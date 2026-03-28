@@ -5,189 +5,161 @@ import {
   Car,
   ClipboardList,
   MessageSquare,
-  AlertTriangle,
   TrendingUp,
   ArrowUpRight,
+  ArrowDownRight,
+  LayoutDashboard
 } from "lucide-react";
 
-/* ================= VARIANTS ================= */
-
+/* ================= ANIMATION VARIANTS ================= */
 const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.08 },
-  },
+    transition: { staggerChildren: 0.1 }
+  }
 };
 
-const card = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0 },
-  hover: { y: -4 },
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 120, damping: 12 } }
 };
 
 /* ================= DATA ================= */
-
 const stats = [
   {
     title: "Pending Consultants",
     value: 12,
     hint: "Requires approval",
     icon: Users,
-    gradient: "from-blue-500 to-cyan-500",
+    color: "text-blue-600",
+    bg: "bg-blue-50",
   },
   {
     title: "Live Vehicles",
-    value: "4,210",
-    hint: "Currently visible",
+    value: "3,210",
+    hint: "Currently active",
     icon: Car,
-    gradient: "from-emerald-500 to-green-500",
+    color: "text-indigo-600",
+    bg: "bg-indigo-50",
   },
   {
     title: "Inspections Today",
     value: 86,
-    hint: "Scheduled",
+    hint: "Scheduled tasks",
     icon: ClipboardList,
-    gradient: "from-purple-500 to-pink-500",
+    color: "text-emerald-600",
+    bg: "bg-emerald-50",
   },
   {
     title: "Inquiries Today",
     value: "1,420",
-    hint: "Buyer activity",
+    hint: "High buyer intent",
     icon: MessageSquare,
-    gradient: "from-orange-500 to-amber-500",
+    color: "text-orange-600",
+    bg: "bg-orange-50",
   },
 ];
 
 const revenue = [
-  { label: "Subscriptions", value: "₹3.2L", trend: "+12%" },
-  { label: "Inspections", value: "₹1.1L", trend: "+6%" },
-  { label: "PPC Revenue", value: "₹78K", trend: "-2%" },
-];
-
-const alerts = [
-  {
-    text: "4 consultants breached response SLA",
-    type: "critical",
-  },
-  {
-    text: "7 vehicles flagged for manual review",
-    type: "warning",
-  },
+  { label: "Subscriptions", value: "₹3.2L", trend: "+12.5%", positive: true },
+  { label: "Inspections", value: "₹1.1L", trend: "+6.2%", positive: true },
+  { label: "PPC Revenue", value: "₹17K", trend: "-2.1%", positive: false },
 ];
 
 /* ================= COMPONENT ================= */
-
 const AdminOverview = () => {
   return (
-    <div className="min-h-screen bg-[#0B0F1A] text-gray-200 p-6 space-y-12">
-      {/* HEADER */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Admin Command Center
-        </h1>
-        <p className="text-sm text-gray-400">
-          Real-time platform health & risk monitoring
-        </p>
-      </motion.div>
+    <div className="min-h-screen bg-[#F9FAFB] p-6 md:p-10 font-sans text-slate-900">
 
-      {/* TODAY STATS */}
-      <motion.div
+      {/* HEADER */}
+      <div className="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="bg-blue-600 p-1.5 rounded-lg flex items-center justify-center">
+              <LayoutDashboard size={18} className="text-white" />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Overview</span>
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+            Admin Command Center
+          </h1>
+          <p className="text-slate-500 mt-1">Platform metrics and real-time monitoring</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm text-slate-600">
+            Last updated: Just now
+          </span>
+        </div>
+      </div>
+
+      {/* STATS GRID */}
+      <motion.div 
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6"
+        className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10"
       >
         {stats.map((s, i) => {
           const Icon = s.icon;
           return (
             <motion.div
               key={i}
-              variants={card}
-              whileHover="hover"
-              className="rounded-2xl p-5 bg-white/5 backdrop-blur-xl
-              border border-white/10 hover:border-white/20 transition"
+              variants={item}
+              whileHover={{ y: -5, scale: 1.03 }}
+              className="bg-white border border-slate-100 rounded-3xl p-6 shadow-md hover:shadow-xl transition-all duration-300"
             >
-              <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center
-                bg-gradient-to-r ${s.gradient}`}
-              >
-                <Icon size={22} />
+              <div className="flex items-start justify-between">
+                <div className={`p-3 rounded-2xl ${s.bg} ${s.color}`}>
+                  <Icon size={24} strokeWidth={2.5} />
+                </div>
+                <ArrowUpRight className="text-slate-300" size={20} />
               </div>
-
-              <p className="mt-4 text-sm text-gray-400">{s.title}</p>
-
-              <div className="flex items-center justify-between">
-                <p className="text-2xl font-bold">{s.value}</p>
-                <ArrowUpRight size={16} className="text-gray-500" />
+              <div className="mt-6">
+                <p className="text-sm font-medium text-slate-500 mb-1">{s.title}</p>
+                <h3 className="text-3xl font-bold text-slate-900 leading-none">{s.value}</h3>
+                <div className="mt-3 flex items-center gap-1.5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{s.hint}</p>
+                </div>
               </div>
-
-              <p className="text-xs text-gray-500 mt-1">{s.hint}</p>
             </motion.div>
           );
         })}
       </motion.div>
 
-      {/* REVENUE SNAPSHOT */}
-      <div className="rounded-2xl p-6 bg-white/5 backdrop-blur-xl border border-white/10">
-        <div className="flex items-center gap-2 mb-6">
-          <TrendingUp className="text-green-400" />
-          <h2 className="text-lg font-semibold">Revenue Pulse</h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {revenue.map((r, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ y: -3 }}
-              className="rounded-xl p-4 bg-black/30 border border-white/10
-              hover:border-white/20 transition"
-            >
-              <p className="text-sm text-gray-400">{r.label}</p>
-              <p className="text-xl font-semibold mt-1">{r.value}</p>
-              <p
-                className={`text-xs mt-1 ${
-                  r.trend.startsWith("-")
-                    ? "text-red-400"
-                    : "text-green-400"
-                }`}
-              >
-                {r.trend} vs yesterday
-              </p>
-            </motion.div>
-          ))}
+      {/* REVENUE SECTION */}
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-md hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-50 rounded-lg">
+                <TrendingUp className="text-emerald-600" size={20} />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">Revenue Pulse</h2>
+            </div>
+            <button className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition">View Details</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {revenue.map((r, i) => (
+              <div key={i} className="group p-5 rounded-2xl bg-[#FBFBFC] hover:bg-white border border-transparent hover:border-slate-100 hover:shadow-lg transition-all duration-300">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{r.label}</p>
+                <p className="text-2xl font-bold text-slate-900 mb-2">{r.value}</p>
+                <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold ${
+                  r.positive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+                }`}>
+                  {r.positive ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}
+                  {r.trend}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ALERTS */}
-      <div className="rounded-2xl p-6 bg-red-500/10 border border-red-500/20">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="text-red-400" />
-          <h2 className="text-lg font-semibold text-red-300">
-            Attention Required
-          </h2>
-        </div>
-
-        <ul className="space-y-3 text-sm">
-          {alerts.map((a, i) => (
-            <li
-              key={i}
-              className={`flex items-start gap-2 ${
-                a.type === "critical"
-                  ? "text-red-300"
-                  : "text-yellow-300"
-              }`}
-            >
-              ⚠️ {a.text}
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 };
 
 export default AdminOverview;
+ 

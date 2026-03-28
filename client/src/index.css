@@ -5,3 +5,15 @@
   text-white text-xs transition;
 }
 
+
+
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0;
+}
+.sidebar-scroll {
+  scrollbar-width: none;
+}
+
+
+
