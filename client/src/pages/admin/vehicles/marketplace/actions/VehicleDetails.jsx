@@ -34,7 +34,6 @@ const cls = (...a) => a.filter(Boolean).join(" ");
 const TABS = [
   "Overview",
   "Inspection",
-  "Ranking",
   "Inquiries",
   "Flags & Fraud Signals",
   "Activity Log",
@@ -182,8 +181,8 @@ const mapVehicleDetails = (data) => {
     galleryImages: Array.isArray(data?.galleryImages)
       ? data.galleryImages
       : data?.thumbnailUrl
-      ? [data.thumbnailUrl]
-      : [],
+        ? [data.thumbnailUrl]
+        : [],
     raw: data,
   };
 };
@@ -348,7 +347,7 @@ const VehicleDetails = () => {
 
                   <span className={cls("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1", inspectionBadge(vehicle.inspectionStatus))}>
                     <ShieldCheck className="h-3.5 w-3.5" />
-                    {vehicle.inspectionStatus}
+                    {vehicle.inspectionStatus?.replace(/_/g, " ") || "-"}
                   </span>
 
                   <span className={cls("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1", statusBadge(vehicle.status, vehicle.isVehicleSold))}>
@@ -390,20 +389,6 @@ const VehicleDetails = () => {
                   {tab}
                 </button>
               ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[28px] border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-2xl bg-white p-2 shadow-sm">
-              <Info className="h-5 w-5 text-amber-700" />
-            </div>
-            <div>
-              <div className="font-semibold text-amber-900">Missing / fallback fields</div>
-              <div className="mt-1 text-sm text-amber-800">
-                {missingFields.length ? missingFields.join(", ") : "None"}
-              </div>
             </div>
           </div>
         </div>
@@ -512,21 +497,6 @@ const VehicleDetails = () => {
                 <InfoItem label="Inspection Report PDF" value={safeText(vehicle.raw?.reportPdfUrl)} />
                 <InfoItem label="Inspection Video" value={safeText(vehicle.raw?.videoUrl)} />
                 <InfoItem label="Inspector ID" value={safeText(vehicle.raw?.inspectorId)} />
-              </div>
-            </SectionCard>
-          )}
-
-          {activeTab === "Ranking" && (
-            <SectionCard title="Ranking Summary" subtitle="Partial ranking support">
-              <div className="space-y-4">
-                <RankRow label="Rank Score" value={vehicle.rankScore} color="bg-zinc-900" />
-                <RankRow label="Boost Impact" value={vehicle.boost ? 10 : 0} color="bg-purple-500" />
-                <RankRow
-                  label="Penalty Applied"
-                  value={vehicle.risk === "High" ? 20 : vehicle.risk === "Moderate" ? 10 : 0}
-                  color="bg-rose-500"
-                  negative
-                />
               </div>
             </SectionCard>
           )}

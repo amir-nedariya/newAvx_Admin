@@ -152,7 +152,7 @@ function PaginationBar({ page, totalPages, totalCount, onPageChange }) {
   if (totalPages <= 1) return null;
 
   return (
-    <div className="mt-6 flex justify-end">
+    <div className="flex justify-end">
       <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
         <span className="text-sm text-slate-500">{totalCount} total</span>
 
@@ -349,7 +349,7 @@ const ViewInquiries = () => {
   }
 
   return (
-    <div className="min-h-screen p-0">
+    <div className="flex h-screen flex-col overflow-hidden p-6">
       <style>{`
         .table-scroll::-webkit-scrollbar { height: 6px; }
         .table-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -362,8 +362,8 @@ const ViewInquiries = () => {
         }
       `}</style>
 
-      <div className="mx-auto space-y-6">
-        <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div className="flex flex-1 flex-col space-y-6 overflow-hidden">
+        <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between shrink-0">
           <div>
             <button
               onClick={() => navigate(-1)}
@@ -380,7 +380,7 @@ const ViewInquiries = () => {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 shrink-0">
           <TopCard title="Total Inquiries" value={data.totalInquiries || 0} icon={User} />
           <TopCard
             title="Open"
@@ -402,10 +402,10 @@ const ViewInquiries = () => {
           />
         </section>
 
-        <section className="relative overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="relative flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 bg-sky-100 blur-[100px] opacity-20" />
 
-          <div className="relative z-10 border-b border-slate-200 p-5 md:p-6">
+          <div className="relative z-10 shrink-0 border-b border-slate-200 p-5 md:p-6">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="relative max-w-2xl flex-1">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -429,8 +429,8 @@ const ViewInquiries = () => {
             </div>
           </div>
 
-          <div className="table-scroll relative z-10 w-full overflow-x-auto pb-[180px]">
-            <table className="min-w-[1100px] w-full border-separate border-spacing-0 px-1">
+          <div className="table-scroll relative z-10 flex-1 w-full overflow-auto">
+            <table className="min-w-[1100px] w-full border-separate border-spacing-0">
               <thead className="sticky top-0 z-20">
                 <tr className="bg-slate-50/80 backdrop-blur-sm">
                   <th className="border-b border-r border-slate-200/60 px-6 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
@@ -570,14 +570,17 @@ const ViewInquiries = () => {
               </tbody>
             </table>
           </div>
-        </section>
 
-        <PaginationBar
-          page={page}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          onPageChange={setPage}
-        />
+          {/* PAGINATION */}
+          <div className="shrink-0 border-t border-slate-100 bg-white px-8 py-5">
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              onPageChange={setPage}
+            />
+          </div>
+        </section>
       </div>
 
       <ChatLogsModal

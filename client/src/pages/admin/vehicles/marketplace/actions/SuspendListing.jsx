@@ -189,12 +189,13 @@ const SuspendListingModal = ({ isOpen, onClose, vehicleId, vehicleTitle, onSucce
                   type="datetime-local"
                   value={suspendUntil}
                   onChange={(e) => setSuspendUntil(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
                   className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-[14px] font-medium text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                 />
               </div>
 
               <p className="mt-2 text-xs text-slate-400 font-medium">
-                Example: 2026-03-10T18:30
+                Select a future date and time for suspension end
               </p>
             </label>
           )}

@@ -22,7 +22,7 @@ export default function FlaggedListingsFilterBar({
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search Vehicle ID, Registration, Consultant or City..."
+          placeholder="Search vehicle name"
           className="h-11 md:h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-[13px] md:text-[14px] font-medium text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 placeholder:text-slate-400"
         />
       </div>
@@ -41,7 +41,7 @@ export default function FlaggedListingsFilterBar({
           type="button"
         >
           <SlidersHorizontal className="h-4 w-4" />
-          <span className="hidden md:inline">Advanced Filters</span>
+          <span className="hidden md:inline">Filters</span>
           {filtersOpen && <div className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse ml-0.5" />}
         </button>
 

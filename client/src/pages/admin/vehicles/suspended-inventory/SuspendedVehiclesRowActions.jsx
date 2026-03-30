@@ -30,7 +30,7 @@ export default function SuspendedVehiclesRowActions({
         <button
           onClick={() => setOpen(!open)}
           className={cls(
-            "flex h-11 w-11 items-center justify-center rounded-[18px] border transition-all duration-300 active:scale-90 shadow-sm",
+            "flex h-11 w-11 cursor-pointer items-center justify-center rounded-[18px] border transition-all duration-300 active:scale-90 shadow-sm",
             open
               ? "bg-slate-900 border-slate-900 text-white ring-4 ring-slate-900/10"
               : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"

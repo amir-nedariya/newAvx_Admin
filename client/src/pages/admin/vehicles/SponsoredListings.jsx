@@ -267,7 +267,7 @@ const SponsoredListings = () => {
   const activeFiltersCount = Object.values(filters).filter(v => v !== "").length;
 
   return (
-    <div className="min-h-screen p-0 bg-slate-50/50">
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50/50">
       <Toaster position="top-right" />
       <style>{`
         .table-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
@@ -276,15 +276,14 @@ const SponsoredListings = () => {
         .table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.55); }
       `}</style>
 
-      <div className="space-y-8 p-4 md:p-8 max-w-[2000px] mx-auto">
+      <div className="flex flex-1 flex-col space-y-4 overflow-hidden p-6 max-w-[2000px] mx-auto w-full">
         {activeView === "list" ? (
           <>
             <header>
-              <h1 className="text-[32px] font-black tracking-tight text-slate-900">Sponsored Listings Dashboard</h1>
-              <p className="mt-1 text-slate-500 font-medium tracking-tight">Monitor & control paid vehicle placements</p>
+              <h1 className="mb-1 text-[32px] font-extrabold tracking-tight text-slate-900">Sponsored Listings</h1>
             </header>
 
-            <section className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl shadow-slate-200/40">
+            <section className="relative flex flex-1 flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl shadow-slate-200/40">
               <div className="relative z-10 border-b border-slate-100 bg-white/80 p-5 backdrop-blur-md md:px-8">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   {/* SEARCH BAR */}
@@ -292,7 +291,7 @@ const SponsoredListings = () => {
                     <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400" />
                     <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Global Search Campaign, Vehicle, Consultant..." className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-11 pr-4 text-[14px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100 placeholder:text-slate-400" />
                   </div>
-                  
+
                   {/* FILTERS TRIGGER */}
                   <div className="flex items-center gap-3">
                     <button onClick={() => setFiltersOpen(true)} className={cls("inline-flex h-12 items-center gap-2.5 rounded-2xl border bg-white px-5 text-[14px] font-bold text-slate-700 transition-all shadow-sm hover:bg-slate-50 active:scale-95 border-slate-200")}>
@@ -306,8 +305,8 @@ const SponsoredListings = () => {
               </div>
 
               {/* PERFECT 14-COLUMN TABLE */}
-              <div className="relative z-10 w-full overflow-hidden">
-                <div className="table-scroll overflow-x-auto pb-[200px]">
+              <div className="relative z-10 flex-1 w-full overflow-auto">
+                <div className="table-scroll h-full overflow-auto">
                   <table className="min-w-[2100px] w-full border-separate border-spacing-0">
                     <thead>
                       <tr className="bg-slate-50/80 backdrop-blur-sm">
@@ -374,12 +373,12 @@ const SponsoredListings = () => {
                   </div>
                   <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
                     <div className="space-y-8">
-                      <FilterGroup label="Identification"><InputField label="Campaign ID" placeholder="Search ID..." value={filters.campaignId} onChange={(val) => setFilters(p => ({...p, campaignId: val}))} /><InputField label="Vehicle ID" placeholder="Search VH-..." value={filters.vehicleId} onChange={(val) => setFilters(p => ({...p, vehicleId: val}))} /></FilterGroup>
-                      <FilterGroup label="Entities"><InputField label="Consultant" placeholder="Name..." value={filters.consultant} onChange={(val) => setFilters(p => ({...p, consultant: val}))} /><InputField label="City" placeholder="Location..." value={filters.city} onChange={(val) => setFilters(p => ({...p, city: val}))} /></FilterGroup>
-                      <FilterGroup label="Parameters"><SelectField label="Placement" value={filters.placement} onChange={(val) => setFilters(p => ({...p, placement: val}))} options={["", "Homepage Featured", "Search Top Sponsored", "Similar Vehicles Sponsored", "City Page Spotlight", "Category Priority"]} /><SelectField label="Tier" value={filters.tier} onChange={(val) => setFilters(p => ({...p, tier: val}))} options={["", "Basic", "Pro", "Premium"]} /><SelectField label="Status" value={filters.status} onChange={(val) => setFilters(p => ({...p, status: val}))} options={["", "Active", "Paused", "Under Review", "Expired", "Budget Exhausted", "Suspended"]} /><SelectField label="Risk Level" value={filters.risk} onChange={(val) => setFilters(p => ({...p, risk: val}))} options={["", "Low", "Moderate", "High"]} /></FilterGroup>
-                      <FilterGroup label="Timeframe"><InputField label="Start From" type="date" value={filters.startDate} onChange={(val) => setFilters(p => ({...p, startDate: val}))} /><InputField label="End At" type="date" value={filters.endDate} onChange={(val) => setFilters(p => ({...p, endDate: val}))} /></FilterGroup>
-                      <FilterGroup label="Budget Range"><div className="grid grid-cols-2 gap-4"><InputField label="Min Budget" type="number" value={filters.budgetMin} onChange={(val) => setFilters(p => ({...p, budgetMin: val}))} /><InputField label="Max Budget" type="number" value={filters.budgetMax} onChange={(val) => setFilters(p => ({...p, budgetMax: val}))} /></div></FilterGroup>
-                      <FilterGroup label="Notifications"><SelectField label="Expiring Soon" value={filters.expiringSoon} onChange={(val) => setFilters(p => ({...p, expiringSoon: val}))} options={["", "Yes", "No"]} /></FilterGroup>
+                      <FilterGroup label="Identification"><InputField label="Campaign ID" placeholder="Search ID..." value={filters.campaignId} onChange={(val) => setFilters(p => ({ ...p, campaignId: val }))} /><InputField label="Vehicle ID" placeholder="Search VH-..." value={filters.vehicleId} onChange={(val) => setFilters(p => ({ ...p, vehicleId: val }))} /></FilterGroup>
+                      <FilterGroup label="Entities"><InputField label="Consultant" placeholder="Name..." value={filters.consultant} onChange={(val) => setFilters(p => ({ ...p, consultant: val }))} /><InputField label="City" placeholder="Location..." value={filters.city} onChange={(val) => setFilters(p => ({ ...p, city: val }))} /></FilterGroup>
+                      <FilterGroup label="Parameters"><SelectField label="Placement" value={filters.placement} onChange={(val) => setFilters(p => ({ ...p, placement: val }))} options={["", "Homepage Featured", "Search Top Sponsored", "Similar Vehicles Sponsored", "City Page Spotlight", "Category Priority"]} /><SelectField label="Tier" value={filters.tier} onChange={(val) => setFilters(p => ({ ...p, tier: val }))} options={["", "Basic", "Pro", "Premium"]} /><SelectField label="Status" value={filters.status} onChange={(val) => setFilters(p => ({ ...p, status: val }))} options={["", "Active", "Paused", "Under Review", "Expired", "Budget Exhausted", "Suspended"]} /><SelectField label="Risk Level" value={filters.risk} onChange={(val) => setFilters(p => ({ ...p, risk: val }))} options={["", "Low", "Moderate", "High"]} /></FilterGroup>
+                      <FilterGroup label="Timeframe"><InputField label="Start From" type="date" value={filters.startDate} onChange={(val) => setFilters(p => ({ ...p, startDate: val }))} /><InputField label="End At" type="date" value={filters.endDate} onChange={(val) => setFilters(p => ({ ...p, endDate: val }))} /></FilterGroup>
+                      <FilterGroup label="Budget Range"><div className="grid grid-cols-2 gap-4"><InputField label="Min Budget" type="number" value={filters.budgetMin} onChange={(val) => setFilters(p => ({ ...p, budgetMin: val }))} /><InputField label="Max Budget" type="number" value={filters.budgetMax} onChange={(val) => setFilters(p => ({ ...p, budgetMax: val }))} /></div></FilterGroup>
+                      <FilterGroup label="Notifications"><SelectField label="Expiring Soon" value={filters.expiringSoon} onChange={(val) => setFilters(p => ({ ...p, expiringSoon: val }))} options={["", "Yes", "No"]} /></FilterGroup>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 border-t border-slate-100 bg-white p-6">

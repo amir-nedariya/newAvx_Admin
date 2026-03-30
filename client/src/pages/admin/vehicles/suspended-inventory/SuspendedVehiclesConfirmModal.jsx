@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, ShieldCheck, AlertTriangle } from "lucide-react";
+import { X, ShieldCheck, AlertTriangle, Loader2 } from "lucide-react";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -24,6 +24,7 @@ export default function SuspendedVehiclesConfirmModal({
   modal,
   onClose,
   onConfirm,
+  loading = false,
 }) {
   const [reason, setReason] = useState("");
 
@@ -85,7 +86,8 @@ export default function SuspendedVehiclesConfirmModal({
         <div className="mt-10 flex items-center gap-3">
           <button
             onClick={onClose}
-            className="flex-1 rounded-2xl border border-slate-200 py-4 text-sm font-black text-slate-500 transition-all hover:bg-slate-50"
+            disabled={loading}
+            className="flex-1 rounded-2xl border border-slate-200 py-4 text-sm font-black text-slate-500 transition-all hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Go Back
           </button>
@@ -97,9 +99,17 @@ export default function SuspendedVehiclesConfirmModal({
                 reason,
               })
             }
-            className="flex-1 rounded-2xl bg-emerald-600 py-4 text-sm font-black text-white shadow-xl shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:scale-[1.02] active:scale-[0.98]"
+            disabled={loading}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-4 text-sm font-black text-white shadow-xl shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            Confirm Restore
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              "Confirm Restore"
+            )}
           </button>
         </div>
       </div>

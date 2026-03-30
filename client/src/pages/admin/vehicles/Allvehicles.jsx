@@ -32,6 +32,7 @@ import {
   BadgeCheck,
   CircleDashed,
   Map,
+  User,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -205,6 +206,16 @@ export default function Allvehicles() {
     const variantName = v?.variantName || "-";
     const yearOfMfg = v?.yearOfMfg || "-";
 
+    // Determine display name based on type
+    let displayName = "-";
+    const vehicleType = v?.type || "";
+
+    if (vehicleType === "CONSULTATION") {
+      displayName = v?.consultantName || "-";
+    } else if (vehicleType === "USER_SELLER" || vehicleType === "SELLER") {
+      displayName = v?.ownerName || "-";
+    }
+
     return {
       id: v?.vehicleId || "-",
       thumb: v?.thumbnailUrl || FALLBACK_VEHICLE_IMAGE,
@@ -212,13 +223,14 @@ export default function Allvehicles() {
         [makerName, modelName, variantName, yearOfMfg !== "-" ? yearOfMfg : null]
           .filter(Boolean)
           .join(" • ") || "-",
-      consultantName: v?.consultantName || "-",
-      type: v?.type || "-",
+      consultantName: displayName,
+      type: vehicleType === "USER_SELLER" ? "SELLER" : vehicleType,
       city: v?.cityName || "-",
       price: Number(v?.price ?? 0),
       inspectionStatus: v?.inspectionStatus || "-",
       rankScore: Number(v?.rankScore ?? 0),
       inquiries: Number(v?.totalInquiries ?? 0),
+      notes: v?.notes || "-",
       boost: Boolean(v?.isTierBoostActive ?? false),
       status: v?.status || "-",
       risk: v?.risk || "Low",
@@ -520,7 +532,7 @@ export default function Allvehicles() {
   }, [kpi, rows, serverTotal]);
 
   return (
-    <div className="min-h-screen p-0">
+    <div className="flex h-screen flex-col overflow-hidden p-0">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -564,7 +576,7 @@ export default function Allvehicles() {
         }
       `}</style>
 
-      <div className="space-y-6">
+      <div className="flex flex-1 flex-col space-y-4 overflow-hidden p-6">
         <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <h1 className="mb-1 text-[32px] font-extrabold tracking-tight text-slate-900">
@@ -592,11 +604,11 @@ export default function Allvehicles() {
           />
         </section>
 
-        <section className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+        <section className="relative flex flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
           <div className="pointer-events-none absolute -top-10 right-10 h-48 w-48 rounded-full bg-sky-100/60 blur-3xl" />
           <div className="pointer-events-none absolute bottom-0 left-0 h-40 w-40 rounded-full bg-indigo-50 blur-3xl" />
 
-          <div className="relative z-10 border-b border-slate-200 px-4 py-4 md:px-6">
+          <div className="relative z-10 shrink-0 border-b border-slate-200 px-4 py-4 md:px-6">
             <div className="flex items-center gap-2.5 md:gap-4 lg:justify-between">
               <div className="relative min-w-0 flex-1 max-w-2xl">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -645,8 +657,8 @@ export default function Allvehicles() {
           </div>
 
 
-          <div className="relative z-10 overflow-visible">
-            <div className="table-scroll w-full overflow-x-auto pb-[220px]">
+          <div className="relative z-10 flex-1 overflow-auto">
+            <div className="table-scroll h-full w-full overflow-x-auto overflow-y-auto">
               <table className="min-w-[1520px] w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-slate-50/80 backdrop-blur-sm">
@@ -654,7 +666,7 @@ export default function Allvehicles() {
                       Vehicle
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
-                      Consultant
+                      Consultant / Seller
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
                       Type
@@ -670,6 +682,9 @@ export default function Allvehicles() {
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
                       Inquiries
+                    </th>
+                    <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
+                      Notes
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
                       Boost
@@ -689,7 +704,7 @@ export default function Allvehicles() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={11} className="px-6 py-24 text-center">
+                      <td colSpan={12} className="px-6 py-24 text-center">
                         <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Loading vehicles...
@@ -701,7 +716,7 @@ export default function Allvehicles() {
                       <tr
                         key={v.id}
                         className={cls(
-                          "group",
+                          "group relative",
                           index % 2 === 0 ? "bg-white" : "bg-slate-50/35",
                           "transition-colors duration-200 hover:bg-sky-50/45"
                         )}
@@ -729,7 +744,11 @@ export default function Allvehicles() {
                             >
                               {v.consultantName && v.consultantName !== "-" ? (
                                 <>
-                                  <BadgeCheck className="h-4 w-4 shrink-0 text-sky-600" />
+                                  {v.type === "CONSULTATION" ? (
+                                    <BadgeCheck className="h-4 w-4 shrink-0 text-sky-600" />
+                                  ) : (
+                                    <User className="h-4 w-4 shrink-0 text-slate-600" />
+                                  )}
                                   <span className="truncate">{v.consultantName}</span>
                                 </>
                               ) : (
@@ -780,6 +799,12 @@ export default function Allvehicles() {
                           </div>
                         </td>
 
+                        <td className="border-b border-slate-100 px-6 py-4.5 align-middle">
+                          <div className="text-[11px] font-medium text-slate-500 line-clamp-2 italic leading-relaxed whitespace-pre-wrap max-w-[250px]">
+                            {v.notes ?? "-"}
+                          </div>
+                        </td>
+
                         <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
                           <span
                             className={cls(
@@ -822,7 +847,7 @@ export default function Allvehicles() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={11} className="px-6 py-28 text-center">
+                      <td colSpan={12} className="px-6 py-28 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
                             <CarFront size={28} />
@@ -850,7 +875,7 @@ export default function Allvehicles() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="relative z-10 flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
             <div className="text-sm text-slate-500">
               Page <span className="font-semibold text-slate-900">{page}</span> /{" "}
               <span className="font-semibold text-slate-900">{serverTotalPages}</span>
@@ -899,16 +924,21 @@ export default function Allvehicles() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 420, opacity: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 24 }}
-              className="fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[430px] flex-col border-l border-slate-200 bg-white shadow-2xl"
+              className="fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[440px] flex-col border-l border-slate-200 bg-white shadow-2xl"
             >
-              <div className="shrink-0 border-b border-slate-200 bg-slate-50 px-6 py-5">
+              <div className="shrink-0 border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-sky-50/30 px-6 py-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-xl font-bold tracking-tight text-slate-900">
-                      Filters
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Refine inventory results
+                    <div className="flex items-center gap-3 mb-1">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/20">
+                        <SlidersHorizontal className="h-5 w-5" />
+                      </div>
+                      <h3 className="text-2xl font-black tracking-tight text-slate-900">
+                        Filters
+                      </h3>
+                    </div>
+                    <p className="mt-1 text-sm font-medium text-slate-500">
+                      Refine your vehicle search results
                     </p>
                   </div>
 
@@ -917,7 +947,7 @@ export default function Allvehicles() {
                       setFiltersOpen(false);
                       setCityDropdownOpen(false);
                     }}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 active:scale-95"
                     type="button"
                   >
                     <X className="h-4 w-4" />
@@ -925,46 +955,58 @@ export default function Allvehicles() {
                 </div>
               </div>
 
-              <div className="flex-1 space-y-4 overflow-y-auto p-6">
-                <SearchableCombobox
-                  label="State"
-                  value={draftFilters.stateId}
-                  onChange={(val) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      stateId: val,
-                    }))
-                  }
-                  query={stateQuery}
-                  setQuery={setStateQuery}
-                  open={stateDropdownOpen}
-                  setOpen={setStateDropdownOpen}
-                  options={filteredStates}
-                  allOptions={states}
-                  loading={statesLoading}
-                  placeholder="All States"
-                />
+              <div className="flex-1 space-y-5 overflow-y-auto p-6 bg-slate-50/30">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Map className="h-4 w-4 text-slate-400" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Location</h4>
+                  </div>
+                  <div className="space-y-4">
+                    <SearchableCombobox
+                      label="State"
+                      value={draftFilters.stateId}
+                      onChange={(val) =>
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          stateId: val,
+                        }))
+                      }
+                      query={stateQuery}
+                      setQuery={setStateQuery}
+                      open={stateDropdownOpen}
+                      setOpen={setStateDropdownOpen}
+                      options={filteredStates}
+                      allOptions={states}
+                      loading={statesLoading}
+                      placeholder="All States"
+                    />
 
-                <SearchableCombobox
-                  label="City"
-                  value={draftFilters.cityId}
-                  onChange={(val) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      cityId: val,
-                    }))
-                  }
-                  query={cityQuery}
-                  setQuery={setCityQuery}
-                  open={cityDropdownOpen}
-                  setOpen={setCityDropdownOpen}
-                  options={filteredCities}
-                  allOptions={cities}
-                  loading={citiesLoading}
-                  placeholder="All Cities"
-                />
+                    <SearchableCombobox
+                      label="City"
+                      value={draftFilters.cityId}
+                      onChange={(val) =>
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          cityId: val,
+                        }))
+                      }
+                      query={cityQuery}
+                      setQuery={setCityQuery}
+                      open={cityDropdownOpen}
+                      setOpen={setCityDropdownOpen}
+                      options={filteredCities}
+                      allOptions={cities}
+                      loading={citiesLoading}
+                      placeholder="All Cities"
+                    />
+                  </div>
+                </div>
 
-                <div className="space-y-4 rounded-3xl border border-slate-100 bg-slate-50/50 p-5">
+                <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-center gap-2">
+                    <div className="text-slate-400">₹</div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Price Range</h4>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <InputField
                       label="Min Price"
@@ -998,110 +1040,123 @@ export default function Allvehicles() {
                   />
                 </div>
 
-                <Select
-                  label="Fuel Type"
-                  value={draftFilters.fuelType}
-                  onChange={(val) =>
-                    setDraftFilters((p) => ({ ...p, fuelType: val }))
-                  }
-                  options={[
-                    "",
-                    "PETROL",
-                    "DIESEL",
-                    "CNG",
-                    "LPG",
-                    "ELECTRIC",
-                    "HYBRID",
-                    "OTHER",
-                  ]}
-                />
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                  <div className="mb-4 flex items-center gap-2">
+                    <CarFront className="h-4 w-4 text-slate-400" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Vehicle Details</h4>
+                  </div>
 
-                <Select
-                  label="Vehicle Type"
-                  value={draftFilters.vehicleType}
-                  onChange={(val) =>
-                    setDraftFilters((p) => ({ ...p, vehicleType: val }))
-                  }
-                  options={["", "TWO_WHEELER", "FOUR_WHEELER", "COMMERCIAL", "OTHER"]}
-                />
-
-                <Select
-                  label="Transmission"
-                  value={draftFilters.transmissionType}
-                  onChange={(val) =>
-                    setDraftFilters((p) => ({ ...p, transmissionType: val }))
-                  }
-                  options={["", "MANUAL", "AUTOMATIC", "OTHER"]}
-                />
-
-                <Select
-                  label="Inspection Status"
-                  value={draftFilters.inspectionStatus}
-                  onChange={(val) =>
-                    setDraftFilters((p) => ({ ...p, inspectionStatus: val }))
-                  }
-                  options={[
-                    "",
-                    "NOT_INSPECTED",
-                    "IN_PROGRESS",
-                    "SELF_INSPECTED",
-                    "AI_INSPECTED",
-                    "AVX_INSPECTED",
-                  ]}
-                />
-
-                <Select
-                  label="Boost Active"
-                  value={draftFilters.isTierBoostActive}
-                  onChange={(val) =>
-                    setDraftFilters((p) => ({ ...p, isTierBoostActive: val }))
-                  }
-                  options={[
-                    { label: "All", value: "" },
-                    { label: "Yes", value: "true" },
-                    { label: "No", value: "false" },
-                  ]}
-                  isObject
-                />
-
-                <Select
-                  label="Marketplace Status"
-                  value={draftFilters.marketplaceStatus}
-                  onChange={(val) =>
-                    setDraftFilters((p) => ({ ...p, marketplaceStatus: val }))
-                  }
-                  options={["", "ACTIVE", "SOLD", "INACTIVE", "DELETED", "DRAFT"]}
-                />
-
-                <div className="grid grid-cols-2 gap-3">
-                  <DateInput
-                    label="Listed After"
-                    value={draftFilters.listedAfter}
+                  <Select
+                    label="Fuel Type"
+                    value={draftFilters.fuelType}
                     onChange={(val) =>
-                      setDraftFilters((p) => ({ ...p, listedAfter: val }))
+                      setDraftFilters((p) => ({ ...p, fuelType: val }))
                     }
+                    options={[
+                      "",
+                      "PETROL",
+                      "DIESEL",
+                      "CNG",
+                      "LPG",
+                      "ELECTRIC",
+                      "HYBRID",
+                      "OTHER",
+                    ]}
                   />
-                  <DateInput
-                    label="Listed Before"
-                    value={draftFilters.listedBefore}
+
+                  <Select
+                    label="Vehicle Type"
+                    value={draftFilters.vehicleType}
                     onChange={(val) =>
-                      setDraftFilters((p) => ({ ...p, listedBefore: val }))
+                      setDraftFilters((p) => ({ ...p, vehicleType: val }))
                     }
+                    options={["", "TWO_WHEELER", "FOUR_WHEELER", "COMMERCIAL", "OTHER"]}
                   />
+
+                  <Select
+                    label="Transmission"
+                    value={draftFilters.transmissionType}
+                    onChange={(val) =>
+                      setDraftFilters((p) => ({ ...p, transmissionType: val }))
+                    }
+                    options={["", "MANUAL", "AUTOMATIC", "OTHER"]}
+                  />
+
+                  <Select
+                    label="Inspection Status"
+                    value={draftFilters.inspectionStatus}
+                    onChange={(val) =>
+                      setDraftFilters((p) => ({ ...p, inspectionStatus: val }))
+                    }
+                    options={[
+                      "",
+                      "NOT_INSPECTED",
+                      "IN_PROGRESS",
+                      "SELF_INSPECTED",
+                      "AI_INSPECTED",
+                      "AVX_INSPECTED",
+                    ]}
+                  />
+
+                  <Select
+                    label="Boost Active"
+                    value={draftFilters.isTierBoostActive}
+                    onChange={(val) =>
+                      setDraftFilters((p) => ({ ...p, isTierBoostActive: val }))
+                    }
+                    options={[
+                      { label: "All", value: "" },
+                      { label: "Yes", value: "true" },
+                      { label: "No", value: "false" },
+                    ]}
+                    isObject
+                  />
+
+                  <Select
+                    label="Marketplace Status"
+                    value={draftFilters.marketplaceStatus}
+                    onChange={(val) =>
+                      setDraftFilters((p) => ({ ...p, marketplaceStatus: val }))
+                    }
+                    options={["", "ACTIVE", "SOLD", "INACTIVE", "DELETED", "DRAFT"]}
+                  />
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-slate-400" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Date Range</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <DateInput
+                      label="Listed After"
+                      value={draftFilters.listedAfter}
+                      onChange={(val) =>
+                        setDraftFilters((p) => ({ ...p, listedAfter: val }))
+                      }
+                    />
+                    <DateInput
+                      label="Listed Before"
+                      value={draftFilters.listedBefore}
+                      onChange={(val) =>
+                        setDraftFilters((p) => ({ ...p, listedBefore: val }))
+                      }
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-6 py-4">
+              <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-gradient-to-br from-slate-50 via-white to-sky-50/30 px-6 py-5 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
                 <button
                   onClick={clearFilters}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                  className="flex-1 rounded-xl border-2 border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
                   type="button"
                 >
-                  Clear
+                  Clear All
                 </button>
                 <button
                   onClick={handleApplyFilters}
-                  className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                  className="flex-1 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-900/30 active:scale-95"
                   type="button"
                 >
                   Apply Filters
@@ -1278,7 +1333,7 @@ function SearchableCombobox({
 
   return (
     <div className="block" ref={wrapperRef}>
-      <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-slate-500">
+      <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
         {label}
       </div>
 
@@ -1298,7 +1353,7 @@ function SearchableCombobox({
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={loading ? "Loading..." : placeholder}
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-medium text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 placeholder:text-slate-400"
+          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 placeholder:text-slate-400 shadow-sm"
         />
 
         <button
@@ -1371,7 +1426,7 @@ function SearchableCombobox({
 function Select({ label, value, onChange, options, isObject = false }) {
   return (
     <label className="block">
-      <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-slate-500">
+      <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
         {label}
       </div>
 
@@ -1379,7 +1434,7 @@ function Select({ label, value, onChange, options, isObject = false }) {
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-medium text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+          className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 shadow-sm"
         >
           {isObject
             ? options.map((o) => (
@@ -1465,7 +1520,7 @@ function DateInput({ label, value, onChange }) {
 
   return (
     <label className="block">
-      <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-slate-500">
+      <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
         {label}
       </div>
 
@@ -1479,7 +1534,7 @@ function DateInput({ label, value, onChange }) {
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-4 pr-11 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 group-hover:border-sky-200"
+          className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-4 pr-11 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 group-hover:border-sky-200 shadow-sm"
         />
 
         <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-hover:text-sky-500">
@@ -1557,13 +1612,13 @@ function InputField({
 }) {
   return (
     <label className="block">
-      <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-slate-500">
+      <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
         {label}
       </div>
 
       <div className="relative group">
         {prefix ? (
-          <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-slate-400 group-focus-within:text-sky-500">
+          <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[13px] font-bold text-slate-400 group-focus-within:text-sky-500">
             {prefix}
           </div>
         ) : null}
@@ -1582,7 +1637,7 @@ function InputField({
           }}
           placeholder={placeholder}
           className={cls(
-            "h-11 w-full rounded-xl border border-slate-200 bg-white text-[13px] font-bold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 placeholder:text-slate-300",
+            "h-11 w-full rounded-xl border border-slate-200 bg-white text-[13px] font-bold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 placeholder:text-slate-300 shadow-sm",
             prefix ? "pl-9 pr-4" : "px-4"
           )}
         />

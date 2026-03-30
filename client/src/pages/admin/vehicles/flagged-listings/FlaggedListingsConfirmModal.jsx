@@ -215,9 +215,13 @@ export default function FlaggedListingsConfirmModal({
                       type="datetime-local"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
                       className="h-12 w-full rounded-[18px] border border-slate-200 bg-white px-4 text-[14px] font-bold text-slate-900 shadow-sm outline-none ring-sky-100 transition-all focus:border-sky-400 focus:ring-4 hover:border-slate-300"
                     />
                   </div>
+                  <p className="mt-2 text-xs text-slate-400 font-medium">
+                    Select a future date and time for suspension end
+                  </p>
                 </label>
               )}
             </div>

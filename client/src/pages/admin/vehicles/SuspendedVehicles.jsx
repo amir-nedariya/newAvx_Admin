@@ -59,6 +59,17 @@ const suspensionTypeBadge = (type) => {
   return "border-slate-200 bg-slate-100 text-slate-700";
 };
 
+const typeBadge = (type) => {
+  if (type === "SELLER" || type === "USER_SELLER") return "border-rose-200 bg-rose-50 text-rose-700";
+  if (type === "CONSULTATION") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  return "border-slate-200 bg-slate-100 text-slate-700";
+};
+
+const formatEnumLabel = (value) => {
+  if (!value) return "-";
+  return value.replace(/_/g, " ");
+};
+
 const statusBadge = (isActive) => {
   if (isActive) {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
@@ -128,6 +139,7 @@ const SuspendedVehicles = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [modal, setModal] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const fetchSuspendedList = useCallback(async (showToast = false) => {
     try {
@@ -155,8 +167,8 @@ const SuspendedVehicles = () => {
       setRows([]);
       setError(
         err?.response?.data?.message ||
-          err?.message ||
-          "Failed to fetch suspended vehicles."
+        err?.message ||
+        "Failed to fetch suspended vehicles."
       );
       toast.error("Failed to fetch suspended vehicles");
     } finally {
@@ -227,6 +239,7 @@ const SuspendedVehicles = () => {
     if (!payload?.item?.vehicleId) return;
 
     try {
+      setActionLoading(true);
       if (payload.type === "unsuspend") {
         await unsuspendVehicle({
           vehicleId: payload.item.vehicleId,
@@ -240,11 +253,13 @@ const SuspendedVehicles = () => {
     } catch (err) {
       console.error("Action failed:", err);
       toast.error(err?.response?.data?.message || err?.message || "Action failed");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen p-0">
+    <div className="flex h-screen flex-col overflow-hidden p-0">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -273,15 +288,12 @@ const SuspendedVehicles = () => {
         }
       `}</style>
 
-      <div className="space-y-6">
+      <div className="flex flex-1 flex-col space-y-4 overflow-hidden p-6">
         <section className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-[32px] font-extrabold tracking-tight text-slate-900">
+            <h1 className="mb-1 text-[32px] font-extrabold tracking-tight text-slate-900">
               Suspended Vehicles
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Review suspended inventory listings and their suspension details.
-            </p>
           </div>
         </section>
 
@@ -315,7 +327,7 @@ const SuspendedVehicles = () => {
           />
         </section>
 
-        <section className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+        <section className="relative flex flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
           <div className="pointer-events-none absolute -top-10 right-10 h-48 w-48 rounded-full bg-sky-100/60 blur-3xl" />
           <div className="pointer-events-none absolute bottom-0 left-0 h-40 w-40 rounded-full bg-indigo-50 blur-3xl" />
 
@@ -396,8 +408,8 @@ const SuspendedVehicles = () => {
             </div>
           ) : null}
 
-          <div className="relative z-10 overflow-visible">
-            <div className="table-scroll w-full overflow-x-auto pb-[120px]">
+          <div className="relative z-10 flex-1 overflow-auto">
+            <div className="table-scroll h-full w-full overflow-auto">
               <table className="min-w-[1750px] w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-slate-50/80 backdrop-blur-sm">
@@ -405,10 +417,10 @@ const SuspendedVehicles = () => {
                       Vehicle
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
-                      Owner
+                      Consultant / Seller
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
-                      Consultant
+                      Type
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
                       City
@@ -440,10 +452,10 @@ const SuspendedVehicles = () => {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={10} className="px-6 py-24 text-center">
+                      <td colSpan={11} className="px-6 py-24 text-center">
                         <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading suspended vehicles...
+                          Loading suspended...
                         </div>
                       </td>
                     </tr>
@@ -466,36 +478,47 @@ const SuspendedVehicles = () => {
                               <div className="truncate text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700">
                                 {safeText(item?.vehicleTitle)}
                               </div>
-                              <div className="mt-1 text-[12px] font-medium text-slate-500">
-                                ID: {safeText(item?.vehicleId)}
-                              </div>
                             </div>
                           </div>
                         </td>
 
                         <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
-                          <div className="inline-flex min-w-[180px] items-center justify-center gap-2 text-[13px] font-semibold text-slate-700">
-                            <User className="h-4 w-4 text-slate-400" />
-                            <span className="truncate">{safeText(item?.ownerName)}</span>
+                          <div className="inline-flex min-w-[180px] items-center justify-center">
+                            <div
+                              className={cls(
+                                "flex items-center gap-2 text-[13px] font-semibold",
+                                ((item?.type === "CONSULTATION" && item?.consultantName) ||
+                                  ((item?.type === "USER_SELLER" || item?.type === "SELLER") && item?.ownerName))
+                                  ? "text-slate-800"
+                                  : "text-slate-400"
+                              )}
+                            >
+                              {item?.type === "CONSULTATION" && item?.consultantName ? (
+                                <>
+                                  <BadgeCheck className="h-4 w-4 shrink-0 text-sky-600" />
+                                  <span className="truncate">{item?.consultantName}</span>
+                                </>
+                              ) : (item?.type === "USER_SELLER" || item?.type === "SELLER") && item?.ownerName ? (
+                                <>
+                                  <User className="h-4 w-4 shrink-0 text-slate-600" />
+                                  <span className="truncate">{item?.ownerName}</span>
+                                </>
+                              ) : (
+                                <span className="opacity-50">-</span>
+                              )}
+                            </div>
                           </div>
                         </td>
 
                         <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
-                          <div
+                          <span
                             className={cls(
-                              "inline-flex min-w-[180px] items-center justify-center gap-2 text-[13px] font-semibold",
-                              item?.consultantName ? "text-slate-800" : "text-slate-400"
+                              "inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.03em] whitespace-nowrap",
+                              typeBadge(item?.type === "USER_SELLER" ? "SELLER" : item?.type)
                             )}
                           >
-                            {item?.consultantName ? (
-                              <>
-                                <BadgeCheck className="h-4 w-4 text-sky-600" />
-                                <span className="truncate">{item?.consultantName}</span>
-                              </>
-                            ) : (
-                              <span className="opacity-50">-</span>
-                            )}
-                          </div>
+                            {formatEnumLabel(item?.type === "USER_SELLER" ? "SELLER" : item?.type)}
+                          </span>
                         </td>
 
                         <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
@@ -505,7 +528,6 @@ const SuspendedVehicles = () => {
                               item?.cityName ? "text-slate-600" : "text-slate-400"
                             )}
                           >
-                            <MapPin className="h-4 w-4" />
                             <span>{safeText(item?.cityName)}</span>
                           </div>
                         </td>
@@ -579,7 +601,7 @@ const SuspendedVehicles = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={10} className="px-6 py-28 text-center">
+                      <td colSpan={11} className="px-6 py-28 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
                             <ShieldAlert size={28} />
@@ -590,13 +612,6 @@ const SuspendedVehicles = () => {
                           <div className="mx-auto mt-1 max-w-sm text-[14px] text-slate-500">
                             Try adjusting your search or filters to see more results.
                           </div>
-                          <button
-                            onClick={handleClearFilters}
-                            className="mt-6 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
-                            type="button"
-                          >
-                            Clear search & filters
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -606,7 +621,7 @@ const SuspendedVehicles = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 border-t border-slate-200 bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex shrink-0 flex-col gap-2 border-t border-slate-200 bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
             <div className="text-sm text-slate-500">
               Showing{" "}
               <span className="font-semibold text-slate-900">
@@ -625,6 +640,7 @@ const SuspendedVehicles = () => {
 
       <SuspendedVehiclesConfirmModal
         modal={modal}
+        loading={actionLoading}
         onClose={() => setModal(null)}
         onConfirm={handleActionConfirm}
       />

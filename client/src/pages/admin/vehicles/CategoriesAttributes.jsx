@@ -262,17 +262,17 @@ const CategoriesAttributes = () => {
   }, [activeTab]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-slate-50 to-gray-100 p-4 md:p-6">
-      <div className="mx-auto w-full max-w-[1800px] space-y-5">
+    <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-br from-zinc-50 via-slate-50 to-gray-100">
+      <div className="mx-auto flex flex-1 flex-col w-full max-w-[1800px] space-y-4 overflow-hidden p-6">
         {/* HEADER */}
         <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h1 className="text-[30px] font-bold tracking-[-0.04em] text-zinc-900">
+            <h1 className="mb-1 text-[32px] font-extrabold tracking-tight text-slate-900">
               Categories & Attributes
             </h1>
           </div>
 
-          
+
         </section>
 
         {/* TABS */}
@@ -475,8 +475,8 @@ const CategoriesAttributes = () => {
                   <div className="mt-4 grid grid-cols-2 gap-3">
                     <ActionBtn icon={Plus} label="Add Category" onClick={() => setModal("category")} />
                     <ActionBtn icon={Plus} label="Add Subcategory" onClick={() => setModal("subcategory")} />
-                    <ActionBtn icon={Pencil} label="Edit Category" onClick={() => {}} />
-                    <ActionBtn icon={Ban} label="Disable" danger onClick={() => {}} />
+                    <ActionBtn icon={Pencil} label="Edit Category" onClick={() => { }} />
+                    <ActionBtn icon={Ban} label="Disable" danger onClick={() => { }} />
                   </div>
                 </div>
               </div>

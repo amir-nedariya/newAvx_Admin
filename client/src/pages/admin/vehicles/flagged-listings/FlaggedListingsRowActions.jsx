@@ -36,11 +36,11 @@ export default function FlaggedListingsRowActions({
   useEffect(() => {
     if (open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      // Position menu ABOVE the trigger button
-      // Window.scrollY + rect.top gives absolute top in page
+      // Position menu relative to the trigger button
+      // Using absolute positioning with scroll offset
       setCoords({
-        top: window.scrollY + rect.top, 
-        left: window.scrollX + rect.left + rect.width,
+        top: window.scrollY + rect.top + rect.height / 2,
+        left: window.scrollX + rect.left,
       });
     }
   }, [open]);
@@ -67,9 +67,9 @@ export default function FlaggedListingsRowActions({
         ref={triggerRef}
         onClick={() => setOpen(!open)}
         className={cls(
-          "flex h-11 w-11 items-center justify-center rounded-[18px] border shadow-sm",
-          open 
-            ? "bg-slate-900 border-slate-900 text-white ring-4 ring-slate-900/10" 
+          "flex h-11 w-11 cursor-pointer items-center justify-center rounded-[18px] border shadow-sm",
+          open
+            ? "bg-slate-900 border-slate-900 text-white ring-4 ring-slate-900/10"
             : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
         )}
       >
@@ -77,10 +77,10 @@ export default function FlaggedListingsRowActions({
       </button>
 
       {open && createPortal(
-        <div 
+        <div
           id="moderation-portal-menu"
-          style={{ 
-            position: "absolute", 
+          style={{
+            position: "absolute",
             top: coords.top - 8, // Shift up slightly
             left: coords.left,
             transform: "translate(-100%, -100%)", // Upward and to the left
@@ -89,10 +89,10 @@ export default function FlaggedListingsRowActions({
           className="w-64 origin-bottom-right rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_20px_50px_rgba(0,0,0,0.15)] ring-1 ring-slate-900/5"
         >
           <div className="mb-1 px-3 py-2 border-b border-slate-50 flex items-center justify-between">
-             <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Moderation Menu</div>
-             <Settings2 size={12} className="text-slate-300" />
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Moderation Menu</div>
+            <Settings2 size={12} className="text-slate-300" />
           </div>
-          
+
           <div className="space-y-0.5">
             <MenuButton
               icon={Eye}
@@ -101,9 +101,9 @@ export default function FlaggedListingsRowActions({
               color="text-slate-900 hover:bg-sky-50"
               highlight={true}
             />
-            
+
             <div className="my-1 border-t border-slate-50" />
-            
+
             <MenuButton
               icon={Ban}
               label="Suspend"
@@ -122,21 +122,21 @@ export default function FlaggedListingsRowActions({
               onClick={() => { onEscalate?.(); setOpen(false); }}
               color="text-amber-600 hover:bg-amber-50"
             />
-            <MenuButton
+            {/* <MenuButton
               icon={Scale}
               label="Penalty"
               onClick={() => { onPenalty?.(); setOpen(false); }}
               color="text-slate-700 hover:bg-slate-50 border border-transparent hover:border-slate-100"
-            />
-            
+            /> */}
+
             <div className="my-1 border-t border-slate-50" />
-            
-            <div className="grid grid-cols-4 gap-1 p-1">
-               <QuickActionBtn icon={Phone} label="Call" onClick={() => { onContact?.(); setOpen(false); }} />
-               <QuickActionBtn icon={Lock} label="Lock" onClick={() => { onLockRanking?.(); setOpen(false); }} />
-               <QuickActionBtn icon={ZapOff} label="Off" onClick={() => { onRemoveBoost?.(); setOpen(false); }} />
-               <QuickActionBtn icon={FileText} label="Note" onClick={() => { onAddNote?.(); setOpen(false); }} />
-            </div>
+
+            {/* <div className="grid grid-cols-4 gap-1 p-1">
+              <QuickActionBtn icon={Phone} label="Call" onClick={() => { onContact?.(); setOpen(false); }} />
+              <QuickActionBtn icon={Lock} label="Lock" onClick={() => { onLockRanking?.(); setOpen(false); }} />
+              <QuickActionBtn icon={ZapOff} label="Off" onClick={() => { onRemoveBoost?.(); setOpen(false); }} />
+              <QuickActionBtn icon={FileText} label="Note" onClick={() => { onAddNote?.(); setOpen(false); }} />
+            </div> */}
           </div>
         </div>,
         document.body

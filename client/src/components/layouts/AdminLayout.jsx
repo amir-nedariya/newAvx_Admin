@@ -92,7 +92,7 @@ const AdminLayout = () => {
         className="flex-1 h-screen overflow-y-auto pt-16 lg:pt-0 bg-white transition-[margin-left] duration-300 ease-in-out relative z-0"
         style={{ marginLeft: isDesktop ? sidebarWidth : 0 }}
       >
-        <div className="min-h-full bg-white p-4 sm:p-5 md:p-6">
+        <div className="min-h-full bg-white p-4 sm:p-5 md:p-0">
           <Outlet />
         </div>
       </main>

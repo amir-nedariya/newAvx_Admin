@@ -38,7 +38,9 @@ export const filterVehicles = async ({
     transmissionType: transmissionType || null,
     inspectionStatus: inspectionStatus || null,
     isTierBoostActive:
-      isTierBoostActive === "" || isTierBoostActive === null || isTierBoostActive === undefined
+      isTierBoostActive === "" ||
+      isTierBoostActive === null ||
+      isTierBoostActive === undefined
         ? null
         : isTierBoostActive,
     marketplaceStatus: marketplaceStatus || null,
@@ -176,6 +178,47 @@ export const unsuspendVehicle = async ({ vehicleId, reason }) => {
 export const getFlaggedVehicles = async () => {
   const res = await api.get("/vehicle/flagged");
   return res.data;
+};
+
+/* =======================================================
+   ✅ VEHICLE: FILTER FLAGGED VEHICLES (NEW)
+======================================================= */
+export const filterFlaggedVehicles = async ({
+  searchText = null,
+  consultantName = null,
+  cityId = null,
+  severity = null,
+  flaggedAfter = null,
+  flaggedBefore = null,
+  pageNo = 1,
+  pageSize = 10,
+} = {}) => {
+  const payload = {
+    searchText: searchText?.trim() ? searchText.trim() : null,
+    consultantName: consultantName?.trim() ? consultantName.trim() : null,
+    cityId: cityId || null,
+    severity: severity || null,
+    flaggedAfter: flaggedAfter || null,
+    flaggedBefore: flaggedBefore || null,
+    pageNo,
+    pageSize,
+  };
+
+  const res = await api.post("/vehicle/flagged/filter", payload);
+  return res.data;
+};
+
+export const normalizeFlaggedVehicleListResponse = (payload) => {
+  const list = Array.isArray(payload?.data) ? payload.data : [];
+  const pr = payload?.pageResponse || {};
+
+  return {
+    list,
+    totalPages: Number(pr?.totalPages || 1),
+    totalElements: Number(pr?.totalElements || list.length || 0),
+    currentPage: Number(pr?.currentPage || 1),
+    currentElements: Number(pr?.currentElements || list.length || 0),
+  };
 };
 
 /* =======================================================

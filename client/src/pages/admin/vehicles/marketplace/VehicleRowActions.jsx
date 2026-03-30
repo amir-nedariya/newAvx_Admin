@@ -28,7 +28,19 @@ export default function VehicleRowActions({
   align = "right",
 }) {
   const [open, setOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (open && wrapRef.current) {
+      const rect = wrapRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropdownHeight = 350; // Approximate height of dropdown
+
+      // If not enough space below, open upward
+      setOpenUpward(spaceBelow < dropdownHeight);
+    }
+  }, [open]);
 
   useEffect(() => {
     const onDown = (e) => {
@@ -96,7 +108,8 @@ export default function VehicleRowActions({
             variants={menuAnim}
             transition={{ duration: 0.16, ease: "easeOut" }}
             className={cls(
-              "absolute top-11 z-50 w-[300px] overflow-hidden",
+              "absolute z-[100] w-[300px] overflow-hidden",
+              openUpward ? "bottom-11" : "top-11",
               align === "right" ? "right-0" : "left-0",
               "rounded-2xl border border-slate-200 bg-white",
               "shadow-[0_20px_60px_rgba(15,23,42,0.18)]"
