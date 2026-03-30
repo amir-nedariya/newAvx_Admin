@@ -67,8 +67,6 @@ export const normalizeVehicleListResponse = (payload) => {
   };
 };
 
-
-
 /* =========================================================
    GET VEHICLE DETAILS BY ID
 ========================================================= */
@@ -80,8 +78,6 @@ export const getVehicleById = async (vehicleId) => {
 export const normalizeVehicleDetailResponse = (payload) => {
   return payload?.data || null;
 };
-
-
 
 /* =========================================================
    SUSPEND VEHICLE
@@ -103,8 +99,6 @@ export const suspendVehicle = async ({
   return res.data;
 };
 
-
-
 /* =========================================================
    FLAG VEHICLE FOR REVIEW
 ========================================================= */
@@ -124,7 +118,6 @@ export const flagVehicleForReview = async ({
   const res = await api.patch("/vehicle/flag-review", payload);
   return res.data;
 };
-
 
 /* =========================================================
    ADD INTERNAL NOTE
@@ -156,12 +149,58 @@ export const getVehicleInquiries = async (vehicleId) => {
   return res.data;
 };
 
-
-
 /* =======================================================
    ✅ VEHICLE: GET SUSPENDED
 ======================================================= */
 export const getSuspendedVehicles = async () => {
   const res = await api.get("/vehicle/suspended");
+  return res.data;
+};
+
+/* =========================================================
+   UNSUSPEND VEHICLE
+========================================================= */
+export const unsuspendVehicle = async ({ vehicleId, reason }) => {
+  const payload = {
+    vehicleId,
+    reason: reason || null,
+  };
+
+  const res = await api.patch("/vehicle/unsuspend", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ VEHICLE: GET FLAGGED
+======================================================= */
+export const getFlaggedVehicles = async () => {
+  const res = await api.get("/vehicle/flagged");
+  return res.data;
+};
+
+/* =======================================================
+   ✅ VEHICLE: GET FLAGGED KPI
+======================================================= */
+export const getFlaggedVehiclesKpi = async () => {
+  const res = await api.get("/vehicle/flags/kpi");
+  return res.data;
+};
+
+/* =========================================================
+   ✅ CLEAR VEHICLE FLAG (PATCH)
+   PATH: /vehicle/clear-flag
+   BODY: { flagId, reason }
+========================================================= */
+export const clearFlaggedVehicle = async (payload) => {
+  const res = await api.patch(`/vehicle/clear-flag`, payload);
+  return res.data;
+};
+
+/* =========================================================
+   ✅ GET FLAG REVIEW DETAILS
+   PATH: /vehicle/flag-review/:flagId
+========================================================= */
+export const getFlagReview = async (flagId) => {
+  const res = await api.get(`/vehicle/flag-review/${flagId}`);
   return res.data;
 };

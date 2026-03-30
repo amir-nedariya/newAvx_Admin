@@ -230,3 +230,12 @@ export const addInternalNote = async (payload) => {
   const res = await api.post("/consultation/internal-note", payload);
   return res.data;
 };
+
+/* =======================================================
+   ✅ APPLY PENALTY (PATCH)
+   BODY: { consultId, deductionCount, reason }
+======================================================= */
+export const addPenalty = async (payload) => {
+  const res = await api.patch("/consultation/addPenalty", payload);
+  return res.data;
+};

@@ -18,6 +18,7 @@ import {
   approveKYCConsultation,
   rejectKYCConsultation,
   requestUploadKYCConsultation,
+  addPenalty,
 } from "../../../../api/consultationApi";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
@@ -260,6 +261,90 @@ function ActionRemarkModal({
   );
 }
 
+/* ================= PENALTY MODAL ================= */
+function PenaltyActionModal({
+  open,
+  title,
+  deduction,
+  setDeduction,
+  reason,
+  setReason,
+  confirmText,
+  loading,
+  onClose,
+  onConfirm,
+}) {
+  if (!open) return null;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[111] w-[95%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div>
+            <h3 className="text-base font-extrabold text-slate-900">{title}</h3>
+
+          </div>
+          <button
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-bold text-slate-700">
+              Deduction Amount (Points)
+            </label>
+            <input
+              type="number"
+              value={deduction}
+              onChange={(e) => setDeduction(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500"
+              placeholder="e.g. 10"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-bold text-slate-700">
+              Reason for Penalty
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={4}
+              placeholder="Enter reason for this penalty..."
+              className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500"
+            />
+          </div>
+
+          <div className="mt-6 flex justify-end gap-2">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={loading || !reason.trim() || !deduction}
+              className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Applying..." : confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ================= MAIN ================= */
 const ConsultantProfile = () => {
   const navigate = useNavigate();
@@ -285,6 +370,8 @@ const ConsultantProfile = () => {
 
   const [reasonText, setReasonText] = useState("");
   const [remarkText, setRemarkText] = useState("");
+  const [penaltyDeduction, setPenaltyDeduction] = useState("");
+  const [penaltyReason, setPenaltyReason] = useState("");
 
   const profile = useMemo(() => {
     const d = data?.data ? data.data : data;
@@ -314,45 +401,45 @@ const ConsultantProfile = () => {
       city !== "—" && state !== "—"
         ? `${city}, ${state}`
         : city !== "—"
-        ? city
-        : state;
+          ? city
+          : state;
 
     const tierTone = tierTitle.toLowerCase().includes("premium")
       ? "green"
       : tierTitle.toLowerCase().includes("pro")
-      ? "blue"
-      : "slate";
+        ? "blue"
+        : "slate";
 
     const verifiedTone =
       verification === "VERIFIED"
         ? "green"
         : verification === "REJECTED"
-        ? "red"
-        : verification === "REQUEST_CHANGES"
-        ? "amber"
-        : verification === "REQUESTED"
-        ? "blue"
-        : "slate";
+          ? "red"
+          : verification === "REQUEST_CHANGES"
+            ? "amber"
+            : verification === "REQUESTED"
+              ? "blue"
+              : "slate";
 
     const statusTone =
       status === "ACTIVE"
         ? "green"
         : status === "INACTIVE"
-        ? "slate"
-        : status === "DELETED"
-        ? "red"
-        : "slate";
+          ? "slate"
+          : status === "DELETED"
+            ? "red"
+            : "slate";
 
     const kycLabel =
       verification === "VERIFIED"
         ? "KYC: Approved"
         : verification === "REJECTED"
-        ? "KYC: Rejected"
-        : verification === "REQUEST_CHANGES"
-        ? "KYC: Changes Requested"
-        : verification === "REQUESTED"
-        ? "KYC: Requested"
-        : "KYC: Pending";
+          ? "KYC: Rejected"
+          : verification === "REQUEST_CHANGES"
+            ? "KYC: Changes Requested"
+            : verification === "REQUESTED"
+              ? "KYC: Requested"
+              : "KYC: Pending";
 
     const riskLabel = risk?.trim() ? risk : "Low";
 
@@ -471,6 +558,7 @@ const ConsultantProfile = () => {
     });
     setReasonText("");
     setRemarkText("");
+    setPenaltyReason("");
   };
 
   const handleUnsuspend = async () => {
@@ -578,6 +666,39 @@ const ConsultantProfile = () => {
       toast.error(getErrorMessage(e, "Failed to request KYC re-upload"));
     } finally {
       setKycActionLoading("");
+    }
+  };
+
+  const handleApplyPenalty = async () => {
+    try {
+      const consultId = getConsultId();
+      if (!consultId) return;
+
+      if (!penaltyReason.trim()) {
+        toast.error("Reason is required");
+        return;
+      }
+
+      if (!penaltyDeduction || isNaN(penaltyDeduction)) {
+        toast.error("Valid deduction amount is required");
+        return;
+      }
+
+      setActionLoading(true);
+
+      await addPenalty({
+        consultId,
+        deductionCount: Number(penaltyDeduction),
+        reason: penaltyReason.trim(),
+      });
+
+      toast.success("Penalty applied successfully");
+      closeActionModal();
+      await fetchProfile({ silent: true });
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Failed to apply penalty"));
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -844,9 +965,8 @@ const ConsultantProfile = () => {
                       onClick={() =>
                         openDocModal("GST Certificate", profile.gstCertificateUrl)
                       }
-                      text={`GST Certificate • ${
-                        profile.gstCertificateUrl ? "Click to View" : "Missing"
-                      }`}
+                      text={`GST Certificate • ${profile.gstCertificateUrl ? "Click to View" : "Missing"
+                        }`}
                     />
 
                     <DocChip
@@ -855,16 +975,14 @@ const ConsultantProfile = () => {
                       onClick={() =>
                         openDocModal("PAN Card", profile.panCardFrontUrl)
                       }
-                      text={`PAN Card • ${
-                        profile.panCardFrontUrl ? "Click to View" : "Missing"
-                      }`}
+                      text={`PAN Card • ${profile.panCardFrontUrl ? "Click to View" : "Missing"
+                        }`}
                     />
 
                     <DocChip
                       ok={!!profile.addressVerifiedStatus}
-                      text={`Address Proof • ${
-                        profile.addressVerifiedStatus ? "Verified" : "Pending"
-                      }`}
+                      text={`Address Proof • ${profile.addressVerifiedStatus ? "Verified" : "Pending"
+                        }`}
                     />
                   </div>
                 </section>
@@ -902,6 +1020,13 @@ const ConsultantProfile = () => {
                       {kycActionLoading === "request"
                         ? "Requesting..."
                         : "Request Re-upload"}
+                    </button>
+
+                    <button
+                      onClick={() => setActionModal({ open: true, type: "penalty" })}
+                      className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                    >
+                      Apply Penalty
                     </button>
 
                     {isInactive && (
@@ -981,6 +1106,19 @@ const ConsultantProfile = () => {
         onClose={closeActionModal}
         onConfirm={handleRequestUploadKYC}
         placeholder="Enter remark for requesting re-upload..."
+      />
+
+      <PenaltyActionModal
+        open={actionModal.open && actionModal.type === "penalty"}
+        title="Apply Ranking Penalty"
+        deduction={penaltyDeduction}
+        setDeduction={setPenaltyDeduction}
+        reason={penaltyReason}
+        setReason={setPenaltyReason}
+        confirmText="Apply Penalty"
+        loading={actionLoading}
+        onClose={closeActionModal}
+        onConfirm={handleApplyPenalty}
       />
     </div>
   );

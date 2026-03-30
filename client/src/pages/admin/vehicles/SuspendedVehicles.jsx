@@ -12,9 +12,12 @@ import {
   User,
   CalendarDays,
   AlertTriangle,
+  ChevronDown,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import { getSuspendedVehicles } from "../../../api/vehicle.api";
+import { getSuspendedVehicles, unsuspendVehicle } from "../../../api/vehicle.api";
+import SuspendedVehiclesRowActions from "./suspended-inventory/SuspendedVehiclesRowActions";
+import SuspendedVehiclesConfirmModal from "./suspended-inventory/SuspendedVehiclesConfirmModal";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -124,6 +127,7 @@ const SuspendedVehicles = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [modal, setModal] = useState(null);
 
   const fetchSuspendedList = useCallback(async (showToast = false) => {
     try {
@@ -219,6 +223,26 @@ const SuspendedVehicles = () => {
     setStatusFilter("");
   };
 
+  const handleActionConfirm = async (payload) => {
+    if (!payload?.item?.vehicleId) return;
+
+    try {
+      if (payload.type === "unsuspend") {
+        await unsuspendVehicle({
+          vehicleId: payload.item.vehicleId,
+          reason: payload.reason,
+        });
+
+        toast.success("Vehicle unsuspended successfully");
+        setModal(null);
+        fetchSuspendedList();
+      }
+    } catch (err) {
+      console.error("Action failed:", err);
+      toast.error(err?.response?.data?.message || err?.message || "Action failed");
+    }
+  };
+
   return (
     <div className="min-h-screen p-0">
       <Toaster
@@ -312,15 +336,15 @@ const SuspendedVehicles = () => {
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
-                    className="h-11 md:h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                    className="h-11 md:h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 cursor-pointer"
                   >
                     <option value="">All Suspension Types</option>
                     <option value="PERMANENT">Permanent</option>
                     <option value="TEMPORARY">Temporary</option>
                   </select>
 
-                  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    <AlertTriangle className="h-4 w-4" />
+                  <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <ChevronDown className="h-4 w-4" />
                   </div>
                 </div>
 
@@ -328,15 +352,15 @@ const SuspendedVehicles = () => {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="h-11 md:h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                    className="h-11 md:h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 cursor-pointer"
                   >
                     <option value="">All Status</option>
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
                   </select>
 
-                  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    <BadgeCheck className="h-4 w-4" />
+                  <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <ChevronDown className="h-4 w-4" />
                   </div>
                 </div>
               </div>
@@ -404,8 +428,11 @@ const SuspendedVehicles = () => {
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
                       Suspend Until
                     </th>
-                    <th className="border-b border-slate-200 px-6 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
+                    <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
                       Status
+                    </th>
+                    <th className="border-b border-slate-200 px-6 py-4.5 text-right text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -526,7 +553,7 @@ const SuspendedVehicles = () => {
                           )}
                         </td>
 
-                        <td className="border-b border-slate-100 px-6 py-4.5 text-center align-middle">
+                        <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
                           <span
                             className={cls(
                               "inline-flex rounded-full border px-3 py-1 text-[11px] font-bold whitespace-nowrap",
@@ -535,6 +562,18 @@ const SuspendedVehicles = () => {
                           >
                             {item?.isActive ? "Active" : "Inactive"}
                           </span>
+                        </td>
+
+                        <td className="border-b border-slate-100 px-6 py-4.5 text-right align-middle">
+                          <SuspendedVehiclesRowActions
+                            onUnsuspend={() =>
+                              setModal({
+                                type: "unsuspend",
+                                item: item,
+                                title: "Restore Merchant Listing",
+                              })
+                            }
+                          />
                         </td>
                       </tr>
                     ))
@@ -583,6 +622,12 @@ const SuspendedVehicles = () => {
           </div>
         </section>
       </div>
+
+      <SuspendedVehiclesConfirmModal
+        modal={modal}
+        onClose={() => setModal(null)}
+        onConfirm={handleActionConfirm}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -19,232 +19,430 @@ import {
   CheckCircle2,
   Calendar,
   Building2,
-  PhoneCall,
+  Phone,
   ChevronRight,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  Zap,
+  Mail,
+  Scale,
+  Activity,
+  UserCheck,
+  Eye,
+  MoreHorizontal
 } from "lucide-react";
-import { DUMMY_FLAGGED_LISTINGS } from "./flaggedListingsData";
+import { toast } from "react-hot-toast";
+import { getFlagReview, suspendVehicle, clearFlaggedVehicle } from "../../../../api/vehicle.api";
+import FlaggedListingsConfirmModal from "./FlaggedListingsConfirmModal";
+
+const cls = (...a) => a.filter(Boolean).join(" ");
 
 export default function FlaggedListingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const item = DUMMY_FLAGGED_LISTINGS.find(r => r.id === id);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [modal, setModal] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  if (!item) {
+  useEffect(() => {
+    if (id) loadData();
+  }, [id]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getFlagReview(id);
+      setData(res.data);
+    } catch (err) {
+      console.error("Flag Review Fetch Error:", err);
+      setError("Failed to load investigation data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActionConfirm = async (payload) => {
+    if (!data) return;
+    try {
+      setActionLoading(true);
+      const vehicleId = data.vehicleInfo?.vehicleId;
+      const flagId = data.flagReviewId;
+
+      if (payload.type === "suspend") {
+        await suspendVehicle({
+          vehicleId,
+          reason: payload.meta?.reason || payload.reason,
+          suspendType: (payload.meta?.suspensionType || "TEMPORARY").toUpperCase(),
+          suspendUntil: payload.meta?.date
+        });
+        toast.success("Vehicle suspended successfully");
+      } else if (payload.type === "clear") {
+        const clearanceReason = payload.meta?.reason || "No violation found";
+        await clearFlaggedVehicle({ flagId, reason: clearanceReason });
+        toast.success("Flag cleared successfully");
+      }
+      
+      setModal(null);
+      loadData(); // REFRESH DATA
+    } catch (err) {
+      console.error("Moderation error:", err);
+      toast.error(err?.response?.data?.message || "Action failed");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-20 text-slate-500">
-        <AlertCircle size={48} className="mb-4 text-rose-500" />
-        <h2 className="text-xl font-bold">Listing Not Found</h2>
-        <button onClick={() => navigate(-1)} className="mt-4 text-indigo-600 font-bold underline">Go Back</button>
+      <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-slate-200" />
+        <p className="text-sm font-black uppercase tracking-widest text-slate-400">Loading Investigation Suite...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex h-[80vh] flex-col items-center justify-center p-20 text-center">
+        <AlertCircle size={64} className="mb-6 text-rose-500 opacity-20" />
+        <h2 className="text-2xl font-black text-slate-900 mb-2">Missing Record</h2>
+        <p className="text-slate-500 font-bold max-w-sm mb-8">{error || "This flag review record could not be retrieved from the central operations database."}</p>
+        <button 
+          onClick={() => navigate("/admin/vehicles/flagged-listings")} 
+          className="rounded-2xl bg-slate-900 px-8 py-3.5 text-xs font-black uppercase tracking-widest text-white transition-all active:scale-95 shadow-lg shadow-slate-900/20"
+        >
+          Return to Dashboard
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      {/* HEADER */}
-      <div className="sticky top-0 z-30 bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
-              <ArrowLeft size={20} className="text-slate-600" />
+    <div className="min-h-screen bg-[#fafbfc] pb-24 font-sans text-slate-900">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+        * { font-family: 'Outfit', sans-serif; }
+      `}</style>
+
+      {/* STICKY TOP NAVIGATION BAR */}
+      <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-xl px-6 py-4">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <button 
+              onClick={() => navigate("/admin/vehicles/flagged-listings")} 
+              className="group flex h-12 w-12 items-center justify-center rounded-[20px] bg-slate-50 border border-slate-200 text-slate-400 transition-all hover:bg-slate-900 hover:text-white hover:border-slate-900 translate-y-0 active:scale-90"
+            >
+              <ArrowLeft size={22} strokeWidth={2.5} />
             </button>
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                  item.risk === "High" ? "bg-rose-100 text-rose-700" : 
-                  item.risk === "Moderate" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
-                }`}>
-                  {item.risk} Risk
+              <div className="flex items-center gap-3 mb-1.5">
+                <span className={cls(
+                  "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.15em] border shadow-sm",
+                  data.severity === "HIGH" ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-amber-50 text-amber-700 border-amber-100"
+                )}>
+                  {data.severity} Risk Warning
                 </span>
-                <span className="text-[11px] font-medium text-slate-400 font-mono">ID: {item.id}</span>
+                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest opacity-60">ID: {data.flagReviewId?.slice(0, 12)}</span>
               </div>
-              <h1 className="text-xl font-bold text-slate-900">{item.title}</h1>
+              <h1 className="text-[26px] font-black tracking-tight text-slate-900 leading-none">{data.vehicleInfo?.title}</h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-rose-700 transition-colors">
-              <Ban size={16} /> Suspend
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white text-slate-700 rounded-lg text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors">
-              <AlertTriangle size={16} /> Escalate
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 transition-colors">
-              <CheckCircle2 size={16} /> Clear Flag
-            </button>
+          <div className="flex items-center gap-3">
+             <ActionButton 
+               icon={Ban} 
+               label="Suspend Listing" 
+               color="bg-rose-600 text-white shadow-rose-900/20" 
+               onClick={() => setModal({ type: 'suspend', title: 'Suspend Vehicle Listing' })} 
+             />
+             <ActionButton 
+               icon={CheckCircle2} 
+               label="Clear All Flags" 
+               color="bg-emerald-600 text-white shadow-emerald-900/20" 
+               onClick={() => setModal({ type: 'clear', title: 'Clear Reporting Flags' })} 
+             />
+             <div className="w-[1px] h-10 bg-slate-200 ml-2 mr-2" />
+             <button className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-white border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white transition-all shadow-sm">
+                <MoreHorizontal size={22} />
+             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-6 py-10 mt-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
-          {/* LEFT CONTENT */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* MAIN COLUMN (LEFT 8) */}
+          <div className="lg:col-span-8 space-y-10">
             
-            {/* FLAG DETAILS */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-4">
-                <ShieldAlert size={20} className="text-rose-500" />
-                <h2 className="text-lg font-bold text-slate-900">Incident Details</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <InfoItem label="Flag Category" value={item.flagCategory} icon={Info} />
-                <InfoItem label="Flag Source" value={item.flagSource} icon={Activity} />
-                <InfoItem label="Reporter ID" value={item.buyerId !== "-" ? item.buyerId : "N/A (System Detected)"} icon={User} />
-                <InfoItem label="Date Flagged" value={item.dateFlagged} icon={Clock} />
-              </div>
-              <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Flag Reason / Comment</p>
-                <p className="text-slate-700 font-medium leading-relaxed italic">"{item.comment || item.flagReason}"</p>
-              </div>
-              {item.autoFlag !== "-" && (
-                <div className="mt-6 flex items-center gap-4 p-4 bg-rose-50 border border-rose-100 rounded-lg text-rose-700">
-                  <ShieldAlert size={20} className="shrink-0" />
-                  <div className="text-sm">
-                    <span className="font-bold">System Warning:</span> Potential {item.autoFlag} detected. Automated verification score failed.
+            {/* 1. INCIDENT REPORT CARD */}
+            <div className="relative overflow-hidden rounded-[40px] border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-200/40">
+               <div className="absolute top-0 right-0 p-8">
+                  <Activity size={120} className="text-slate-50 opacity-10 rotate-12" />
+               </div>
+               
+               <div className="relative z-10">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-[24px] bg-slate-900 text-white shadow-xl shadow-slate-900/20">
+                      <ShieldAlert size={28} />
+                    </div>
+                    <div>
+                      <h2 className="text-[20px] font-black tracking-tight text-slate-900">Incident Intelligence</h2>
+                      <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Detailed Violation Analysis</p>
+                    </div>
                   </div>
-                </div>
-              )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                    <SpecItem label="Policy Category" value={data.flagCategory?.replace(/_/g, ' ')} icon={Info} bold />
+                    <SpecItem label="Risk Profile" value={`${data.severity} SEVERITY`} icon={ShieldAlert} highlight={data.severity === "HIGH"} />
+                    <SpecItem label="Detection Node" value="AUTOMATED FRAUD MONITOR" icon={Zap} />
+                    <SpecItem label="Incident Timestamp" value={new Date(data.flaggedAt).toLocaleString()} icon={Clock} />
+                  </div>
+
+                  <div className="rounded-[32px] border border-slate-100 bg-slate-50/50 p-8">
+                     <div className="mb-4 flex items-center gap-3">
+                        <FileText size={16} className="text-slate-400" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Administrator / System Notes</span>
+                     </div>
+                     <p className="text-[17px] font-bold leading-[1.6] text-slate-800 italic">
+                       "{data.internalNotes || "No specific investigator notes provided for this observation."}"
+                     </p>
+                  </div>
+               </div>
             </div>
 
-            {/* VEHICLE PREVIEW */}
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="flex items-center gap-2 p-6 border-b border-slate-100">
-                <Car size={20} className="text-slate-400" />
-                <h2 className="text-lg font-bold text-slate-900">Listing Snapshot</h2>
-              </div>
-              <div className="flex flex-col md:flex-row overflow-hidden">
-                <div className="w-full md:w-1/3 h-48 md:h-auto">
-                  <img src={item.thumb} alt={item.title} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-slate-900">{item.title}</h3>
-                    <span className="text-xl font-black text-indigo-600">{item.price}</span>
+            {/* 2. VEHICLE SPECS GRID */}
+            <div>
+               <SectionHeader title="Vehicle Specifications" icon={Car} />
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <MetricCard label="Registration" value={data.vehicleInfo?.registrationNumber} icon={Info} />
+                  <MetricCard label="Market Valuation" value={`₹${data.vehicleInfo?.price?.toLocaleString("en-IN")}`} icon={IndianRupee} color="text-indigo-600" />
+                  <MetricCard label="Inspection Rating" value={data.vehicleInfo?.avxInspectionRating || "UNRATED"} icon={UserCheck} />
+               </div>
+               
+               <div className="mt-6 flex items-center gap-5 rounded-[32px] border border-slate-200 bg-white p-6 transition-all hover:bg-slate-50 group">
+                  <div className="h-28 w-44 shrink-0 overflow-hidden rounded-[24px] border-4 border-white bg-slate-100 shadow-xl shadow-slate-200/50">
+                     <img src={data.vehicleInfo?.thumbnailUrl} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700" alt="Preview" />
                   </div>
-                  <div className="flex items-center gap-4 text-slate-500 text-sm mb-6">
-                    <span className="flex items-center gap-1"><MapPin size={14} /> {item.city}</span>
-                    <span className="flex items-center gap-1"><Clock size={14} /> {item.daysOpen} days active</span>
+                  <div className="flex-1 min-w-0">
+                     <div className="flex flex-wrap gap-2 mb-3">
+                       <Pill label={data.vehicleInfo?.fuelType} color="bg-orange-50 text-orange-600" />
+                       <Pill label={data.vehicleInfo?.transmissionType} color="bg-sky-50 text-sky-600" />
+                       <Pill label={`${data.vehicleInfo?.kmDriven} KM`} color="bg-emerald-50 text-emerald-600" />
+                     </div>
+                     <h3 className="text-[18px] font-black tracking-tight text-slate-900 truncate">{data.vehicleInfo?.title}</h3>
+                     <p className="mt-1 text-sm font-bold text-slate-400 flex items-center gap-2">
+                        <MapPin size={14} /> {data.addressInfo?.address}, {data.addressInfo?.cityName}
+                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {item.specs.map(s => (
-                      <span key={s} className="px-3 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold uppercase tracking-wider">{s}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                  <button className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[24px] bg-white border border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white transition-all shadow-sm">
+                     <ExternalLink size={22} />
+                  </button>
+               </div>
             </div>
 
-            {/* MESSAGE AUDIT */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
-                <MessageSquare size={20} className="text-slate-400" />
-                <h2 className="text-lg font-bold text-slate-900">Communication Audit</h2>
-              </div>
-              <div className="space-y-6">
-                <ChatRow user="Buyer" msg="Can we talk on WhatsApp? Give me your number." time="10:42 AM" flagged />
-                <ChatRow user={item.consultant} msg="Sure, call me at 98XX-XXX-XXX." time="10:45 AM" flagged />
-                <ChatRow user="Buyer" msg="I want to negotiate the price in person." time="10:50 AM" />
-              </div>
+            {/* 3. AUDIT TIMELINE */}
+            <div>
+               <SectionHeader title="Administrative Audit Timeline" icon={History} />
+               <div className="rounded-[40px] border border-slate-200 bg-white p-8">
+                  <div className="space-y-8 relative">
+                     <div className="absolute left-[31px] top-6 bottom-6 w-[2px] bg-slate-100" />
+                     <TimelineItem time="PRESENT" text="Current record under investigator review" status="pending" />
+                     <TimelineItem time="12 Mins Ago" text="Compliance AI flagged behavioral anomaly" status="flag" />
+                     <TimelineItem time="07 Mar 2026" text="Initial registration verification completed" status="check" />
+                  </div>
+               </div>
             </div>
 
           </div>
 
-          {/* RIGHT SIDEBAR */}
-          <div className="space-y-6">
+          {/* SIDEBAR (RIGHT 4) */}
+          <div className="lg:col-span-4 space-y-8">
             
-            {/* CONSULTANT DOOSIER */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="h-12 w-12 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xl">
-                  {item.consultant[0]}
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900">{item.consultant}</h3>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{item.tier} Partner</p>
-                </div>
-              </div>
-              <div className="space-y-4 mb-6 border-y border-slate-100 py-4">
-                <SidebarInfo label="Lifetime Flags" value={item.consultantHistory.previousFlags} />
-                <SidebarInfo label="Penalties" value={item.consultantHistory.rankingPenalties} />
-                <SidebarInfo label="Total Inquiries" value={item.inquiries} />
-                <SidebarInfo label="IP Anomaly" value={item.ipAnomaly === "YES" ? "Detected" : "None"} color={item.ipAnomaly === "YES" ? "text-rose-600" : "text-emerald-600"} />
-              </div>
-              <button className="w-full py-3 bg-slate-50 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-100 transition-colors">
-                View Partner Profile
-              </button>
+            {/* OWNER & PARTNER DOSSIER */}
+            <div className="rounded-[40px] border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/20">
+               <h3 className="mb-8 text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Compliance Dossier</h3>
+               
+               {/* OWNER */}
+               <div className="mb-10 flex items-center gap-5">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-[28px] bg-slate-50 border border-slate-100 text-slate-400">
+                     <User size={32} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                     <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">LISTING OWNER</span>
+                        <div className="h-[3px] w-[3px] rounded-full bg-slate-300" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">{data.ownerInfo?.userRole}</span>
+                     </div>
+                     <h4 className="truncate text-[16px] font-black text-slate-900 leading-none mb-2">{data.ownerInfo?.fullName}</h4>
+                     <p className="truncate text-sm font-bold text-slate-400 mb-2">{data.ownerInfo?.email}</p>
+                     <div className="flex items-center gap-2 text-slate-900">
+                        <Phone size={14} className="text-slate-300" />
+                        <span className="text-xs font-black">{data.ownerInfo?.phoneNumber}</span>
+                     </div>
+                  </div>
+               </div>
+
+               {/* CONSULTANT */}
+               <div className="rounded-[32px] bg-slate-900 p-6 text-white shadow-2xl shadow-slate-900/40">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-white/10 text-white backdrop-blur-md">
+                       <Zap size={24} />
+                    </div>
+                    <div>
+                      <h4 className="text-[15px] font-black truncate">{data.consultantInfo?.consultationName}</h4>
+                      <div className="mt-1 flex items-center gap-2">
+                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">{data.consultantInfo?.tierPlanTitle}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 border-y border-white/10 py-5">
+                     <SidebarMetric label="Risk Level" value="LOW" color="text-emerald-400" />
+                     <SidebarMetric label="Past Flags" value="02" />
+                     <SidebarMetric label="Storefront" value={data.consultantInfo?.isActiveTier ? "ACTIVE" : "INACTIVE"} />
+                  </div>
+
+                  <button className="mt-6 w-full rounded-[20px] bg-white py-4 text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all hover:bg-slate-100 active:scale-95">
+                     Investigate Consultant
+                  </button>
+               </div>
             </div>
 
-            {/* QUICK ACTIONS / LOGS */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2 uppercase tracking-widest">
-                <History size={16} className="text-slate-400" /> Audit Logs
-              </h3>
-              <div className="space-y-4">
-                <AuditLog time="Just Now" text="Admin viewed case" />
-                <AuditLog time="2h ago" text="System flagged message" />
-                <AuditLog time="1d ago" text="Listing created" />
-              </div>
+            {/* LOCATION CARD */}
+            <div className="rounded-[40px] border border-slate-200 bg-white p-8">
+               <h3 className="mb-6 text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Geo Tracking</h3>
+               <div className="flex items-center gap-5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-sky-50 text-sky-600">
+                     <MapPin size={24} />
+                  </div>
+                  <div>
+                    <h4 className="text-[15px] font-black text-slate-900">{data.addressInfo?.cityName}</h4>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">{data.addressInfo?.stateName}, {data.addressInfo?.countryName}</p>
+                  </div>
+               </div>
+               <div className="mt-6 border-t border-slate-100 pt-6">
+                  <p className="text-[13px] font-bold text-slate-500 italic">"{data.addressInfo?.address}"</p>
+               </div>
             </div>
 
           </div>
 
         </div>
       </div>
+
+      {modal && (
+        <FlaggedListingsConfirmModal
+          modal={modal}
+          loading={actionLoading}
+          onClose={() => setModal(null)}
+          onConfirm={handleActionConfirm}
+        />
+      )}
     </div>
   );
 }
 
-function InfoItem({ label, value, icon: Icon }) {
+function SectionHeader({ title, icon: Icon }) {
   return (
-    <div className="flex gap-4">
-      <div className="p-2 rounded-lg bg-slate-50 text-slate-400 h-fit">
-        <Icon size={18} />
+    <div className="mb-6 flex items-center gap-4">
+       <div className="h-[1px] flex-1 bg-slate-200/60" />
+       <div className="flex items-center gap-3">
+          <Icon size={18} className="text-slate-400" />
+          <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">{title}</h3>
+       </div>
+       <div className="h-[1px] flex-1 bg-slate-200/60" />
+    </div>
+  );
+}
+
+function SpecItem({ label, value, icon: Icon, bold, highlight }) {
+  return (
+    <div className="flex items-center gap-4">
+      <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-slate-50 border border-slate-100 text-slate-400">
+        <Icon size={20} />
       </div>
       <div>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-sm font-bold text-slate-800">{value}</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+        <p className={cls(
+          "text-[15px] font-black tracking-tight",
+          highlight ? "text-rose-600" : "text-slate-900"
+        )}>{value}</p>
       </div>
     </div>
   );
 }
 
-function SidebarInfo({ label, value, color = "text-slate-900" }) {
+function MetricCard({ label, value, icon: Icon, color }) {
   return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-slate-500 font-medium">{label}</span>
-      <span className={`font-bold ${color}`}>{value}</span>
+    <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+       <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
+          <Icon size={20} />
+       </div>
+       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+       <p className={cls("text-[18px] font-black tracking-tight", color || "text-slate-900")}>{value}</p>
     </div>
   );
 }
 
-function ChatRow({ user, msg, time, flagged }) {
+function Pill({ label, color }) {
   return (
-    <div className={`p-4 rounded-xl border ${flagged ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-black text-slate-900 uppercase tracking-widest">{user}</span>
-        <span className="text-[10px] text-slate-400 font-medium">{time}</span>
-      </div>
-      <p className="text-sm text-slate-700 font-medium leading-relaxed">"{msg}"</p>
-      {flagged && <div className="mt-2 text-[9px] font-black text-rose-600 uppercase tracking-widest">Potential Policy Violation</div>}
+    <span className={cls("rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter italic", color)}>
+       {label}
+    </span>
+  );
+}
+
+function SidebarMetric({ label, value, color }) {
+  return (
+    <div className="flex items-center justify-between">
+       <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
+       <span className={cls("text-[14px] font-black tracking-widest", color || "text-white")}>{value}</span>
     </div>
   );
 }
 
-function AuditLog({ time, text }) {
+function TimelineItem({ time, text, status }) {
+  const ico = {
+    pending: <Clock size={16} />,
+    flag: <ShieldAlert size={16} />,
+    check: <ShieldCheck size={16} />
+  }[status];
+
+  const col = {
+    pending: "bg-slate-50 text-slate-400",
+    flag: "bg-rose-50 text-rose-500",
+    check: "bg-emerald-50 text-emerald-500"
+  }[status];
+
   return (
-    <div className="flex gap-3 text-sm">
-      <span className="text-[10px] font-bold text-slate-400 w-12 pt-1">{time}</span>
-      <p className="text-slate-700 font-medium">{text}</p>
+    <div className="flex gap-6 items-start relative z-10">
+       <div className={cls("flex h-16 w-16 shrink-0 items-center justify-center rounded-[24px] border-4 border-white shadow-lg", col)}>
+          {ico}
+       </div>
+       <div className="pt-2">
+          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{time}</div>
+          <p className="text-sm font-black text-slate-900">{text}</p>
+       </div>
     </div>
   );
 }
 
-function Activity(props) {
+function ActionButton({ icon: Icon, label, color, onClick }) {
   return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    <button 
+      onClick={onClick}
+      className={cls(
+        "flex h-12 items-center gap-3 rounded-[24px] px-6 text-xs font-black uppercase tracking-widest transition-all hover:scale-[1.03] active:scale-95 shadow-xl",
+        color
+      )}
+    >
+      <Icon size={18} />
+      <span className="hidden md:inline">{label}</span>
+    </button>
   );
 }
