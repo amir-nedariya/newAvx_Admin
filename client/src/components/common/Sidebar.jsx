@@ -25,20 +25,26 @@ const cls = (...classes) => classes.filter(Boolean).join(" ");
 /* ================= SUB ITEM ================= */
 const SubItem = ({ to, label, collapsed, onNavigate }) => {
   const location = useLocation();
-  const isActive = location.pathname === to;
+
+  // Check exact match OR if current path starts with the base path (for nested routes like /admin/vehicles/123)
+  // Also check if we came from this section via navigation state
+  const isActive =
+    location.pathname === to ||
+    location.pathname.startsWith(to + '/') ||
+    location.state?.from === to;
 
   if (collapsed) return null;
 
   return (
     <div className="relative flex items-center group w-full py-[3px]">
       {/* The Connector dot */}
-      <div 
+      <div
         className={cls(
           "absolute z-10 rounded-full transition-all duration-300",
-          isActive 
-            ? "left-[21px] w-[9px] h-[9px] bg-sky-600 shadow-[0_0_12px_rgba(34,211,238,0.7)]" 
+          isActive
+            ? "left-[21px] w-[9px] h-[9px] bg-sky-600 shadow-[0_0_12px_rgba(34,211,238,0.7)]"
             : "left-[21.5px] w-[8px] h-[8px] border-[1.5px] border-gray-600 bg-[#0A0D14] group-hover:border-gray-400"
-        )} 
+        )}
       />
 
       {/* The background box and link text */}
@@ -100,7 +106,7 @@ const TreeItem = ({
   // When expanding or active, color it sky
   const isMenuExpanded = hasChildren && open && !collapsed;
   const isHighlighted = isActive || isMenuExpanded;
-  
+
   const baseBtnClass = cls(
     "relative flex items-center w-full px-4 py-3.5 rounded-2xl transition-all duration-300 group cursor-pointer",
     collapsed ? "justify-center" : "justify-start"
@@ -111,8 +117,8 @@ const TreeItem = ({
       <div
         className={cls(
           "flex items-center justify-center transition-all duration-300",
-          isHighlighted 
-            ? "text-sky-400" 
+          isHighlighted
+            ? "text-sky-400"
             : "text-gray-400 group-hover:text-gray-200 group-hover:scale-105"
         )}
       >
@@ -163,8 +169,8 @@ const TreeItem = ({
 
   const enhancedChildren = React.Children.map(children, (child) => {
     if (!React.isValidElement(child)) return child;
-    return React.cloneElement(child, { 
-      collapsed, 
+    return React.cloneElement(child, {
+      collapsed,
       onNavigate
     });
   });
@@ -198,13 +204,13 @@ const TreeItem = ({
           >
             <div className="relative flex flex-col pt-2 pb-2">
               {/* Continuous vertical tree line */}
-              <div 
-                className="absolute w-[1px] bg-gray-600/50" 
+              <div
+                className="absolute w-[1px] bg-gray-600/50"
                 style={{
                   left: '25.5px', // Exact center aligned with the icon (px-4 = 16px padding + 10px half icon)
                   top: '0px',
                   bottom: '6px' // Trims the bottom so it stops cleanly at the last hollow circle
-                }} 
+                }}
               />
               {enhancedChildren}
             </div>
@@ -247,14 +253,14 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
         <div className="h-24 shrink-0 flex items-center justify-between px-5 relative z-10 transition-all duration-400">
           <div className={cls("flex items-center gap-3 overflow-hidden", collapsed && "justify-center w-full")}>
             <div className="w-10 h-10 shrink-0 bg-[#0A0D14] border border-white/10 rounded-xl flex items-center justify-center shadow-lg">
-               <ShieldCheck className="text-sky-400" size={22} strokeWidth={1.5} />
+              <ShieldCheck className="text-sky-400" size={22} strokeWidth={1.5} />
             </div>
 
             <div className={cls("flex-col transition-all duration-400", collapsed ? "opacity-0 w-0 hidden" : "opacity-100 w-auto flex")}>
-                <span className="text-[19px] font-bold text-white leading-none tracking-tight whitespace-nowrap">
-                  AVX Admin
-                </span>
-                <span className="text-[12px] text-sky-500 font-semibold mt-1.5 tracking-wide whitespace-nowrap">Control Panel</span>
+              <span className="text-[19px] font-bold text-white leading-none tracking-tight whitespace-nowrap">
+                AVX Admin
+              </span>
+              <span className="text-[12px] text-sky-500 font-semibold mt-1.5 tracking-wide whitespace-nowrap">Control Panel</span>
             </div>
           </div>
 
@@ -268,7 +274,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
           )}
 
           {mobile && (
-             <button
+            <button
               onClick={onClose}
               className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-gray-500 hover:text-white transition-colors flex-shrink-0"
             >
@@ -277,7 +283,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
           )}
 
           {!mobile && collapsed && (
-             <button
+            <button
               onClick={onToggle}
               className="absolute -right-3.5 top-8 w-7 h-7 bg-[#111622] border border-[#2A3441] rounded-full flex items-center justify-center text-sky-400 hover:text-white hover:bg-[#1A2234] transition-all z-50 shadow-[0_0_15px_rgba(0,0,0,0.5)] cursor-pointer"
             >
@@ -288,7 +294,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
 
         {/* Scrollable Menu */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden premium-scroll px-3 pb-6 flex flex-col relative z-10">
-          
+
           <TreeItem
             title="Overview"
             icon={LayoutDashboard}
@@ -306,7 +312,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             onToggleCollapsed={onToggle}
             onNavigate={mobile ? onClose : undefined}
           />
-          
+
           <TreeItem
             title="Consultants"
             icon={Users}
@@ -335,7 +341,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             <SubItem to="/admin/vehicles/sponsored-listings" label="Sponsored Listings" />
             <SubItem to="/admin/vehicles/categories-attributes" label="Categories / Attributes" />
           </TreeItem>
-            
+
           <TreeItem
             title="Buyers"
             icon={ShoppingCart}
@@ -343,10 +349,10 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             onToggleCollapsed={onToggle}
             onNavigate={mobile ? onClose : undefined}
           >
-           <SubItem to="/admin/buyers/all" label="All Buyers" />
-           <SubItem to="/admin/buyers/suspended-users" label="Suspended Users" />
-           <SubItem to="/admin/buyers/saved-lists" label="Saved Lists" />
-           <SubItem to="/admin/buyers/inquiry-monitoring" label="Inquiry Monitoring" />
+            <SubItem to="/admin/buyers/all" label="All Buyers" />
+            <SubItem to="/admin/buyers/suspended-users" label="Suspended Users" />
+            <SubItem to="/admin/buyers/saved-lists" label="Saved Lists" />
+            <SubItem to="/admin/buyers/inquiry-monitoring" label="Inquiry Monitoring" />
           </TreeItem>
 
           <TreeItem
@@ -361,12 +367,12 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             <SubItem to="/admin/inspections/reports-review" label="Reports Review" />
             <SubItem to="/admin/inspections/disputes" label="Disputes" />
           </TreeItem>
-            
 
-            {/* Operations */}
+
+          {/* Operations */}
           <TreeItem
             title="Operations"
-            icon={Shield }
+            icon={Shield}
             collapsed={collapsed}
             onToggleCollapsed={onToggle}
             onNavigate={mobile ? onClose : undefined}
@@ -376,7 +382,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             <SubItem to="/admin/operations/dispute-center" label="Dispute Center" />
             <SubItem to="/admin/operations/fraud-alerts" label="Fraud Alerts" />
           </TreeItem>
-         
+
           <TreeItem
             title="Inquiries"
             icon={MessageSquare}
@@ -410,7 +416,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             <SubItem to="/admin/ppc/campaigns" label="Campaigns" />
             <SubItem to="/admin/ppc/featured" label="Featured" />
           </TreeItem>
-          
+
           <TreeItem
             title="Analytics"
             icon={BarChart3}

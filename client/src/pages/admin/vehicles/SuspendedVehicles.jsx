@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   RefreshCw,
@@ -8,10 +9,8 @@ import {
   ShieldAlert,
   ShieldX,
   Clock3,
-  MapPin,
   User,
   CalendarDays,
-  AlertTriangle,
   ChevronDown,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
@@ -131,6 +130,7 @@ function TopCard({ title, value, icon: Icon, iconWrapClass = "", valueClass = ""
 }
 
 const SuspendedVehicles = () => {
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -360,7 +360,7 @@ const SuspendedVehicles = () => {
                   </div>
                 </div>
 
-                <div className="relative min-w-[180px]">
+                {/* <div className="relative min-w-[180px]">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
@@ -374,7 +374,7 @@ const SuspendedVehicles = () => {
                   <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
                     <ChevronDown className="h-4 w-4" />
                   </div>
-                </div>
+                </div> */}
               </div>
 
               <div className="flex items-center gap-2">
@@ -588,6 +588,11 @@ const SuspendedVehicles = () => {
 
                         <td className="border-b border-slate-100 px-6 py-4.5 text-right align-middle">
                           <SuspendedVehiclesRowActions
+                            onViewDetails={() => {
+                              navigate(`/admin/vehicles/${item.vehicleId}`, {
+                                state: { from: '/admin/vehicles/suspended' }
+                              });
+                            }}
                             onUnsuspend={() =>
                               setModal({
                                 type: "unsuspend",

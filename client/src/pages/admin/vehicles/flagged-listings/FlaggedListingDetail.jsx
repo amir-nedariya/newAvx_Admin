@@ -359,13 +359,13 @@ export default function FlaggedListingDetail() {
                 </div>
               </div>
 
-              <div className="mb-6">
+              {/* <div className="mb-6">
                 <img
                   src={vehicleInfo?.thumbnailUrl || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600"}
                   alt={vehicleInfo?.title}
                   className="h-64 w-full rounded-2xl object-cover"
                 />
-              </div>
+              </div> */}
 
               <div className="grid grid-cols-2 gap-4">
                 <SpecCard
@@ -481,46 +481,44 @@ export default function FlaggedListingDetail() {
 
               {/* Consultant-specific details */}
               {consultantInfo && (
-                <>
-                  <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 mb-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Risk Level
-                      </span>
-                      <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
-                        LOW
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Past Flags
-                      </span>
-                      <span className="text-sm font-bold text-slate-900">02</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Storefront
-                      </span>
-                      <span className={cls(
-                        "rounded-full px-3 py-1 text-xs font-bold",
-                        consultantInfo?.isActiveTier
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          : "bg-slate-100 text-slate-600 border border-slate-200"
-                      )}>
-                        {consultantInfo?.isActiveTier ? "ACTIVE" : "INACTIVE"}
-                      </span>
-                    </div>
+                <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Risk Level
+                    </span>
+                    <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+                      LOW
+                    </span>
                   </div>
-
-                  <button
-                    onClick={() => setPenaltyModal(true)}
-                    className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Scale className="h-4 w-4" />
-                    Apply Penalty
-                  </button>
-                </>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Past Flags
+                    </span>
+                    <span className="text-sm font-bold text-slate-900">02</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Storefront
+                    </span>
+                    <span className={cls(
+                      "rounded-full px-3 py-1 text-xs font-bold",
+                      consultantInfo?.isActiveTier
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-slate-100 text-slate-600 border border-slate-200"
+                    )}>
+                      {consultantInfo?.isActiveTier ? "ACTIVE" : "INACTIVE"}
+                    </span>
+                  </div>
+                </div>
               )}
+
+              <button
+                onClick={() => setPenaltyModal(true)}
+                className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Scale className="h-4 w-4" />
+                Apply Penalty
+              </button>
             </div>
 
             {/* TIMESTAMPS */}

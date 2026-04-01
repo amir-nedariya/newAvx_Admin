@@ -82,6 +82,18 @@ export const normalizeVehicleDetailResponse = (payload) => {
 };
 
 /* =========================================================
+   GET VEHICLE DETAILS ENHANCED BY ID
+========================================================= */
+export const getVehicleDetailsEnhanced = async (vehicleId) => {
+  const res = await api.get(`/vehicle/${vehicleId}/enhanced`);
+  return res.data;
+};
+
+export const normalizeVehicleDetailEnhancedResponse = (payload) => {
+  return payload?.data || null;
+};
+
+/* =========================================================
    SUSPEND VEHICLE
 ========================================================= */
 export const suspendVehicle = async ({

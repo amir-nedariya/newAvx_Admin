@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   X,
   CheckCircle2,
@@ -6,7 +6,9 @@ import {
   FileEdit,
   NotebookPen,
   XCircle,
+  Loader2,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -17,6 +19,7 @@ const rejectReasons = [
   "Policy violation",
   "Incomplete data",
   "Fraud suspicion",
+  "Other",
 ];
 
 const changeFields = [
@@ -25,6 +28,7 @@ const changeFields = [
   "Media",
   "Inspection details",
   "Registration details",
+  "Other",
 ];
 
 export default function PendingApprovalsConfirmModal({
@@ -39,14 +43,18 @@ export default function PendingApprovalsConfirmModal({
   const [reason, setReason] = useState(rejectReasons[0]);
   const [comment, setComment] = useState("");
   const [note, setNote] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [selectedFields, setSelectedFields] = useState(["Price", "Description"]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!modal) return;
     setReason(rejectReasons[0]);
     setComment("");
     setNote("");
+    setRemarks("");
     setSelectedFields(["Price", "Description"]);
+    setLoading(false);
   }, [modal]);
 
   const config = useMemo(() => {
@@ -128,53 +136,147 @@ export default function PendingApprovalsConfirmModal({
   const tone = toneMap[config.tone];
 
   const toggleField = (field) => {
-    setSelectedFields((prev) =>
-      prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
-    );
+    setSelectedFields((prev) => {
+      // If "Other" is clicked
+      if (field === "Other") {
+        // If "Other" is already selected, uncheck it
+        if (prev.includes("Other")) {
+          return prev.filter((f) => f !== "Other");
+        }
+        // If "Other" is not selected, select only "Other" and clear others
+        return ["Other"];
+      }
+
+      // If any other field is clicked and "Other" is selected, remove "Other"
+      if (prev.includes("Other")) {
+        return [field];
+      }
+
+      // Normal toggle for non-Other fields
+      return prev.includes(field)
+        ? prev.filter((f) => f !== field)
+        : [...prev, field];
+    });
   };
 
-  const handleConfirm = () => {
-    if (modal.type === "approve") {
-      onApprove?.(item);
-      return;
-    }
+  const handleConfirm = async () => {
+    if (loading) return;
 
-    if (modal.type === "reject") {
-      if (!comment.trim()) return;
-      onReject?.({
-        ...item,
-        rejectReason: reason,
-        rejectComment: comment.trim(),
-      });
-      return;
-    }
+    try {
+      setLoading(true);
 
-    if (modal.type === "changes") {
-      if (!comment.trim()) return;
-      onRequestChanges?.({
-        ...item,
-        requestedFields: selectedFields,
-        requestComment: comment.trim(),
-      });
-      return;
-    }
+      if (modal.type === "approve") {
+        await onApprove?.({
+          ...item,
+          approvalRemarks: remarks.trim() || null,
+        });
+        toast.success("Vehicle approved successfully");
+        // Delay closing to show toast
+        setTimeout(() => {
+          onClose?.();
+        }, 500);
+        return;
+      }
 
-    if (modal.type === "escalate") {
-      if (!comment.trim()) return;
-      onEscalate?.({
-        ...item,
-        escalateComment: comment.trim(),
-      });
-      return;
-    }
+      if (modal.type === "reject") {
+        // Only require comment if "Other" is selected
+        if (reason === "Other" && !comment.trim()) {
+          toast.error("Please enter a reason");
+          setLoading(false);
+          return;
+        }
 
-    if (modal.type === "note") {
-      if (!note.trim()) return;
-      onSaveNote?.({
-        ...item,
-        note: note.trim(),
-      });
-      return;
+        // If "Other" is selected, use the comment as the reason
+        // Otherwise, use the selected reason directly
+        const finalReason = reason === "Other"
+          ? comment.trim()
+          : reason;
+
+        await onReject?.({
+          ...item,
+          rejectReason: finalReason,
+        });
+        toast.success("Vehicle rejected successfully");
+        // Delay closing to show toast
+        setTimeout(() => {
+          onClose?.();
+        }, 500);
+        return;
+      }
+
+      if (modal.type === "changes") {
+        // Validate that at least one field is selected
+        if (selectedFields.length === 0) {
+          toast.error("Please select at least one field");
+          setLoading(false);
+          return;
+        }
+
+        // If "Other" is selected, require comment
+        if (selectedFields.includes("Other") && !comment.trim()) {
+          toast.error("Please enter a reason for other changes");
+          setLoading(false);
+          return;
+        }
+
+        // Format reason based on selection
+        let finalReason;
+        if (selectedFields.includes("Other")) {
+          // If "Other" is selected, use comment as reason
+          finalReason = comment.trim();
+        } else {
+          // If multiple fields selected, join with comma
+          finalReason = `Reason: ${selectedFields.join(", ")}`;
+        }
+
+        await onRequestChanges?.({
+          ...item,
+          changeReason: finalReason,
+        });
+        toast.success("Change request sent successfully");
+        setTimeout(() => {
+          onClose?.();
+        }, 500);
+        return;
+      }
+
+      if (modal.type === "escalate") {
+        if (!comment.trim()) {
+          toast.error("Please enter an escalation note");
+          setLoading(false);
+          return;
+        }
+        await onEscalate?.({
+          ...item,
+          escalateComment: comment.trim(),
+        });
+        toast.success("Listing escalated successfully");
+        setTimeout(() => {
+          onClose?.();
+        }, 500);
+        return;
+      }
+
+      if (modal.type === "note") {
+        if (!note.trim()) {
+          toast.error("Please enter a note");
+          setLoading(false);
+          return;
+        }
+        await onSaveNote?.({
+          ...item,
+          note: note.trim(),
+        });
+        toast.success("Note saved successfully");
+        setTimeout(() => {
+          onClose?.();
+        }, 500);
+        return;
+      }
+    } catch (error) {
+      console.error("Action failed:", error);
+      toast.error(error?.response?.data?.message || "Action failed");
+      setLoading(false);
     }
   };
 
@@ -226,27 +328,38 @@ export default function PendingApprovalsConfirmModal({
             </div>
             <div className="mt-2 grid grid-cols-2 gap-3 text-[13px]">
               <div>
-                <span className="text-slate-400">Vehicle ID:</span>{" "}
-                <span className="font-medium text-slate-700">{item?.id || "-"}</span>
-              </div>
-              <div>
                 <span className="text-slate-400">Submission:</span>{" "}
                 <span className="font-medium text-slate-700">
                   {item?.submissionType || "-"}
                 </span>
               </div>
               <div>
+                <span className="text-slate-400">Risk:</span>{" "}
+                <span className="font-medium text-slate-700">{item?.risk || "-"}</span>
+              </div>
+              <div className="col-span-2">
                 <span className="text-slate-400">Consultant:</span>{" "}
                 <span className="font-medium text-slate-700">
                   {item?.consultant || "-"}
                 </span>
               </div>
-              <div>
-                <span className="text-slate-400">Risk:</span>{" "}
-                <span className="font-medium text-slate-700">{item?.risk || "-"}</span>
-              </div>
             </div>
           </div>
+
+          {modal.type === "approve" && (
+            <div>
+              <label className="mb-2 block text-[13px] font-medium text-slate-700">
+                Remarks <span className="text-slate-400">(Optional)</span>
+              </label>
+              <textarea
+                rows={3}
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Add any approval notes or remarks..."
+                className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-900 outline-none focus:border-sky-400"
+              />
+            </div>
+          )}
 
           {modal.type === "reject" && (
             <>
@@ -265,18 +378,20 @@ export default function PendingApprovalsConfirmModal({
                 </select>
               </div>
 
-              <div>
-                <label className="mb-2 block text-[13px] font-medium text-slate-700">
-                  Comment <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={4}
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Enter rejection note for consultant and audit trail..."
-                  className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-900 outline-none focus:border-sky-400"
-                />
-              </div>
+              {reason === "Other" && (
+                <div>
+                  <label className="mb-2 block text-[13px] font-medium text-slate-700">
+                    Reason <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Enter the rejection reason..."
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-900 outline-none focus:border-sky-400"
+                  />
+                </div>
+              )}
             </>
           )}
 
@@ -305,18 +420,20 @@ export default function PendingApprovalsConfirmModal({
                 </div>
               </div>
 
-              <div>
-                <label className="mb-2 block text-[13px] font-medium text-slate-700">
-                  Comment <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={4}
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Describe what needs to be corrected..."
-                  className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-900 outline-none focus:border-sky-400"
-                />
-              </div>
+              {selectedFields.includes("Other") && (
+                <div>
+                  <label className="mb-2 block text-[13px] font-medium text-slate-700">
+                    Reason <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Describe what needs to be corrected..."
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-900 outline-none focus:border-sky-400"
+                  />
+                </div>
+              )}
             </>
           )}
 
@@ -354,18 +471,21 @@ export default function PendingApprovalsConfirmModal({
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
           <button
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-50"
+            disabled={loading}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
 
           <button
             onClick={handleConfirm}
+            disabled={loading}
             className={cls(
-              "rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-colors",
+              "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed",
               tone.btn
             )}
           >
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {config.confirmText}
           </button>
         </div>

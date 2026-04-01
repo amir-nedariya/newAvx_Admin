@@ -68,6 +68,17 @@ const statusBadge = (resolved) => {
   return "border-amber-200 bg-amber-50 text-amber-700";
 };
 
+const verificationStatusBadge = (status) => {
+  const map = {
+    VERIFIED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    PENDING: "border-amber-200 bg-amber-50 text-amber-700",
+    REJECTED: "border-rose-200 bg-rose-50 text-rose-700",
+    UNDER_REVIEW: "border-blue-200 bg-blue-50 text-blue-700",
+    FLAGGED: "border-orange-200 bg-orange-50 text-orange-700",
+  };
+  return map[status] || "border-slate-200 bg-slate-100 text-slate-700";
+};
+
 const typeBadge = (type) => {
   if (type === "SELLER" || type === "USER_SELLER") return "border-rose-200 bg-rose-50 text-rose-700";
   if (type === "CONSULTATION") return "border-emerald-200 bg-emerald-50 text-emerald-700";
@@ -286,7 +297,7 @@ export default function FlaggedListings() {
 
   const handleActionConfirm = async (payload) => {
     if (!payload?.item) return;
-    console.log("first",payload);
+    console.log("first", payload);
     const vehicleId = payload.item.vehicleId;
     const flagId = payload.item.flagReviewId;
 
@@ -318,7 +329,9 @@ export default function FlaggedListings() {
   };
 
   const handleReview = (row) => {
-    navigate(`/admin/vehicles/flagged-listings/${row?.flagReviewId}`);
+    navigate(`/admin/vehicles/flagged-listings/${row?.flagReviewId}`, {
+      state: { from: '/admin/vehicles/flagged-listings' }
+    });
   };
 
   return (
@@ -499,8 +512,8 @@ export default function FlaggedListings() {
                         </div>
                       </td>
                       <td className="border-b border-r border-slate-100 px-5 py-4.5 text-center align-middle">
-                        <span className={cls("inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider shadow-sm whitespace-nowrap", statusBadge(row.isResolved))}>
-                          {row.isResolved ? "Resolved" : "Under Review"}
+                        <span className={cls("inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider shadow-sm whitespace-nowrap", verificationStatusBadge(row?.verificationStatus))}>
+                          {formatEnumLabel(row?.verificationStatus)}
                         </span>
                       </td>
                       <td className="border-b border-r border-slate-100 px-5 py-4.5 text-center align-middle">

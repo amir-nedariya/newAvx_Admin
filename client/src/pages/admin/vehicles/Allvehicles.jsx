@@ -108,6 +108,16 @@ const statusBadge = (status) => {
   return map[status] || "border-slate-200 bg-slate-100 text-slate-700";
 };
 
+const verificationStatusBadge = (status) => {
+  const map = {
+    REQUESTED: "border-amber-200 bg-amber-50 text-amber-700",
+    REQUEST_CHANGES: "border-orange-200 bg-orange-50 text-orange-700",
+    VERIFIED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    REJECTED: "border-rose-200 bg-rose-50 text-rose-700",
+  };
+  return map[status] || "border-slate-200 bg-slate-100 text-slate-700";
+};
+
 const riskBadge = (risk) => {
   if (risk === "High") return "border-rose-200 bg-rose-50 text-rose-700";
   if (risk === "Moderate") return "border-amber-200 bg-amber-50 text-amber-700";
@@ -233,6 +243,7 @@ export default function Allvehicles() {
       notes: v?.notes || "-",
       boost: Boolean(v?.isTierBoostActive ?? false),
       status: v?.status || "-",
+      verificationStatus: v?.verificationStatus || "-",
       risk: v?.risk || "Low",
       ownerName: v?.ownerName || "-",
       avxInspectionRating: v?.avxInspectionRating ?? "-",
@@ -495,7 +506,7 @@ export default function Allvehicles() {
 
     const path = map[action];
     if (path) {
-      navigate(path);
+      navigate(path, { state: { from: '/admin/vehicles/all' } });
       return;
     }
 
@@ -690,7 +701,7 @@ export default function Allvehicles() {
                       Boost
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
-                      Status
+                      Verification Status
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
                       Risk
@@ -822,10 +833,10 @@ export default function Allvehicles() {
                           <span
                             className={cls(
                               "inline-flex rounded-full border px-3 py-1 text-[11px] font-bold whitespace-nowrap",
-                              statusBadge(v.status)
+                              verificationStatusBadge(v.verificationStatus)
                             )}
                           >
-                            {formatEnumLabel(v.status)}
+                            {formatEnumLabel(v.verificationStatus)}
                           </span>
                         </td>
 

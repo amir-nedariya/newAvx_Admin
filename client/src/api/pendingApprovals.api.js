@@ -47,3 +47,58 @@ export const normalizePendingApprovalsResponse = (payload) => {
     currentElements: Number(root?.pageResponse?.currentElements || 0),
   };
 };
+
+/* =========================================================
+   GET PENDING APPROVAL DETAILS BY VEHICLE ID
+   ENDPOINT: /vehicle/pending-approvals/{vehicleId}
+========================================================= */
+export const getPendingApprovalDetails = async (vehicleId) => {
+  const res = await api.get(`/vehicle/pending-approvals/${vehicleId}`);
+  return res.data;
+};
+
+export const normalizePendingApprovalDetailsResponse = (payload) => {
+  return payload?.data || null;
+};
+
+/* =========================================================
+   APPROVE PENDING VEHICLE
+   ENDPOINT: /vehicle/pending-approvals/approve
+========================================================= */
+export const approvePendingVehicle = async (vehicleId, remarks = null) => {
+  const payload = {
+    vehicleId,
+    remarks,
+  };
+  const res = await api.patch("/vehicle/pending-approvals/approve", payload);
+  return res.data;
+};
+
+/* =========================================================
+   REJECT PENDING VEHICLE
+   ENDPOINT: /vehicle/pending-approvals/reject
+========================================================= */
+export const rejectPendingVehicle = async (vehicleId, reason) => {
+  const payload = {
+    vehicleId,
+    reason,
+  };
+  const res = await api.patch("/vehicle/pending-approvals/reject", payload);
+  return res.data;
+};
+
+/* =========================================================
+   REQUEST CHANGES FOR PENDING VEHICLE
+   ENDPOINT: /vehicle/pending-approvals/request-changes
+========================================================= */
+export const requestChangesPendingVehicle = async (vehicleId, reason) => {
+  const payload = {
+    vehicleId,
+    reason,
+  };
+  const res = await api.patch(
+    "/vehicle/pending-approvals/request-changes",
+    payload,
+  );
+  return res.data;
+};

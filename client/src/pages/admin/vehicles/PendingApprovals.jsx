@@ -18,16 +18,20 @@ import {
   Map,
   BadgeCheck,
   User,
+  Eye,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import toast, { Toaster } from "react-hot-toast";
 
-import PendingApprovalRowActions from "./pending-approvals/PendingApprovalRowActions";
 import PendingApprovalsReviewPanel from "./pending-approvals/PendingApprovalsReviewPanel";
 import PendingApprovalsConfirmModal from "./pending-approvals/PendingApprovalsConfirmModal";
 
 import {
   filterPendingApprovals,
   normalizePendingApprovalsResponse,
+  approvePendingVehicle,
+  rejectPendingVehicle,
+  requestChangesPendingVehicle,
 } from "../../../api/pendingApprovals.api";
 import { getAllTierPlans } from "../../../api/tierPlan.api";
 import { getAllCitiesFromSearch } from "../../../api/addressApi";
@@ -78,6 +82,16 @@ const inspectionBadge = (status) => {
     SELF_INSPECTED: "bg-slate-100 text-slate-700 border-slate-200",
     IN_PROGRESS: "bg-amber-50 text-amber-700 border-amber-200",
     NOT_INSPECTED: "bg-slate-100 text-slate-700 border-slate-200",
+  };
+  return map[status] || "bg-slate-100 text-slate-700 border-slate-200";
+};
+
+const verificationStatusBadge = (status) => {
+  const map = {
+    REQUESTED: "bg-amber-50 text-amber-700 border-amber-200",
+    VERIFIED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    REJECTED: "bg-rose-50 text-rose-700 border-rose-200",
+    REQUEST_CHANGES: "bg-sky-50 text-sky-700 border-sky-200",
   };
   return map[status] || "bg-slate-100 text-slate-700 border-slate-200";
 };
@@ -174,6 +188,7 @@ const mapApiRow = (item) => {
     tier: item?.tierPlanTitle || "-",
     submissionType: item?.submissionType || "-",
     inspection: item?.inspectionStatus || "NOT_INSPECTED",
+    verificationStatus: item?.verificationStatus || "REQUESTED",
     risk: item?.riskLevel || "LOW",
     submittedAt: item?.submittedAt || null,
     submittedAtHours: hoursSinceDate(item?.submittedAt),
@@ -639,24 +654,63 @@ export default function PendingApprovals() {
   };
 
   // Approval Flows
-  const handleApprove = (item) => {
-    console.log("Approving:", item);
-    setRows(prev => prev.filter(r => r.id !== item.id));
-    setModal(null);
-    setReviewItem(null);
+  const handleApprove = async (item) => {
+    try {
+      await approvePendingVehicle(item.id, item.approvalRemarks || null);
+      setRows(prev => prev.filter(r => r.id !== item.id));
+      setModal(null);
+      setReviewItem(null);
+    } catch (error) {
+      console.error("Failed to approve vehicle:", error);
+      throw error; // Re-throw to be caught by modal
+    }
   };
 
-  const handleReject = (item) => {
-    console.log("Rejecting:", item);
-    setRows(prev => prev.filter(r => r.id !== item.id));
-    setModal(null);
-    setReviewItem(null);
+  const handleReject = async (item) => {
+    try {
+      const reason = item.rejectReason; // Already formatted in modal
+      await rejectPendingVehicle(item.id, reason);
+      setRows(prev => prev.filter(r => r.id !== item.id));
+      setModal(null);
+      setReviewItem(null);
+    } catch (error) {
+      console.error("Failed to reject vehicle:", error);
+      throw error; // Re-throw to be caught by modal
+    }
+  };
+
+  const handleRequestChanges = async (item) => {
+    try {
+      const reason = item.changeReason; // Already formatted in modal
+      await requestChangesPendingVehicle(item.id, reason);
+      setRows(prev => prev.filter(r => r.id !== item.id));
+      setModal(null);
+      setReviewItem(null);
+    } catch (error) {
+      console.error("Failed to request changes:", error);
+      throw error; // Re-throw to be caught by modal
+    }
   };
 
   // If reviewItem is set, we show the review panel instead of the table list
   if (reviewItem) {
     return (
       <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              borderRadius: "14px",
+              border: "1px solid #e2e8f0",
+              background: "#fff",
+              color: "#0f172a",
+              boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
+              fontSize: "13px",
+              fontWeight: 600,
+            },
+          }}
+        />
         <button
           onClick={() => setReviewItem(null)}
           className="group mb-6 inline-flex items-center gap-2 text-sm font-bold text-slate-500 transition-colors hover:text-slate-900"
@@ -683,7 +737,7 @@ export default function PendingApprovals() {
           onClose={() => setModal(null)}
           onApprove={handleApprove}
           onReject={handleReject}
-          onRequestChanges={() => setModal(null)}
+          onRequestChanges={handleRequestChanges}
           onEscalate={() => setModal(null)}
         />
       </div>
@@ -692,6 +746,21 @@ export default function PendingApprovals() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden p-0">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            borderRadius: "14px",
+            border: "1px solid #e2e8f0",
+            background: "#fff",
+            color: "#0f172a",
+            boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
+            fontSize: "13px",
+            fontWeight: 600,
+          },
+        }}
+      />
       <style>{`
         .table-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
         .table-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -808,6 +877,9 @@ export default function PendingApprovals() {
                     Inspection
                   </th>
                   <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
+                    Verification Status
+                  </th>
+                  <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
                     Risk
                   </th>
                   <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
@@ -825,7 +897,7 @@ export default function PendingApprovals() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={11} className="px-6 py-24 text-center">
+                    <td colSpan={12} className="px-6 py-24 text-center">
                       <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading pending approval...
@@ -909,7 +981,13 @@ export default function PendingApprovals() {
 
                       <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
                         <span className={cls("inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.03em] whitespace-nowrap", inspectionBadge(row.inspection))}>
-                          {row.inspection.replace(/_/g, " ")}
+                          {formatEnumLabel(row.inspection)}
+                        </span>
+                      </td>
+
+                      <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                        <span className={cls("inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.03em] whitespace-nowrap", verificationStatusBadge(row.verificationStatus))}>
+                          {formatEnumLabel(row.verificationStatus)}
                         </span>
                       </td>
 
@@ -933,21 +1011,19 @@ export default function PendingApprovals() {
                       </td>
 
                       <td className="border-b border-slate-100 px-6 py-4.5 text-right align-middle">
-                        <PendingApprovalRowActions
-                          item={row}
-                          canQuickApprove={canQuickApprove(row)}
-                          onReview={(item) => setReviewItem(item)}
-                          onQuickApprove={(item) => setModal({ type: "approve", item })}
-                          onReject={(item) => setModal({ type: "reject", item })}
-                          onRequestChanges={(item) => setModal({ type: "changes", item })}
-                          onEscalate={(item) => setModal({ type: "escalate", item })}
-                        />
+                        <button
+                          onClick={() => setReviewItem(row)}
+                          title="Review"
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={11} className="px-6 py-40 text-center">
+                    <td colSpan={12} className="px-6 py-40 text-center">
                       <div className="flex flex-col items-center justify-center">
                         <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[32px] border-2 border-dashed border-slate-200 bg-slate-50 text-slate-300">
                           <FileSearch size={40} />
@@ -958,12 +1034,6 @@ export default function PendingApprovals() {
                         <div className="mx-auto mt-2 max-w-sm text-[15px] font-medium text-slate-400">
                           The queue is all clear! All current vehicle submissions have been processed.
                         </div>
-                        <button
-                          onClick={handleClear}
-                          className="mt-8 rounded-2xl bg-slate-900 px-8 py-3 text-sm font-bold text-white shadow-xl shadow-slate-900/20 transition-all hover:bg-slate-800 active:scale-95"
-                        >
-                          Refresh Queue
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1163,7 +1233,7 @@ export default function PendingApprovals() {
         onClose={() => setModal(null)}
         onApprove={handleApprove}
         onReject={handleReject}
-        onRequestChanges={() => setModal(null)}
+        onRequestChanges={handleRequestChanges}
         onEscalate={() => setModal(null)}
       />
     </div>

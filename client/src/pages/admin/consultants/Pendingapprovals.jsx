@@ -76,19 +76,19 @@ const tierBadge = (tierTitle) => {
 ========================================================= */
 function TopCard({ title, value, icon: Icon = User }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="absolute inset-0 bg-gradient-to-br from-sky-50 to-transparent opacity-70" />
-      <div className="relative z-10 flex items-end justify-between">
+    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-50/80 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+      <div className="relative z-10 flex items-center justify-between gap-4">
         <div>
-          <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.15em] text-slate-400">
+          <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
             {title}
           </div>
-          <div className="text-3xl font-extrabold tracking-tight text-slate-900">
+          <div className="text-4xl font-extrabold tracking-tight text-slate-900">
             {value}
           </div>
         </div>
 
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-sky-100 bg-sky-50 text-sky-600">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-100 bg-sky-50 text-sky-600 shadow-sm">
           <Icon size={18} />
         </div>
       </div>
@@ -349,10 +349,8 @@ const Pendingapprovals = () => {
 
   useEffect(() => {
     if (!didInit.current) return;
-
-    if (page !== 1) {
-      setPage(1);
-    }
+    // Reset page to 1 when search changes
+    setPage(1);
   }, [search]);
 
   const handleRefresh = async () => {
@@ -394,7 +392,7 @@ const Pendingapprovals = () => {
   }, [kpi, rows, totalCount]);
 
   return (
-    <div className="min-h-screen p-0">
+    <div className="h-screen flex flex-col overflow-hidden p-0">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -412,21 +410,16 @@ const Pendingapprovals = () => {
       />
 
       <style>{`
-        .table-scroll::-webkit-scrollbar { height: 6px; }
+        .table-scroll::-webkit-scrollbar { height: 6px; width: 8px; }
         .table-scroll::-webkit-scrollbar-track { background: transparent; }
-        .table-scroll::-webkit-scrollbar-thumb {
-          background: rgba(148,163,184,0.35);
-          border-radius: 6px;
-        }
-        .table-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(100,116,139,0.45);
-        }
+        .table-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 6px; }
+        .table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.45); }
       `}</style>
 
-      <div className="mx-auto space-y-6">
+      <div className="flex flex-1 flex-col space-y-4 overflow-hidden p-6">
         <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h1 className="mb-2 text-3xl font-bold tracking-tight text-slate-900">
+            <h1 className="mb-1 text-[32px] font-extrabold tracking-tight text-slate-900">
               Pending Approvals
             </h1>
             <p className="max-w-3xl text-sm leading-relaxed text-slate-500">
@@ -459,18 +452,19 @@ const Pendingapprovals = () => {
           />
         </section>
 
-        <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 bg-sky-100 blur-[100px]" />
+        <section className="relative flex flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+          <div className="pointer-events-none absolute -top-10 right-10 h-48 w-48 rounded-full bg-sky-100/60 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 left-0 h-40 w-40 rounded-full bg-indigo-50 blur-3xl" />
 
-          <div className="relative z-10 border-b border-slate-200 p-5 md:p-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="relative max-w-2xl flex-1">
+          <div className="relative z-10 shrink-0 border-b border-slate-200 px-4 py-4 md:px-6">
+            <div className="flex items-center gap-2.5 md:gap-4 lg:justify-between">
+              <div className="relative min-w-0 flex-1 max-w-2xl">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search pending consultant..."
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-11 text-[14px] text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-sky-400"
+                  className="h-11 md:h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-11 text-[13px] md:text-[14px] font-medium text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 placeholder:text-slate-400"
                 />
 
                 {search ? (
@@ -486,152 +480,185 @@ const Pendingapprovals = () => {
 
               <button
                 onClick={handleRefresh}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                className="flex h-11 w-11 md:h-12 md:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
                 title="Refresh List"
                 type="button"
               >
-                <RefreshCw className="h-4 w-4" />
+                {loading || kpiLoading ? (
+                  <RefreshCw className="h-4 w-4 animate-spin text-sky-500" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
               </button>
             </div>
           </div>
 
           {error ? (
-            <div className="relative z-10 px-6 pt-5">
+            <div className="px-6 pt-5 relative z-10 shrink-0">
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700">
                 {error}
               </div>
             </div>
           ) : null}
 
-          <div className="table-scroll relative z-10 w-full overflow-x-auto pb-4">
-            <table className="min-w-[1000px] w-full border-collapse">
-              <thead className="border-b border-slate-200 bg-slate-50">
-                <tr className="text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                  <th className="whitespace-nowrap px-6 py-4 font-semibold">Consultant</th>
-                  <th className="whitespace-nowrap px-5 py-4 font-semibold">Tier</th>
-                  <th className="whitespace-nowrap px-5 py-4 font-semibold">City</th>
-                  <th className="whitespace-nowrap px-5 py-4 font-semibold">Status</th>
-                  <th className="whitespace-nowrap px-5 py-4 font-semibold">Verification</th>
-                  <th className="whitespace-nowrap px-6 py-4 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-28 text-center">
-                      <div className="text-[14px] font-medium text-slate-500">
-                        Loading pending approvals...
-                      </div>
-                    </td>
+          <div className="relative z-10 flex-1 overflow-auto">
+            <div className="table-scroll h-full w-full overflow-x-auto overflow-y-auto">
+              <table className="min-w-[1000px] w-full border-separate border-spacing-0">
+                <thead>
+                  <tr className="bg-slate-50/80 backdrop-blur-sm">
+                    <th className="border-b border-r border-slate-200/60 px-6 py-4.5 text-left text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">Consultant</th>
+                    <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">Tier</th>
+                    <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">City</th>
+                    <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">Status</th>
+                    <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">Verification</th>
+                    <th className="border-b border-slate-200 px-6 py-4.5 text-right text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">Actions</th>
                   </tr>
-                ) : rows.length ? (
-                  rows.map((row, idx) => (
-                    <motion.tr
-                      key={row.id || idx}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="group transition-colors duration-200 hover:bg-slate-50"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                            {row.logoURL ? (
-                              <img
-                                src={row.logoURL}
-                                alt={row.name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-xs font-bold text-slate-500">
-                                {(row.name || "C").charAt(0)}
-                              </span>
-                            )}
-                          </div>
+                </thead>
 
-                          <div>
-                            <div className="text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700">
-                              {row.name || "-"}
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-24 text-center">
+                        <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Loading pending approvals...
+                        </div>
+                      </td>
+                    </tr>
+                  ) : rows.length ? (
+                    rows.map((row, idx) => (
+                      <motion.tr
+                        key={row.id || idx}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={cls(
+                          "group relative",
+                          idx % 2 === 0 ? "bg-white" : "bg-slate-50/35",
+                          "transition-colors duration-200 hover:bg-sky-50/45"
+                        )}
+                      >
+                        <td className="border-b border-slate-100 px-6 py-4.5 align-middle">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 shrink-0">
+                              {row.logoURL ? (
+                                <img
+                                  src={row.logoURL}
+                                  alt={row.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-xs font-bold text-slate-500">
+                                  {(row.name || "C").charAt(0)}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="truncate text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700">
+                                {row.name || "-"}
+                              </div>
                             </div>
                           </div>
+                        </td>
+
+                        <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                          <span
+                            className={cls(
+                              "inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.03em] whitespace-nowrap",
+                              tierBadge(row.tierTitle)
+                            )}
+                          >
+                            {row.tierTitle || "Basic"}
+                          </span>
+                        </td>
+
+                        <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                          <div className="text-[13px] font-medium text-slate-600 whitespace-nowrap">
+                            {row.city || "-"}
+                          </div>
+                        </td>
+
+                        <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                          <span
+                            className={cls(
+                              "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-bold",
+                              statusBadge(row.status)
+                            )}
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+                            {String(row.status || "UNKNOWN").replaceAll("_", " ")}
+                          </span>
+                        </td>
+
+                        <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                          <span
+                            className={cls(
+                              "inline-flex whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-bold",
+                              statusBadge(row.verificationStatus)
+                            )}
+                          >
+                            {String(row.verificationStatus || "N/A").replaceAll("_", " ")}
+                          </span>
+                        </td>
+
+                        <td className="border-b border-slate-100 px-6 py-4.5 text-right align-middle">
+                          <RowActions item={row} />
+                        </td>
+                      </motion.tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-28 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
+                            <Search size={28} />
+                          </div>
+
+                          <div className="text-lg font-bold tracking-tight text-slate-900">
+                            No pending approvals found
+                          </div>
+
+                          <div className="mx-auto mt-1 max-w-sm text-[14px] text-slate-500">
+                            Try adjusting your search or refresh the list to load
+                            the latest pending consultants.
+                          </div>
                         </div>
                       </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-                      <td className="px-5 py-4">
-                        <span
-                          className={cls(
-                            "inline-flex whitespace-nowrap rounded-md border px-2.5 py-1 text-[11px] font-bold",
-                            tierBadge(row.tierTitle)
-                          )}
-                        >
-                          {row.tierTitle || "Basic"}
-                        </span>
-                      </td>
+          <div className="relative z-10 flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
+            <div className="text-sm text-slate-500">
+              Page <span className="font-semibold text-slate-900">{page}</span> /{" "}
+              <span className="font-semibold text-slate-900">{totalPages}</span>
+              <span className="ml-2">• {totalCount} total records</span>
+            </div>
 
-                      <td className="whitespace-nowrap px-5 py-4 text-[13px] font-medium text-slate-600">
-                        {row.city || "-"}
-                      </td>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1 || loading}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+              >
+                Prev
+              </button>
 
-                      <td className="px-5 py-4">
-                        <span
-                          className={cls(
-                            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-[11px] font-bold",
-                            statusBadge(row.status)
-                          )}
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
-                          {String(row.status || "UNKNOWN").replaceAll("_", " ")}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span
-                          className={cls(
-                            "inline-flex whitespace-nowrap rounded-md border px-2.5 py-1 text-[11px] font-bold",
-                            statusBadge(row.verificationStatus)
-                          )}
-                        >
-                          {String(row.verificationStatus || "N/A").replaceAll("_", " ")}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-                        <RowActions item={row} />
-                      </td>
-                    </motion.tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-28 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
-                          <Search size={28} />
-                        </div>
-
-                        <div className="text-lg font-bold tracking-tight text-slate-900">
-                          No pending approvals found
-                        </div>
-
-                        <div className="mx-auto mt-1 max-w-sm text-[14px] text-slate-500">
-                          Try adjusting your search or refresh the list to load
-                          the latest pending consultants.
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages || loading}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </section>
-
-        <PaginationBar
-          page={page}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          loading={loading}
-          onPageChange={setPage}
-        />
       </div>
     </div>
   );

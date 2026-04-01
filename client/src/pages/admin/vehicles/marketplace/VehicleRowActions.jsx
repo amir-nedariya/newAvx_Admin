@@ -88,7 +88,7 @@ export default function VehicleRowActions({
         type="button"
         onClick={() => setOpen((s) => !s)}
         className={cls(
-          "inline-flex h-9 w-9 items-center justify-center rounded-xl",
+          "inline-flex h-9 w-9 items-center justify-center cursor-pointer rounded-xl",
           "border border-slate-200 bg-white shadow-sm",
           "transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow",
           "active:scale-[0.97]",

@@ -4,12 +4,14 @@ import {
   ShieldCheck,
   ChevronRight,
   Settings2,
+  Eye,
 } from "lucide-react";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
 export default function SuspendedVehiclesRowActions({
   onUnsuspend,
+  onViewDetails,
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -49,6 +51,16 @@ export default function SuspendedVehiclesRowActions({
             </div>
 
             <div className="space-y-1">
+              <MenuButton
+                icon={Eye}
+                label="View Details"
+                onClick={() => {
+                  onViewDetails?.();
+                  setOpen(false);
+                }}
+                color="text-sky-600 hover:bg-sky-50"
+              />
+
               <MenuButton
                 icon={ShieldCheck}
                 label="Unsuspend Vehicle"
