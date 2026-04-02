@@ -325,6 +325,8 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             <SubItem to="/admin/consultants/tier-management" label="Tier Management" />
             <SubItem to="/admin/consultants/ranking-control" label="Ranking Control" />
             <SubItem to="/admin/consultants/storefront-approvals" label="Storefront Approvals" />
+            <SubItem to="/admin/consultants/suspended" label="Suspended Consultants" />
+            <SubItem to="/admin/consultants/flagged-consultations" label="Flagged Consultations" />
           </TreeItem>
 
           <TreeItem

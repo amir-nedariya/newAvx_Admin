@@ -9,13 +9,20 @@ export const filterConsultations = async (payload = {}) => {
 };
 
 /* =======================================================
+   ✅ CONSULTATION: GET SUSPENDED (GET)
+======================================================= */
+export const getSuspendedConsultations = async () => {
+  const res = await api.get("/consultation/suspended");
+  return res.data;
+};
+
+/* =======================================================
    ✅ CONSULTATION: GET KPI (GET)
 ======================================================= */
 export const getConsultationKpi = async () => {
   const res = await api.get("/consultation/kpi");
   return res.data;
 };
-
 
 /* =======================================================
    ✅ CONSULTATION: GET SINGLE
@@ -25,7 +32,7 @@ export const getConsultationById = async (consultId) => {
     throw new Error("consultId is required");
   }
 
-  const res = await api.get(`/consultation/${consultId}`);
+  const res = await api.get(`/consultation/${consultId}/enhanced`);
   return res.data;
 };
 
@@ -237,5 +244,27 @@ export const addInternalNote = async (payload) => {
 ======================================================= */
 export const addPenalty = async (payload) => {
   const res = await api.patch("/consultation/addPenalty", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ CLEAR FLAGGED CONSULTATION (PATCH)
+   BODY: { flagId, reason }
+======================================================= */
+export const clearFlaggedConsultation = async ({ flagId, reason }) => {
+  if (!flagId) {
+    throw new Error("flagId is required");
+  }
+
+  if (!reason || !String(reason).trim()) {
+    throw new Error("reason is required");
+  }
+
+  const payload = {
+    flagId,
+    reason: String(reason).trim(),
+  };
+
+  const res = await api.patch("/consultation/clear-flag", payload);
   return res.data;
 };

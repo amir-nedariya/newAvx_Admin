@@ -1,6 +1,41 @@
 import api from "./axios";
 
 /* =========================================================
+   GET STOREFRONT DRAFT DETAILS
+   ENDPOINT: /consultation/storefront/draft/{storeDraftId}
+========================================================= */
+export const getStorefrontApprovalDetails = async (storeDraftId) => {
+  const res = await api.get(`/consultation/storefront/draft/${storeDraftId}`);
+  return res.data;
+};
+
+/* =========================================================
+   POST FILTER STOREFRONT APPROVALS
+   ENDPOINT: /consultation/storefront/approvals/filter
+========================================================= */
+export const filterStorefrontApprovals = async ({
+  searchText = null,
+  tierPlanId = null,
+  cityId = null,
+  pageNo = 1,
+  pageSize = 10,
+} = {}) => {
+  const payload = {
+    searchText: searchText?.trim() ? searchText.trim() : null,
+    tierPlanId: tierPlanId || null,
+    cityId: cityId || null,
+    pageNo,
+    pageSize,
+  };
+
+  const res = await api.post(
+    "/consultation/storefront/approvals/filter",
+    payload,
+  );
+  return res.data;
+};
+
+/* =========================================================
    POST FILTER PENDING APPROVALS
    ENDPOINT: /vehicle/pending-approvals/filter
 ========================================================= */

@@ -19,6 +19,8 @@ import TierManagement from "./pages/admin/consultants/TierManagement";
 import StorefrontApprovals from "./pages/admin/consultants/StorefrontApprovals";
 import StorefrontApprovalDetail from "./pages/admin/consultants/storefront-approvals/StorefrontApprovalDetail";
 import RankingControl from "./pages/admin/consultants/RankingControl";
+import SuspendedConsultants from "./pages/admin/consultants/SuspendedConsultants";
+import FlaggedConsultations from "./pages/admin/consultants/FlaggedConsultations";
 
 // Vehicles
 import Allvehicles from "./pages/admin/vehicles/Allvehicles";
@@ -125,6 +127,8 @@ const App = () => {
         <Route path="consultants/storefront-approvals" element={<StorefrontApprovals />} />
         <Route path="consultants/storefront-approvals/:id" element={<StorefrontApprovalDetail />} />
         <Route path="consultants/ranking-control" element={<RankingControl />} />
+        <Route path="consultants/suspended" element={<SuspendedConsultants />} />
+        <Route path="consultants/flagged-consultations" element={<FlaggedConsultations />} />
 
         {/* Vehicles */}
         <Route path="vehicles/all" element={<Allvehicles />} />

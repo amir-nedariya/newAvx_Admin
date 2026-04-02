@@ -377,26 +377,26 @@ const ConsultantProfile = () => {
     const d = data?.data ? data.data : data;
     if (!d) return null;
 
-    const tierTitle = d?.tierTitle || "—";
+    // Extract nested data
+    const tierInfo = d?.tierPlanInfo || {};
+    const addressInfo = d?.addressInfo || {};
+    const documentInfo = d?.documentInfo || {};
+    const stats = d?.stats || {};
+
+    const tierTitle = tierInfo?.tierPlanTitle || "—";
     const status = String(d?.status || "").toUpperCase() || "—";
 
-    const verification =
-      (d?.verificationStatus
-        ? String(d.verificationStatus).toUpperCase()
-        : null) ||
-      (d?.addressVerifiedStatus
-        ? String(d.addressVerifiedStatus).toUpperCase()
-        : null) ||
-      "PENDING";
+    const verification = d?.verificationStatus
+      ? String(d.verificationStatus).toUpperCase()
+      : "PENDING";
 
     const risk = d?.risk ? String(d.risk) : "Low";
 
-    const name =
-      d?.consultationName || d?.consultName || d?.ownerName || "Consultant";
+    const name = d?.consultationName || d?.consultName || d?.ownerName || "Consultant";
     const username = d?.username || "—";
 
-    const city = d?.cityName || "—";
-    const state = d?.stateName || "—";
+    const city = addressInfo?.cityName || "—";
+    const state = addressInfo?.stateName || "—";
     const location =
       city !== "—" && state !== "—"
         ? `${city}, ${state}`
@@ -445,14 +445,17 @@ const ConsultantProfile = () => {
 
     return {
       raw: d,
-      consultId: d?.consultId || d?.id || id,
+      consultId: d?.id || id,
       name,
       username,
       ownerName: d?.ownerName || "—",
 
-      tierId: d?.tierId || null,
+      tierId: tierInfo?.tierPlanId || null,
       tierTitle,
       tierTone,
+      tierBadgeUrl: tierInfo?.tierBadgeUrl || null,
+      tierStartDate: tierInfo?.tierStartDate || null,
+      tierEndDate: tierInfo?.tierEndDate || null,
 
       status,
       statusTone,
@@ -464,25 +467,40 @@ const ConsultantProfile = () => {
       risk: riskLabel,
 
       location: location || "—",
+      address: addressInfo?.address || "—",
       email: d?.companyEmail || "—",
       phone: d?.phoneNumber || "—",
 
       bannerUrl: d?.bannerUrl || null,
       logoUrl: d?.logoUrl || d?.logoURL || null,
 
-      totalVehicles: fmtInt(d?.totalVehicles),
-      totalActiveVehicles: fmtInt(d?.totalActiveVehicles),
-      totalSoldVehicles: fmtInt(d?.totalSoldVehicles),
-      conversions: fmtPct(d?.conversions),
-      totalInquiries: fmtInt(d?.totalInquiries),
-      responseTime: fmtResponse(d?.responseTime),
-      avgRating: d?.avgRating ?? 0,
+      establishmentYear: d?.establishmentYear || "—",
+      vehicleTypes: d?.vehicleTypes || [],
+      services: d?.services || [],
 
-      gstNumber: d?.gstNumber || "—",
-      panCardNumber: d?.panCardNumber || "—",
-      gstCertificateUrl: d?.gstCertificateUrl || null,
-      panCardFrontUrl: d?.panCardFrontUrl || null,
-      addressVerifiedStatus: d?.addressVerifiedStatus || null,
+      totalVehicles: fmtInt(stats?.totalVehicles),
+      totalActiveVehicles: fmtInt(stats?.activeVehicles),
+      totalSoldVehicles: fmtInt(stats?.soldVehicles),
+      conversions: fmtPct(stats?.conversionRate),
+      totalInquiries: fmtInt(stats?.totalInquiries),
+      responseTime: fmtResponse(stats?.avgResponseTime),
+      avgRating: stats?.avgRating ?? 0,
+      totalReviews: fmtInt(stats?.totalReviews),
+      totalFollowers: fmtInt(stats?.totalFollowers),
+
+      gstNumber: documentInfo?.gstNumber || "—",
+      panCardNumber: documentInfo?.panCardNumber || "—",
+      aadharCardNumber: documentInfo?.aadharCardNumber || "—",
+      gstCertificateUrl: documentInfo?.gstCertificateUrl || null,
+      panCardFrontUrl: documentInfo?.panCardFrontUrl || null,
+      aadharCardFrontUrl: documentInfo?.aadharCardFrontUrl || null,
+      aadharCardBackUrl: documentInfo?.aadharCardBackUrl || null,
+      addressVerifiedStatus: addressInfo?.status || null,
+
+      flagReviews: d?.flagReviews || [],
+      suspensions: d?.suspensions || [],
+      internalNotes: d?.internalNotes || [],
+      activityLogs: d?.activityLogs || [],
     };
   }, [data, id]);
 
@@ -737,18 +755,6 @@ const ConsultantProfile = () => {
             <h1 className="text-2xl font-extrabold md:text-3xl">
               {loading ? "Loading..." : profile?.name || "Consultant"}
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              ID: <span className="font-semibold text-slate-700">{id}</span>
-              {profile?.location && profile.location !== "—" ? (
-                <>
-                  {" "}
-                  ·{" "}
-                  <span className="font-semibold text-slate-700">
-                    {profile.location}
-                  </span>
-                </>
-              ) : null}
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -893,6 +899,18 @@ const ConsultantProfile = () => {
                   label="Avg Response"
                   value={safe(profile?.responseTime)}
                 />
+                <Stat
+                  label="Avg Rating"
+                  value={safe(profile?.avgRating)}
+                />
+                <Stat
+                  label="Total Reviews"
+                  value={safe(profile?.totalReviews)}
+                />
+                <Stat
+                  label="Total Followers"
+                  value={safe(profile?.totalFollowers)}
+                />
               </div>
             </div>
           </div>
@@ -945,11 +963,41 @@ const ConsultantProfile = () => {
                   </h3>
                   <div className="grid gap-x-10 gap-y-2 md:grid-cols-2">
                     <CardField label="Business Name" value={profile.name} />
-                    <CardField label="GST Number" value={profile.gstNumber} />
-                    <CardField label="PAN Number" value={profile.panCardNumber} />
+                    <CardField label="Owner Name" value={profile.ownerName} />
+                    <CardField label="Username" value={profile.username} />
+                    <CardField label="Establishment Year" value={profile.establishmentYear} />
                     <CardField label="Contact Number" value={profile.phone} />
                     <CardField label="Email" value={profile.email} />
-                    <CardField label="Owner Name" value={profile.ownerName} />
+                    <CardField label="GST Number" value={profile.gstNumber} />
+                    <CardField label="PAN Number" value={profile.panCardNumber} />
+                    <CardField label="Aadhar Number" value={profile.aadharCardNumber} />
+                    <CardField label="Address" value={profile.address} />
+                    <CardField label="City" value={profile.location} />
+                  </div>
+                </section>
+
+                <section>
+                  <h3 className="mb-4 text-sm font-extrabold text-slate-900">
+                    Tier & Subscription
+                  </h3>
+                  <div className="grid gap-x-10 gap-y-2 md:grid-cols-2">
+                    <CardField label="Current Tier" value={profile.tierTitle} />
+                    <CardField
+                      label="Tier Start Date"
+                      value={profile.tierStartDate ? new Date(profile.tierStartDate).toLocaleDateString("en-IN") : "—"}
+                    />
+                    <CardField
+                      label="Tier End Date"
+                      value={profile.tierEndDate ? new Date(profile.tierEndDate).toLocaleDateString("en-IN") : "—"}
+                    />
+                    <CardField
+                      label="Vehicle Types"
+                      value={profile.vehicleTypes.length > 0 ? profile.vehicleTypes.join(", ") : "—"}
+                    />
+                    <CardField
+                      label="Services"
+                      value={profile.services.length > 0 ? profile.services.join(", ") : "—"}
+                    />
                   </div>
                 </section>
 
@@ -976,6 +1024,26 @@ const ConsultantProfile = () => {
                         openDocModal("PAN Card", profile.panCardFrontUrl)
                       }
                       text={`PAN Card • ${profile.panCardFrontUrl ? "Click to View" : "Missing"
+                        }`}
+                    />
+
+                    <DocChip
+                      ok={!!profile.aadharCardFrontUrl}
+                      clickable={!!profile.aadharCardFrontUrl}
+                      onClick={() =>
+                        openDocModal("Aadhar Card (Front)", profile.aadharCardFrontUrl)
+                      }
+                      text={`Aadhar Front • ${profile.aadharCardFrontUrl ? "Click to View" : "Missing"
+                        }`}
+                    />
+
+                    <DocChip
+                      ok={!!profile.aadharCardBackUrl}
+                      clickable={!!profile.aadharCardBackUrl}
+                      onClick={() =>
+                        openDocModal("Aadhar Card (Back)", profile.aadharCardBackUrl)
+                      }
+                      text={`Aadhar Back • ${profile.aadharCardBackUrl ? "Click to View" : "Missing"
                         }`}
                     />
 
