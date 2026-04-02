@@ -19,7 +19,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import { filterStorefrontApprovals } from "../../../api/pendingApprovals.api";
+import { filterStorefrontApprovals, getStorefrontDraftStats, approveStorefront, rejectStorefront } from "../../../api/pendingApprovals.api";
 import { getTierPlans } from "../../../api/tierPlan.api";
 import { getAllCitiesFromSearch } from "../../../api/addressApi";
 
@@ -430,6 +430,23 @@ const StorefrontApprovals = () => {
   const [searchText, setSearchText] = useState("");
   const searchDebounceRef = useRef(null);
 
+  const [activeStatusTab, setActiveStatusTab] = useState("REQUESTED");
+
+  const [kpiStats, setKpiStats] = useState({
+    totalCount: 0,
+    requestedCount: 0,
+    verifiedCount: 0,
+    rejectedCount: 0,
+  });
+
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [approveReason, setApproveReason] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+
   const loadTiersOnce = useCallback(async () => {
     if (tierLoaded || tierLoading) return;
 
@@ -457,6 +474,21 @@ const StorefrontApprovals = () => {
       setTierLoading(false);
     }
   }, [tierLoaded, tierLoading]);
+
+  const loadKpiStats = useCallback(async () => {
+    try {
+      const res = await getStorefrontDraftStats();
+      const data = res?.data || res || {};
+      setKpiStats({
+        totalCount: Number(data.totalCount || 0),
+        requestedCount: Number(data.requestedCount || 0),
+        verifiedCount: Number(data.verifiedCount || 0),
+        rejectedCount: Number(data.rejectedCount || 0),
+      });
+    } catch (e) {
+      console.error("Failed to load KPI stats:", e);
+    }
+  }, []);
 
   const loadCitiesOnce = useCallback(async () => {
     if (cities.length > 0 || citiesLoading) return;
@@ -490,8 +522,10 @@ const StorefrontApprovals = () => {
       nextTierId = "ALL",
       nextCityId = "ALL",
       nextSearch = "",
+      nextStatus = "ALL",
     }) => ({
       searchText: nextSearch?.trim() || null,
+      verificationStatus: nextStatus === "ALL" ? null : nextStatus,
       tierPlanId: nextTierId === "ALL" ? null : String(nextTierId),
       cityId: nextCityId === "ALL" ? null : String(nextCityId),
       pageNo: nextPage,
@@ -506,6 +540,7 @@ const StorefrontApprovals = () => {
       nextTierId,
       nextCityId,
       nextSearch,
+      nextStatus,
       silent = false,
       force = false,
     }) => {
@@ -514,6 +549,7 @@ const StorefrontApprovals = () => {
         nextTierId,
         nextCityId,
         nextSearch,
+        nextStatus,
       });
 
       const requestKey = JSON.stringify(payload);
@@ -577,8 +613,9 @@ const StorefrontApprovals = () => {
       nextTierId: tierId,
       nextCityId: cityId,
       nextSearch: searchText,
+      nextStatus: activeStatusTab,
     }),
-    [page, tierId, cityId, searchText]
+    [page, tierId, cityId, searchText, activeStatusTab]
   );
 
   useEffect(() => {
@@ -587,16 +624,18 @@ const StorefrontApprovals = () => {
 
     loadTiersOnce();
     loadCitiesOnce();
+    loadKpiStats();
 
     fetchApprovals({
       nextPage: 1,
       nextTierId: "ALL",
       nextCityId: "ALL",
       nextSearch: "",
+      nextStatus: "REQUESTED",
       silent: false,
       force: true,
     });
-  }, [fetchApprovals, loadCitiesOnce, loadTiersOnce]);
+  }, [fetchApprovals, loadCitiesOnce, loadTiersOnce, loadKpiStats]);
 
   useEffect(() => {
     if (!didInit.current) return;
@@ -667,16 +706,17 @@ const StorefrontApprovals = () => {
 
   const stats = useMemo(() => {
     return {
-      total: totalCount,
-      requested: rows.filter((item) => item?.verificationStatus === "REQUESTED").length,
-      verified: rows.filter((item) => item?.verificationStatus === "VERIFIED").length,
-      rejected: rows.filter((item) => item?.verificationStatus === "REJECTED").length,
+      total: kpiStats.totalCount,
+      requested: kpiStats.requestedCount,
+      verified: kpiStats.verifiedCount,
+      rejected: kpiStats.rejectedCount,
     };
-  }, [rows, totalCount]);
+  }, [kpiStats]);
 
   const handleRefresh = () => {
     lastFetchKeyRef.current = "";
     setRefreshing(true);
+    loadKpiStats();
     fetchApprovals({
       ...queryState,
       silent: false,
@@ -707,6 +747,7 @@ const StorefrontApprovals = () => {
       nextTierId: "ALL",
       nextCityId: "ALL",
       nextSearch: "",
+      nextStatus: activeStatusTab,
       silent: true,
       force: true,
     });
@@ -733,11 +774,75 @@ const StorefrontApprovals = () => {
   };
 
   const handleApprove = (item) => {
-    toast.success(`Approved storefront for ${item.consultationName}`);
+    setSelectedItem(item);
+    setShowApproveModal(true);
   };
 
   const handleReject = (item) => {
-    toast.error(`Rejected storefront for ${item.consultationName}`);
+    setSelectedItem(item);
+    setShowRejectModal(true);
+  };
+
+  const confirmApprove = async () => {
+    if (!approveReason.trim()) {
+      toast.error("Please provide a reason for approval");
+      return;
+    }
+
+    setIsApproving(true);
+    try {
+      await approveStorefront(selectedItem.storeDraftId, approveReason.trim());
+      toast.success(`Storefront approved for ${selectedItem.consultationName}`);
+      setShowApproveModal(false);
+      setApproveReason("");
+      setSelectedItem(null);
+      loadKpiStats();
+      fetchApprovals({
+        ...queryState,
+        silent: true,
+        force: true,
+      });
+    } catch (err) {
+      console.error("Failed to approve storefront:", err);
+      toast.error(
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to approve storefront"
+      );
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const confirmReject = async () => {
+    if (!rejectReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
+    setIsRejecting(true);
+    try {
+      await rejectStorefront(selectedItem.storeDraftId, rejectReason.trim());
+      toast.success(`Storefront rejected for ${selectedItem.consultationName}`);
+      setShowRejectModal(false);
+      setRejectReason("");
+      setSelectedItem(null);
+      loadKpiStats();
+      fetchApprovals({
+        ...queryState,
+        silent: true,
+        force: true,
+      });
+    } catch (err) {
+      console.error("Failed to reject storefront:", err);
+      toast.error(
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to reject storefront"
+      );
+    } finally {
+      setIsRejecting(false);
+    }
   };
 
   return (
@@ -807,6 +912,70 @@ const StorefrontApprovals = () => {
             iconWrapClass="border-rose-100 bg-rose-50 text-rose-600"
             valueClass="text-rose-600"
           />
+        </section>
+
+        {/* Status Tabs */}
+        <section className="flex items-center gap-2 overflow-x-auto pb-1">
+          <button
+            onClick={() => setActiveStatusTab("ALL")}
+            className={cls(
+              "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border-2 px-6 text-sm font-bold transition-all active:scale-95 whitespace-nowrap",
+              activeStatusTab === "ALL"
+                ? "border-sky-500 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            )}
+            type="button"
+          >
+            All
+          </button>
+          <button
+            onClick={() => setActiveStatusTab("REQUESTED")}
+            className={cls(
+              "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border-2 px-6 text-sm font-bold transition-all active:scale-95 whitespace-nowrap",
+              activeStatusTab === "REQUESTED"
+                ? "border-amber-500 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                : "border-amber-200 bg-amber-50/30 text-amber-600 hover:bg-amber-50"
+            )}
+            type="button"
+          >
+            Pending
+          </button>
+          <button
+            onClick={() => setActiveStatusTab("REQUEST_CHANGES")}
+            className={cls(
+              "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border-2 px-6 text-sm font-bold transition-all active:scale-95 whitespace-nowrap",
+              activeStatusTab === "REQUEST_CHANGES"
+                ? "border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100"
+                : "border-orange-200 bg-orange-50/30 text-orange-600 hover:bg-orange-50"
+            )}
+            type="button"
+          >
+            Request Changes
+          </button>
+          <button
+            onClick={() => setActiveStatusTab("VERIFIED")}
+            className={cls(
+              "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border-2 px-6 text-sm font-bold transition-all active:scale-95 whitespace-nowrap",
+              activeStatusTab === "VERIFIED"
+                ? "border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                : "border-emerald-200 bg-emerald-50/30 text-emerald-600 hover:bg-emerald-50"
+            )}
+            type="button"
+          >
+            Verified
+          </button>
+          <button
+            onClick={() => setActiveStatusTab("REJECTED")}
+            className={cls(
+              "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border-2 px-6 text-sm font-bold transition-all active:scale-95 whitespace-nowrap",
+              activeStatusTab === "REJECTED"
+                ? "border-rose-500 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                : "border-rose-200 bg-rose-50/30 text-rose-600 hover:bg-rose-50"
+            )}
+            type="button"
+          >
+            Rejected
+          </button>
         </section>
 
         <section className="relative flex flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
@@ -1160,6 +1329,136 @@ const StorefrontApprovals = () => {
           </>
         )}
       </AnimatePresence>
+
+      {/* Approve Modal */}
+      {showApproveModal && selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl mx-4">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900">
+                  Approve Storefront
+                </h3>
+              </div>
+              <p className="text-sm text-slate-500 font-medium">
+                Approve storefront for <span className="font-bold text-slate-700">{selectedItem.consultationName}</span>
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Approval Reason
+              </label>
+              <textarea
+                value={approveReason}
+                onChange={(e) => setApproveReason(e.target.value)}
+                placeholder="Enter reason for approval..."
+                rows={4}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 placeholder:text-slate-400 resize-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowApproveModal(false);
+                  setApproveReason("");
+                  setSelectedItem(null);
+                }}
+                disabled={isApproving}
+                className="flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmApprove}
+                disabled={isApproving || !approveReason.trim()}
+                className="flex-1 h-11 rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isApproving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} />
+                    Approve
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl mx-4">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-12 w-12 rounded-2xl bg-rose-100 flex items-center justify-center">
+                  <XCircle className="h-6 w-6 text-rose-600" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900">
+                  Reject Storefront
+                </h3>
+              </div>
+              <p className="text-sm text-slate-500 font-medium">
+                Reject storefront for <span className="font-bold text-slate-700">{selectedItem.consultationName}</span>
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Rejection Reason
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter reason for rejection..."
+                rows={4}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-rose-400 focus:ring-4 focus:ring-rose-100 placeholder:text-slate-400 resize-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason("");
+                  setSelectedItem(null);
+                }}
+                disabled={isRejecting}
+                className="flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={isRejecting || !rejectReason.trim()}
+                className="flex-1 h-11 rounded-xl bg-rose-600 text-sm font-bold text-white shadow-lg shadow-rose-600/20 transition-all hover:bg-rose-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isRejecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Rejecting...
+                  </>
+                ) : (
+                  <>
+                    <XCircle size={16} />
+                    Reject
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

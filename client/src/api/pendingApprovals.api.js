@@ -1,6 +1,15 @@
 import api from "./axios";
 
 /* =========================================================
+   GET STOREFRONT DRAFT STATS
+   ENDPOINT: /consultation/storefront/kpi
+========================================================= */
+export const getStorefrontDraftStats = async () => {
+  const res = await api.get("/consultation/storefront/kpi");
+  return res.data;
+};
+
+/* =========================================================
    GET STOREFRONT DRAFT DETAILS
    ENDPOINT: /consultation/storefront/draft/{storeDraftId}
 ========================================================= */
@@ -10,11 +19,54 @@ export const getStorefrontApprovalDetails = async (storeDraftId) => {
 };
 
 /* =========================================================
+   APPROVE STOREFRONT
+   ENDPOINT: /consultation/storefront/approve
+========================================================= */
+export const approveStorefront = async (storeDraftId, reason = null) => {
+  const payload = {
+    storeDraftId,
+    reason,
+  };
+  const res = await api.patch("/consultation/storefront/approve", payload);
+  return res.data;
+};
+
+/* =========================================================
+   REJECT STOREFRONT
+   ENDPOINT: /consultation/storefront/reject
+========================================================= */
+export const rejectStorefront = async (storeDraftId, reason) => {
+  const payload = {
+    storeDraftId,
+    reason,
+  };
+  const res = await api.patch("/consultation/storefront/reject", payload);
+  return res.data;
+};
+
+/* =========================================================
+   REQUEST CHANGES STOREFRONT
+   ENDPOINT: /consultation/storefront/request-changes
+========================================================= */
+export const requestChangesStorefront = async (storeDraftId, reason) => {
+  const payload = {
+    storeDraftId,
+    reason,
+  };
+  const res = await api.patch(
+    "/consultation/storefront/request-changes",
+    payload,
+  );
+  return res.data;
+};
+
+/* =========================================================
    POST FILTER STOREFRONT APPROVALS
    ENDPOINT: /consultation/storefront/approvals/filter
 ========================================================= */
 export const filterStorefrontApprovals = async ({
   searchText = null,
+  verificationStatus = null,
   tierPlanId = null,
   cityId = null,
   pageNo = 1,
@@ -22,6 +74,7 @@ export const filterStorefrontApprovals = async ({
 } = {}) => {
   const payload = {
     searchText: searchText?.trim() ? searchText.trim() : null,
+    verificationStatus: verificationStatus || null,
     tierPlanId: tierPlanId || null,
     cityId: cityId || null,
     pageNo,

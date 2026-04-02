@@ -14,7 +14,7 @@ import {
    User,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import { getStorefrontApprovalDetails } from "../../../../api/pendingApprovals.api";
+import { getStorefrontApprovalDetails, approveStorefront, rejectStorefront, requestChangesStorefront } from "../../../../api/pendingApprovals.api";
 import { getThemeComponent } from "./themes/ThemeRegistry";
 import mapStorefrontData from "./utils/storefrontDataMapper";
 
@@ -49,6 +49,16 @@ const StorefrontApprovalDetail = () => {
    const [error, setError] = useState("");
    const [data, setData] = useState(null);
    const [activeTab, setActiveTab] = useState("about");
+   const [showApproveModal, setShowApproveModal] = useState(false);
+   const [approveReason, setApproveReason] = useState("");
+   const [isApproving, setIsApproving] = useState(false);
+   const [showRejectModal, setShowRejectModal] = useState(false);
+   const [rejectReason, setRejectReason] = useState("");
+   const [isRejecting, setIsRejecting] = useState(false);
+   const [showRequestChangesModal, setShowRequestChangesModal] = useState(false);
+   const [requestChangesSection, setRequestChangesSection] = useState("about_us");
+   const [requestChangesReason, setRequestChangesReason] = useState("");
+   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
 
    useEffect(() => {
       const fetchDetails = async () => {
@@ -77,19 +87,83 @@ const StorefrontApprovalDetail = () => {
       }
    }, [id]);
 
-   const handleApprove = () => {
-      toast.success("Storefront approved");
-      navigate("/admin/consultants/storefront-approvals");
+   const handleApprove = async () => {
+      if (!approveReason.trim()) {
+         toast.error("Please provide a reason for approval");
+         return;
+      }
+
+      setIsApproving(true);
+      try {
+         await approveStorefront(id, approveReason.trim());
+         toast.success("Storefront approved successfully");
+         setShowApproveModal(false);
+         setTimeout(() => {
+            navigate("/admin/consultants/storefront-approvals");
+         }, 1000);
+      } catch (err) {
+         console.error("Failed to approve storefront:", err);
+         toast.error(
+            err?.response?.data?.message ||
+            err?.message ||
+            "Failed to approve storefront"
+         );
+      } finally {
+         setIsApproving(false);
+      }
    };
 
-   const handleReject = () => {
-      toast.error("Storefront rejected");
-      navigate("/admin/consultants/storefront-approvals");
+   const handleReject = async () => {
+      if (!rejectReason.trim()) {
+         toast.error("Please provide a reason for rejection");
+         return;
+      }
+
+      setIsRejecting(true);
+      try {
+         await rejectStorefront(id, rejectReason.trim());
+         toast.success("Storefront rejected successfully");
+         setShowRejectModal(false);
+         setTimeout(() => {
+            navigate("/admin/consultants/storefront-approvals");
+         }, 1000);
+      } catch (err) {
+         console.error("Failed to reject storefront:", err);
+         toast.error(
+            err?.response?.data?.message ||
+            err?.message ||
+            "Failed to reject storefront"
+         );
+      } finally {
+         setIsRejecting(false);
+      }
    };
 
-   const handleRequestChanges = () => {
-      toast.success("Changes requested");
-      navigate("/admin/consultants/storefront-approvals");
+   const handleRequestChanges = async () => {
+      if (!requestChangesReason.trim()) {
+         toast.error("Please provide a reason for requesting changes");
+         return;
+      }
+
+      setIsRequestingChanges(true);
+      try {
+         const combinedReason = `${requestChangesSection}: ${requestChangesReason.trim()}`;
+         await requestChangesStorefront(id, combinedReason);
+         toast.success("Changes requested successfully");
+         setShowRequestChangesModal(false);
+         setTimeout(() => {
+            navigate("/admin/consultants/storefront-approvals");
+         }, 1000);
+      } catch (err) {
+         console.error("Failed to request changes:", err);
+         toast.error(
+            err?.response?.data?.message ||
+            err?.message ||
+            "Failed to request changes"
+         );
+      } finally {
+         setIsRequestingChanges(false);
+      }
    };
 
    if (loading) {
@@ -339,24 +413,24 @@ const StorefrontApprovalDetail = () => {
 
                      <div className="flex items-center gap-3">
                         <button
-                           onClick={handleRequestChanges}
-                           className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-amber-200 bg-amber-50 px-6 text-sm font-bold text-amber-700 transition-all hover:bg-amber-100 active:scale-95"
+                           onClick={() => setShowRequestChangesModal(true)}
+                           className="inline-flex cursor-pointer h-12 items-center justify-center gap-2 rounded-xl border-2 border-amber-200 bg-amber-50 px-6 text-sm font-bold text-amber-700 transition-all hover:bg-amber-100 active:scale-95"
                         >
                            <RefreshCcw size={16} />
                            Request Changes
                         </button>
 
                         <button
-                           onClick={handleReject}
-                           className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-rose-200 bg-rose-50 px-6 text-sm font-bold text-rose-700 transition-all hover:bg-rose-100 active:scale-95"
+                           onClick={() => setShowRejectModal(true)}
+                           className="inline-flex cursor-pointer h-12 items-center justify-center gap-2 rounded-xl border-2 border-rose-200 bg-rose-50 px-6 text-sm font-bold text-rose-700 transition-all hover:bg-rose-100 active:scale-95"
                         >
                            <XCircle size={16} />
                            Reject
                         </button>
 
                         <button
-                           onClick={handleApprove}
-                           className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-8 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-95"
+                           onClick={() => setShowApproveModal(true)}
+                           className="inline-flex cursor-pointer h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-8 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-95"
                         >
                            <CheckCircle2 size={16} />
                            Approve
@@ -366,6 +440,213 @@ const StorefrontApprovalDetail = () => {
                </div>
             </div>
          </div>
+
+         {/* Approve Modal */}
+         {showApproveModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+               <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl mx-4">
+                  <div className="mb-6">
+                     <div className="flex items-center gap-3 mb-2">
+                        <div className="h-12 w-12 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                           <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900">
+                           Approve Storefront
+                        </h3>
+                     </div>
+                     <p className="text-sm text-slate-500 font-medium">
+                        Provide a reason for approving this storefront
+                     </p>
+                  </div>
+
+                  <div className="mb-6">
+                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Approval Reason
+                     </label>
+                     <textarea
+                        value={approveReason}
+                        onChange={(e) => setApproveReason(e.target.value)}
+                        placeholder="Enter reason for approval..."
+                        rows={4}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 placeholder:text-slate-400 resize-none"
+                     />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                     <button
+                        onClick={() => {
+                           setShowApproveModal(false);
+                           setApproveReason("");
+                        }}
+                        disabled={isApproving}
+                        className="flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                     >
+                        Cancel
+                     </button>
+                     <button
+                        onClick={handleApprove}
+                        disabled={isApproving || !approveReason.trim()}
+                        className="flex-1 h-11 rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                     >
+                        {isApproving ? (
+                           <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Approving...
+                           </>
+                        ) : (
+                           <>
+                              <CheckCircle2 size={16} />
+                              Approve
+                           </>
+                        )}
+                     </button>
+                  </div>
+               </div>
+            </div>
+         )}
+
+         {/* Reject Modal */}
+         {showRejectModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+               <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl mx-4">
+                  <div className="mb-6">
+                     <div className="flex items-center gap-3 mb-2">
+                        <div className="h-12 w-12 rounded-2xl bg-rose-100 flex items-center justify-center">
+                           <XCircle className="h-6 w-6 text-rose-600" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900">
+                           Reject Storefront
+                        </h3>
+                     </div>
+                     <p className="text-sm text-slate-500 font-medium">
+                        Provide a reason for rejecting this storefront
+                     </p>
+                  </div>
+
+                  <div className="mb-6">
+                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Rejection Reason
+                     </label>
+                     <textarea
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        placeholder="Enter reason for rejection..."
+                        rows={4}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-rose-400 focus:ring-4 focus:ring-rose-100 placeholder:text-slate-400 resize-none"
+                     />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                     <button
+                        onClick={() => {
+                           setShowRejectModal(false);
+                           setRejectReason("");
+                        }}
+                        disabled={isRejecting}
+                        className="flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                     >
+                        Cancel
+                     </button>
+                     <button
+                        onClick={handleReject}
+                        disabled={isRejecting || !rejectReason.trim()}
+                        className="flex-1 h-11 rounded-xl bg-rose-600 text-sm font-bold text-white shadow-lg shadow-rose-600/20 transition-all hover:bg-rose-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                     >
+                        {isRejecting ? (
+                           <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Rejecting...
+                           </>
+                        ) : (
+                           <>
+                              <XCircle size={16} />
+                              Reject
+                           </>
+                        )}
+                     </button>
+                  </div>
+               </div>
+            </div>
+         )}
+
+         {/* Request Changes Modal */}
+         {showRequestChangesModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+               <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl mx-4">
+                  <div className="mb-6">
+                     <div className="flex items-center gap-3 mb-2">
+                        <div className="h-12 w-12 rounded-2xl bg-amber-100 flex items-center justify-center">
+                           <RefreshCcw className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900">
+                           Request Changes
+                        </h3>
+                     </div>
+                     <p className="text-sm text-slate-500 font-medium">
+                        Specify which section needs changes and provide details
+                     </p>
+                  </div>
+
+                  <div className="mb-4">
+                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Section Needed
+                     </label>
+                     <select
+                        value={requestChangesSection}
+                        onChange={(e) => setRequestChangesSection(e.target.value)}
+                        className="w-full h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                     >
+                        <option value="about_us">About Us</option>
+                        <option value="why_buy_here">Why Buy Here</option>
+                     </select>
+                  </div>
+
+                  <div className="mb-6">
+                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Change Details
+                     </label>
+                     <textarea
+                        value={requestChangesReason}
+                        onChange={(e) => setRequestChangesReason(e.target.value)}
+                        placeholder="Describe what changes are needed..."
+                        rows={4}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-amber-400 focus:ring-4 focus:ring-amber-100 placeholder:text-slate-400 resize-none"
+                     />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                     <button
+                        onClick={() => {
+                           setShowRequestChangesModal(false);
+                           setRequestChangesSection("about_us");
+                           setRequestChangesReason("");
+                        }}
+                        disabled={isRequestingChanges}
+                        className="flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                     >
+                        Cancel
+                     </button>
+                     <button
+                        onClick={handleRequestChanges}
+                        disabled={isRequestingChanges || !requestChangesReason.trim()}
+                        className="flex-1 h-11 rounded-xl bg-amber-600 text-sm font-bold text-white shadow-lg shadow-amber-600/20 transition-all hover:bg-amber-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                     >
+                        {isRequestingChanges ? (
+                           <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Requesting...
+                           </>
+                        ) : (
+                           <>
+                              <RefreshCcw size={16} />
+                              Request Changes
+                           </>
+                        )}
+                     </button>
+                  </div>
+               </div>
+            </div>
+         )}
       </div>
    );
 };
