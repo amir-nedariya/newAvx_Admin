@@ -19,7 +19,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import { filterStorefrontApprovals, getStorefrontDraftStats, approveStorefront, rejectStorefront } from "../../../api/pendingApprovals.api";
+import { filterStorefrontApprovals, getStorefrontDraftStats, approveStorefront, rejectStorefront, requestChangesStorefront } from "../../../api/pendingApprovals.api";
 import { getTierPlans } from "../../../api/tierPlan.api";
 import { getAllCitiesFromSearch } from "../../../api/addressApi";
 
@@ -127,7 +127,7 @@ function TopCard({ title, value, icon: Icon, iconWrapClass = "", valueClass = ""
   );
 }
 
-function RowActions({ onView, onApprove, onReject }) {
+function RowActions({ onView, onApprove, onReject, onRequestChanges }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -176,6 +176,18 @@ function RowActions({ onView, onApprove, onReject }) {
             >
               <Eye className="h-4 w-4" />
               View Details
+            </button>
+
+            <button
+              onClick={() => {
+                onRequestChanges?.();
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-amber-700 transition-all hover:bg-amber-50"
+              type="button"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Request Changes
             </button>
 
             <button
@@ -441,11 +453,15 @@ const StorefrontApprovals = () => {
 
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showRequestChangesModal, setShowRequestChangesModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [approveReason, setApproveReason] = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  const [requestChangesSection, setRequestChangesSection] = useState("about_us");
+  const [requestChangesReason, setRequestChangesReason] = useState("");
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [isRequestingChanges, setIsRequestingChanges] = useState(false);
 
   const loadTiersOnce = useCallback(async () => {
     if (tierLoaded || tierLoading) return;
@@ -814,6 +830,44 @@ const StorefrontApprovals = () => {
     }
   };
 
+  const handleRequestChanges = (item) => {
+    setSelectedItem(item);
+    setShowRequestChangesModal(true);
+  };
+
+  const confirmRequestChanges = async () => {
+    if (!requestChangesReason.trim()) {
+      toast.error("Please provide a reason for requesting changes");
+      return;
+    }
+
+    setIsRequestingChanges(true);
+    try {
+      const combinedReason = `${requestChangesSection}: ${requestChangesReason.trim()}`;
+      await requestChangesStorefront(selectedItem.storeDraftId, combinedReason);
+      toast.success(`Changes requested for ${selectedItem.consultationName}`);
+      setShowRequestChangesModal(false);
+      setRequestChangesSection("about_us");
+      setRequestChangesReason("");
+      setSelectedItem(null);
+      loadKpiStats();
+      fetchApprovals({
+        ...queryState,
+        silent: true,
+        force: true,
+      });
+    } catch (err) {
+      console.error("Failed to request changes:", err);
+      toast.error(
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to request changes"
+      );
+    } finally {
+      setIsRequestingChanges(false);
+    }
+  };
+
   const confirmReject = async () => {
     if (!rejectReason.trim()) {
       toast.error("Please provide a reason for rejection");
@@ -1162,6 +1216,7 @@ const StorefrontApprovals = () => {
                         <td className="border-b border-slate-100 px-6 py-4.5 text-right align-middle">
                           <RowActions
                             onView={() => handleViewDetails(item)}
+                            onRequestChanges={() => handleRequestChanges(item)}
                             onApprove={() => handleApprove(item)}
                             onReject={() => handleReject(item)}
                           />
@@ -1452,6 +1507,86 @@ const StorefrontApprovals = () => {
                   <>
                     <XCircle size={16} />
                     Reject
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Changes Modal */}
+      {showRequestChangesModal && selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl mx-4">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-12 w-12 rounded-2xl bg-amber-100 flex items-center justify-center">
+                  <RefreshCw className="h-6 w-6 text-amber-600" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900">
+                  Request Changes
+                </h3>
+              </div>
+              <p className="text-sm text-slate-500 font-medium">
+                Request changes for <span className="font-bold text-slate-700">{selectedItem.consultationName}</span>
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Section Needed
+              </label>
+              <select
+                value={requestChangesSection}
+                onChange={(e) => setRequestChangesSection(e.target.value)}
+                className="w-full h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+              >
+                <option value="about_us">About Us</option>
+                <option value="why_buy_here">Why Buy Here</option>
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Change Details
+              </label>
+              <textarea
+                value={requestChangesReason}
+                onChange={(e) => setRequestChangesReason(e.target.value)}
+                placeholder="Describe what changes are needed..."
+                rows={4}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-amber-400 focus:ring-4 focus:ring-amber-100 placeholder:text-slate-400 resize-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowRequestChangesModal(false);
+                  setRequestChangesSection("about_us");
+                  setRequestChangesReason("");
+                  setSelectedItem(null);
+                }}
+                disabled={isRequestingChanges}
+                className="flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRequestChanges}
+                disabled={isRequestingChanges || !requestChangesReason.trim()}
+                className="flex-1 h-11 rounded-xl bg-amber-600 text-sm font-bold text-white shadow-lg shadow-amber-600/20 transition-all hover:bg-amber-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isRequestingChanges ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Requesting...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={16} />
+                    Request Changes
                   </>
                 )}
               </button>

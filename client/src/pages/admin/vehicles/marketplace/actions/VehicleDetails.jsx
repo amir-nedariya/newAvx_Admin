@@ -24,6 +24,8 @@ import {
   CarFront,
   Ban,
   StickyNote,
+  Eye,
+  XCircle,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -240,6 +242,8 @@ const VehicleDetails = () => {
   const [error, setError] = useState("");
   const [vehicle, setVehicle] = useState(null);
   const [selectedImage, setSelectedImage] = useState("");
+  const [previewImage, setPreviewImage] = useState(null);
+  const [previewTitle, setPreviewTitle] = useState("");
 
   const [suspendModal, setSuspendModal] = useState({
     open: false,
@@ -743,18 +747,6 @@ const VehicleDetails = () => {
                       <InfoLine icon={<ShieldCheck className="h-4 w-4" />} label="Tier Plan" value={vehicle.displayInfo.tierPlanTitle} />
                       <InfoLine icon={<CalendarDays className="h-4 w-4" />} label="Establishment Year" value={vehicle.displayInfo.establishmentYear} />
                       <InfoLine icon={<ShieldCheck className="h-4 w-4" />} label="Status" value={vehicle.displayInfo.status} />
-                      {vehicle.consultantInfo?.logoUrl && (
-                        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">Logo</p>
-                          <img src={vehicle.consultantInfo.logoUrl} alt="Logo" className="h-16 w-16 rounded-xl object-cover border border-zinc-200" />
-                        </div>
-                      )}
-                      {vehicle.consultantInfo?.bannerUrl && (
-                        <div className="col-span-full rounded-2xl border border-zinc-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">Banner</p>
-                          <img src={vehicle.consultantInfo.bannerUrl} alt="Banner" className="h-32 w-full rounded-xl object-cover border border-zinc-200" />
-                        </div>
-                      )}
                     </>
                   ) : (
                     <>
@@ -767,6 +759,63 @@ const VehicleDetails = () => {
                     </>
                   )}
                 </div>
+
+                {vehicle.isConsultation && (vehicle.consultantInfo?.logoUrl || vehicle.consultantInfo?.bannerUrl) && (
+                  <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-4 overflow-hidden">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Consultant Branding</p>
+                      <div className="flex items-center gap-2">
+                        {vehicle.consultantInfo?.logoUrl && (
+                          <button
+                            onClick={() => {
+                              setPreviewImage(vehicle.consultantInfo.logoUrl);
+                              setPreviewTitle("Consultant Logo");
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-all hover:bg-zinc-200 active:scale-95"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Preview Logo
+                          </button>
+                        )}
+                        {vehicle.consultantInfo?.bannerUrl && (
+                          <button
+                            onClick={() => {
+                              setPreviewImage(vehicle.consultantInfo.bannerUrl);
+                              setPreviewTitle("Consultant Banner");
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-all hover:bg-zinc-200 active:scale-95"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Preview Banner
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="relative h-48 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-50">
+                      {vehicle.consultantInfo?.bannerUrl ? (
+                        <img
+                          src={vehicle.consultantInfo.bannerUrl}
+                          alt="Banner"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-gradient-to-br from-zinc-200 to-zinc-100" />
+                      )}
+
+                      {vehicle.consultantInfo?.logoUrl && (
+                        <div className="absolute left-6 top-1/2 -translate-y-1/2">
+                          <div className="h-24 w-24 rounded-2xl border-4 border-white bg-white shadow-2xl overflow-hidden">
+                            <img
+                              src={vehicle.consultantInfo.logoUrl}
+                              alt="Logo"
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </SectionCard>
             </div>
           )}
@@ -1075,9 +1124,53 @@ const VehicleDetails = () => {
         vehicleTitle={noteModal.vehicleTitle}
         onSuccess={() => fetchVehicleDetails()}
       />
+
+      {previewImage && (
+        <ImagePreviewModal
+          imageUrl={previewImage}
+          title={previewTitle}
+          onClose={() => {
+            setPreviewImage(null);
+            setPreviewTitle("");
+          }}
+        />
+      )}
     </div>
   );
 };
+
+function ImagePreviewModal({ imageUrl, title, onClose }) {
+  if (!imageUrl) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-w-6xl max-h-[90vh] w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-xl font-bold text-white">{title}</h3>
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm transition-all hover:bg-white/20 active:scale-95"
+          >
+            <XCircle className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl">
+          <img
+            src={imageUrl}
+            alt={title}
+            className="max-h-[80vh] w-full object-contain"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatItem({ label, value }) {
   return (

@@ -41,13 +41,39 @@ const cls = (...a) => a.filter(Boolean).join(" ");
 const fmtInt = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : 0);
 
 const fmtHours = (v) => {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return "N/A";
-  if (n > 100000) {
-    const hours = n / (1000 * 60 * 60);
-    return hours < 1 ? `${Math.round(hours * 60)}m` : `${hours.toFixed(1)}h`;
+  const minutes = Number(v);
+  if (!Number.isFinite(minutes) || minutes <= 0) return "N/A";
+
+  // Convert minutes to different time units
+  const minutesInHour = 60;
+  const minutesInDay = 60 * 24;
+  const minutesInMonth = 60 * 24 * 30; // Approximate
+  const minutesInYear = 60 * 24 * 365; // Approximate
+
+  if (minutes < minutesInHour) {
+    // Less than 1 hour - show minutes
+    return `${Math.round(minutes)}m`;
+  } else if (minutes < minutesInDay) {
+    // Less than 1 day - show hours and minutes
+    const hours = Math.floor(minutes / minutesInHour);
+    const mins = Math.round(minutes % minutesInHour);
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  } else if (minutes < minutesInMonth) {
+    // Less than 1 month - show days and hours
+    const days = Math.floor(minutes / minutesInDay);
+    const hours = Math.round((minutes % minutesInDay) / minutesInHour);
+    return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  } else if (minutes < minutesInYear) {
+    // Less than 1 year - show months and days
+    const months = Math.floor(minutes / minutesInMonth);
+    const days = Math.round((minutes % minutesInMonth) / minutesInDay);
+    return days > 0 ? `${months}mo ${days}d` : `${months}mo`;
+  } else {
+    // 1 year or more - show years and months
+    const years = Math.floor(minutes / minutesInYear);
+    const months = Math.round((minutes % minutesInYear) / minutesInMonth);
+    return months > 0 ? `${years}y ${months}mo` : `${years}y`;
   }
-  return n % 1 === 0 ? `${n}h` : `${n.toFixed(1)}h`;
 };
 
 const fmtPct = (v) =>
@@ -203,7 +229,7 @@ const tierBadge = (tierTitle) => {
 //   );
 // }
 
-function RowActions({ consultantId }) {
+function RowActions({ consultantId, consultantName, onOpenModal }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
@@ -225,13 +251,13 @@ function RowActions({ consultantId }) {
 
   /* SUSPEND */
   const handleSuspend = () => {
-    navigate(`/admin/consultants/suspend/${consultantId}`);
+    onOpenModal("suspend", consultantId, consultantName);
     setOpen(false);
   };
 
   /* CHANGE TIER */
   const handleChangeTier = () => {
-    navigate(`/admin/consultants/change-tier/${consultantId}`);
+    onOpenModal("changeTier", consultantId, consultantName);
     setOpen(false);
   };
 
@@ -243,19 +269,19 @@ function RowActions({ consultantId }) {
 
   /* FLAG FOR REVIEW */
   const handleFlagForReview = () => {
-    navigate(`/admin/consultants/flag-review/${consultantId}`);
+    onOpenModal("flagReview", consultantId, consultantName);
     setOpen(false);
   };
 
   /* FORCE AUDIT */
   const handleForceAudit = () => {
-    navigate(`/admin/consultants/force-audit/${consultantId}`);
+    onOpenModal("forceAudit", consultantId, consultantName);
     setOpen(false);
   };
 
   /* ADD INTERNAL NOTE */
   const handleAddNote = () => {
-    navigate(`/admin/consultants/add-note/${consultantId}`);
+    onOpenModal("addNote", consultantId, consultantName);
     setOpen(false);
   };
 
@@ -332,6 +358,742 @@ function RowActions({ consultantId }) {
     </div>
   );
 }
+
+/* =========================================================
+   ACTION MODALS
+========================================================= */
+
+/* SUSPEND CONSULTANT MODAL */
+function SuspendConsultantModal({
+  open,
+  consultantName,
+  suspendReason,
+  setSuspendReason,
+  suspendType,
+  setSuspendType,
+  suspendUntil,
+  setSuspendUntil,
+  loading,
+  onClose,
+  onConfirm,
+}) {
+  if (!open) return null;
+
+  const suspensionReasons = [
+    "Policy violation",
+    "Fraudulent activity",
+    "Multiple complaints",
+    "Fake documents",
+    "Inappropriate behavior",
+    "Terms of service violation",
+    "Quality issues",
+    "Other",
+  ];
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[111] w-[95%] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-zinc-100 bg-rose-50 px-6 py-5 rounded-t-[28px]">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-100">
+              <Ban className="h-6 w-6 text-rose-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900">Suspend Consultant</h3>
+              {consultantName && (
+                <p className="mt-1 text-sm text-zinc-600">{consultantName}</p>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="space-y-6">
+            {/* Reason Dropdown */}
+            <div>
+              <label className="mb-2 block text-sm font-bold uppercase tracking-wide text-zinc-600">
+                Reason for Suspension
+              </label>
+              <div className="relative">
+                <select
+                  value={suspendReason}
+                  onChange={(e) => setSuspendReason(e.target.value)}
+                  className="w-full appearance-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 pr-10 text-sm text-zinc-900 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+                >
+                  <option value="">Select reason</option>
+                  {suspensionReasons.map((reason) => (
+                    <option key={reason} value={reason}>
+                      {reason}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
+              </div>
+            </div>
+
+            {/* Suspension Type */}
+            <div>
+              <label className="mb-3 block text-sm font-bold uppercase tracking-wide text-zinc-600">
+                Suspension Type
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSuspendType("TEMPORARY")}
+                  className={cls(
+                    "rounded-2xl border-2 p-4 text-left transition-all",
+                    suspendType === "TEMPORARY"
+                      ? "border-sky-500 bg-sky-50"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  )}
+                >
+                  <div className="text-base font-bold text-zinc-900">Temporary</div>
+                  <div className="mt-1 text-sm text-zinc-500">Suspend for limited time</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSuspendType("PERMANENT")}
+                  className={cls(
+                    "rounded-2xl border-2 p-4 text-left transition-all",
+                    suspendType === "PERMANENT"
+                      ? "border-sky-500 bg-sky-50"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  )}
+                >
+                  <div className="text-base font-bold text-zinc-900">Permanent</div>
+                  <div className="mt-1 text-sm text-zinc-500">Until manually restored</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Suspend Until (only for temporary) */}
+            {suspendType === "TEMPORARY" && (
+              <div>
+                <label className="mb-2 block text-sm font-bold uppercase tracking-wide text-zinc-600">
+                  Suspend Until
+                </label>
+                <input
+                  type="datetime-local"
+                  value={suspendUntil}
+                  onChange={(e) => setSuspendUntil(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+                />
+                <p className="mt-2 text-xs text-zinc-500">Select a future date and time for suspension end</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-zinc-200 bg-white px-6 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={
+                loading ||
+                !suspendReason ||
+                (suspendType === "TEMPORARY" && !suspendUntil)
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Ban className="h-4 w-4" />
+              {loading ? "Suspending..." : "Confirm Suspend"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* CHANGE TIER MODAL */
+function ChangeTierModal({
+  open,
+  consultantName,
+  selectedTier,
+  setSelectedTier,
+  tierPlans,
+  applyType,
+  setApplyType,
+  discountPercentage,
+  setDiscountPercentage,
+  manualPrice,
+  setManualPrice,
+  reason,
+  setReason,
+  loading,
+  onClose,
+  onConfirm,
+}) {
+  if (!open) return null;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[111] w-[95%] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-zinc-100 px-6 py-5">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-50">
+              <BadgeCheck className="h-6 w-6 text-sky-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900">Change Tier Plan</h3>
+              {consultantName && (
+                <p className="mt-1 text-sm text-zinc-500">{consultantName}</p>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-6 rounded-2xl bg-sky-50 border border-sky-100 px-4 py-3">
+            <p className="text-sm font-semibold text-sky-800">
+              Select a new tier plan for this consultant. Changes will take effect based on apply type.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            {/* Select Tier Plan */}
+            <div>
+              <label className="mb-2 block text-sm font-bold text-zinc-700">
+                Select Tier Plan <span className="text-sky-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedTier}
+                  onChange={(e) => setSelectedTier(e.target.value)}
+                  className="w-full appearance-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 pr-10 text-sm text-zinc-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                >
+                  <option value="">Select a tier...</option>
+                  {tierPlans.map((tier) => (
+                    <option key={tier.id} value={tier.id}>
+                      {tier.title}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
+              </div>
+            </div>
+
+            {/* Apply Type */}
+            <div>
+              <label className="mb-3 block text-sm font-bold text-zinc-700">
+                Apply Type <span className="text-sky-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setApplyType("IMMEDIATE")}
+                  className={cls(
+                    "rounded-2xl border-2 p-4 text-left transition-all",
+                    applyType === "IMMEDIATE"
+                      ? "border-sky-500 bg-sky-50"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  )}
+                >
+                  <div className="text-base font-bold text-zinc-900">Immediate</div>
+                  <div className="mt-1 text-sm text-zinc-500">Apply changes now</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApplyType("AT_EXPIRY")}
+                  className={cls(
+                    "rounded-2xl border-2 p-4 text-left transition-all",
+                    applyType === "AT_EXPIRY"
+                      ? "border-sky-500 bg-sky-50"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  )}
+                >
+                  <div className="text-base font-bold text-zinc-900">At Expiry</div>
+                  <div className="mt-1 text-sm text-zinc-500">Apply after current tier expires</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Discount Percentage */}
+            <div>
+              <label className="mb-2 block text-sm font-bold text-zinc-700">
+                Discount Percentage (Optional)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={discountPercentage}
+                  onChange={(e) => setDiscountPercentage(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 pr-10 text-sm text-zinc-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-400">
+                  %
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-zinc-500">
+                Maximum 100%
+              </p>
+            </div>
+
+            {/* Manual Price */}
+            <div>
+              <label className="mb-2 block text-sm font-bold text-zinc-700">
+                Manual Price (Optional)
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-400">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  value={manualPrice}
+                  onChange={(e) => setManualPrice(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 pl-10 text-sm text-zinc-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                />
+              </div>
+              <p className="mt-2 text-xs text-zinc-500">
+                Override tier price with custom amount
+              </p>
+            </div>
+
+            {/* Reason */}
+            <div>
+              <label className="mb-2 block text-sm font-bold text-zinc-700">
+                Reason <span className="text-sky-500">*</span>
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                placeholder="Enter reason for tier change..."
+                className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+              />
+              <p className="mt-2 text-xs text-zinc-500">
+                Minimum 5 characters required
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-zinc-200 bg-white px-6 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={
+                loading ||
+                !selectedTier ||
+                !applyType ||
+                !reason.trim() ||
+                reason.trim().length < 5
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <BadgeCheck className="h-4 w-4" />
+              {loading ? "Updating..." : "Confirm Change"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* FLAG FOR REVIEW MODAL */
+function FlagReviewModal({
+  open,
+  consultantName,
+  flagCategory,
+  setFlagCategory,
+  flagSeverity,
+  setFlagSeverity,
+  flagNotes,
+  setFlagNotes,
+  loading,
+  onClose,
+  onConfirm,
+}) {
+  if (!open) return null;
+
+  const flagCategories = [
+    { value: "FRAUD_SUSPICION", label: "Fraud Suspicion", icon: "⚠️" },
+    { value: "SUSPICIOUS_PRICING", label: "Suspicious Pricing", icon: "💰" },
+    { value: "FAKE_INQUIRIES", label: "Fake Inquiries", icon: "🚫" },
+    { value: "POLICY_VIOLATION", label: "Policy Violation", icon: "🚷" },
+    { value: "DATA_INCONSISTENCY", label: "Data Inconsistency", icon: "🔵" },
+  ];
+
+  const severityLevels = ["LOW", "MODERATE", "HIGH"];
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[111] w-[95%] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-zinc-100 px-6 py-5">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50">
+              <ShieldAlert className="h-6 w-6 text-rose-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900">Flag Consultant For Review</h3>
+              {consultantName && (
+                <p className="mt-1 text-sm text-zinc-500">{consultantName}</p>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="space-y-6">
+            {/* Flag Category */}
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-rose-400">
+                <ShieldAlert className="h-4 w-4" />
+                Flag Category
+              </label>
+              <div className="relative">
+                <select
+                  value={flagCategory}
+                  onChange={(e) => setFlagCategory(e.target.value)}
+                  className="w-full appearance-none rounded-2xl border-2 border-rose-200 bg-white px-4 py-3 pr-10 text-sm text-zinc-900 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+                >
+                  <option value="">Select Category</option>
+                  {flagCategories.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.icon} {cat.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
+              </div>
+            </div>
+
+            {/* Severity Level */}
+            <div>
+              <label className="mb-3 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                Severity Level
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {severityLevels.map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setFlagSeverity(level)}
+                    className={cls(
+                      "rounded-2xl border-2 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all",
+                      flagSeverity === level
+                        ? level === "LOW"
+                          ? "border-sky-500 bg-sky-50 text-sky-700"
+                          : level === "MODERATE"
+                            ? "border-amber-500 bg-amber-50 text-amber-700"
+                            : "border-rose-500 bg-rose-50 text-rose-700"
+                        : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
+                    )}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Internal Administrative Notes */}
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                <NotebookPen className="h-4 w-4" />
+                Internal Administrative Notes
+              </label>
+              <textarea
+                value={flagNotes}
+                onChange={(e) => setFlagNotes(e.target.value)}
+                rows={4}
+                placeholder="Why are you flagging this consultant? Be specific for the auditing team..."
+                className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+              />
+              <p className="mt-2 text-xs text-zinc-500">
+                Minimum 10 characters required
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-zinc-200 bg-white px-6 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={
+                loading ||
+                !flagCategory ||
+                !flagSeverity ||
+                !flagNotes.trim() ||
+                flagNotes.trim().length < 10
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <ShieldAlert className="h-4 w-4" />
+              {loading ? "Flagging..." : "Flag Consultant"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* FORCE AUDIT MODAL */
+function ForceAuditModal({
+  open,
+  consultantName,
+  auditType,
+  setAuditType,
+  auditReason,
+  setAuditReason,
+  loading,
+  onClose,
+  onConfirm,
+}) {
+  if (!open) return null;
+
+  const auditTypes = [
+    { value: "INVENTORY_AUDIT", label: "Inventory Audit" },
+    { value: "KYC_AUDIT", label: "KYC Audit" },
+    { value: "FULL_COMPLIANCE_AUDIT", label: "Full Compliance Audit" },
+  ];
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[111] w-[95%] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-zinc-100 px-6 py-5">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50">
+              <Activity className="h-6 w-6 text-violet-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900">Force Audit</h3>
+              {consultantName && (
+                <p className="mt-1 text-sm text-zinc-500">{consultantName}</p>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-6 rounded-2xl bg-violet-50 border border-violet-100 px-4 py-3">
+            <p className="text-sm font-semibold text-violet-800">
+              This will trigger a comprehensive audit of the consultant's account and activities.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            {/* Audit Type Dropdown */}
+            <div>
+              <label className="mb-2 block text-sm font-bold text-zinc-700">
+                Audit Type <span className="text-violet-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={auditType}
+                  onChange={(e) => setAuditType(e.target.value)}
+                  className="w-full appearance-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 pr-10 text-sm text-zinc-900 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                >
+                  <option value="">Select audit type</option>
+                  {auditTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div>
+              <label className="mb-2 block text-sm font-bold text-zinc-700">
+                Reason for Audit <span className="text-violet-500">*</span>
+              </label>
+              <textarea
+                value={auditReason}
+                onChange={(e) => setAuditReason(e.target.value)}
+                rows={4}
+                placeholder="Enter reason for forcing an audit..."
+                className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+              />
+              <p className="mt-2 text-xs text-zinc-500">
+                Minimum 10 characters required
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-zinc-200 bg-white px-6 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={
+                loading ||
+                !auditType ||
+                !auditReason.trim() ||
+                auditReason.trim().length < 10
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Activity className="h-4 w-4" />
+              {loading ? "Processing..." : "Confirm Audit"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ADD INTERNAL NOTE MODAL */
+function AddNoteModal({
+  open,
+  consultantName,
+  noteText,
+  setNoteText,
+  loading,
+  onClose,
+  onConfirm,
+}) {
+  if (!open) return null;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[111] w-[95%] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-zinc-100 px-6 py-5">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100">
+              <NotebookPen className="h-6 w-6 text-slate-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900">Add Internal Note</h3>
+              {consultantName && (
+                <p className="mt-1 text-sm text-zinc-500">{consultantName}</p>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-6 rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-700">
+              This note will be visible only to admin team members.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-bold text-zinc-700">
+              Note <span className="text-slate-500">*</span>
+            </label>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              rows={5}
+              placeholder="Enter internal note about this consultant..."
+              className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20"
+            />
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-zinc-200 bg-white px-6 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={loading || !noteText.trim()}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <NotebookPen className="h-4 w-4" />
+              {loading ? "Saving..." : "Save Note"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* =========================================================
    DRAWER / SMALL PARTS
 ========================================================= */
@@ -727,6 +1489,34 @@ const Allconsultants = () => {
 
   const [selectedConsultant, setSelectedConsultant] = useState(null);
   const [modal, setModal] = useState(null);
+
+  // Action modal states
+  const [actionModal, setActionModal] = useState({ open: false, type: "", consultantId: null, consultantName: "" });
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Suspend modal states
+  const [suspendReason, setSuspendReason] = useState("");
+  const [suspendType, setSuspendType] = useState("TEMPORARY");
+  const [suspendUntil, setSuspendUntil] = useState("");
+
+  // Change tier modal states
+  const [selectedTier, setSelectedTier] = useState("");
+  const [applyType, setApplyType] = useState("IMMEDIATE");
+  const [discountPercentage, setDiscountPercentage] = useState("");
+  const [manualPrice, setManualPrice] = useState("");
+  const [tierChangeReason, setTierChangeReason] = useState("");
+
+  // Flag review modal states
+  const [flagCategory, setFlagCategory] = useState("");
+  const [flagSeverity, setFlagSeverity] = useState("");
+  const [flagNotes, setFlagNotes] = useState("");
+
+  // Force audit modal states
+  const [auditType, setAuditType] = useState("");
+  const [auditReason, setAuditReason] = useState("");
+
+  // Add note modal states
+  const [noteText, setNoteText] = useState("");
 
   const loadKpi = useCallback(async () => {
     setKpiLoading(true);
@@ -1134,7 +1924,7 @@ const Allconsultants = () => {
     };
   }, [kpi, rows, totalCount]);
 
-  const handleSuspendConfirm = (item) => {
+  const handleOldSuspendConfirm = (item) => {
     setRows((prev) =>
       prev.map((r) =>
         r.id === item.id ? { ...r, status: "INACTIVE", risk: "High" } : r
@@ -1208,6 +1998,140 @@ const Allconsultants = () => {
     return VERIFY_OPTIONS.map(v => ({ id: v, name: v.replace(/_/g, " ") }))
       .filter((v) => v.name.toLowerCase().includes(q));
   }, [verificationQuery]);
+
+  // Modal handlers
+  const openModal = (type, consultantId, consultantName) => {
+    setActionModal({ open: true, type, consultantId, consultantName });
+    // Reset all modal states
+    setSuspendReason("");
+    setSuspendType("TEMPORARY");
+    setSuspendUntil("");
+    setSelectedTier("");
+    setApplyType("IMMEDIATE");
+    setDiscountPercentage("");
+    setManualPrice("");
+    setTierChangeReason("");
+    setFlagCategory("");
+    setFlagSeverity("");
+    setFlagNotes("");
+    setAuditType("");
+    setAuditReason("");
+    setNoteText("");
+  };
+
+  const closeModal = () => {
+    setActionModal({ open: false, type: "", consultantId: null, consultantName: "" });
+    setActionLoading(false);
+  };
+
+  const handleSuspendConfirm = async () => {
+    try {
+      setActionLoading(true);
+
+      // TODO: Replace with actual API call
+      // await suspendConsultation({
+      //   consultId: actionModal.consultantId,
+      //   reason: suspendReason,
+      //   suspensionType: suspendType,
+      //   suspendUntil: suspendType === "TEMPORARY" ? suspendUntil : null,
+      // });
+
+      toast.success("Consultant suspended successfully");
+      closeModal();
+      handleRefresh();
+    } catch (e) {
+      toast.error("Failed to suspend consultant");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleChangeTierConfirm = async () => {
+    try {
+      setActionLoading(true);
+
+      // TODO: Replace with actual API call
+      // await changeTierPlan({
+      //   consultId: actionModal.consultantId,
+      //   newTierId: selectedTier,
+      //   applyType: applyType,
+      //   discountPercentage: discountPercentage ? parseFloat(discountPercentage) : null,
+      //   manualPrice: manualPrice ? parseFloat(manualPrice) : null,
+      //   reason: tierChangeReason,
+      // });
+
+      toast.success("Tier plan changed successfully");
+      closeModal();
+      handleRefresh();
+    } catch (e) {
+      toast.error("Failed to change tier plan");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleFlagReviewConfirm = async () => {
+    try {
+      setActionLoading(true);
+
+      // TODO: Replace with actual API call
+      // await flagForReview({
+      //   consultId: actionModal.consultantId,
+      //   flagCategory: flagCategory,
+      //   severity: flagSeverity,
+      //   internalNotes: flagNotes,
+      // });
+
+      toast.success("Consultant flagged for review");
+      closeModal();
+      handleRefresh();
+    } catch (e) {
+      toast.error("Failed to flag consultant");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleForceAuditConfirm = async () => {
+    try {
+      setActionLoading(true);
+
+      // TODO: Replace with actual API call
+      // await forceAudit({
+      //   consultId: actionModal.consultantId,
+      //   auditType: auditType,
+      //   reason: auditReason,
+      // });
+
+      toast.success("Audit initiated successfully");
+      closeModal();
+      handleRefresh();
+    } catch (e) {
+      toast.error("Failed to initiate audit");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAddNoteConfirm = async () => {
+    try {
+      setActionLoading(true);
+
+      // TODO: Replace with actual API call
+      // await addInternalNote({
+      //   consultId: actionModal.consultantId,
+      //   note: noteText,
+      // });
+
+      toast.success("Internal note added successfully");
+      closeModal();
+      handleRefresh();
+    } catch (e) {
+      toast.error("Failed to add note");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col overflow-hidden p-0">
@@ -1500,7 +2424,11 @@ const Allconsultants = () => {
                           </td>
 
                           <td className="border-b border-slate-100 px-6 py-4.5 text-right align-middle">
-                            <RowActions consultantId={row.id} />
+                            <RowActions
+                              consultantId={row.id}
+                              consultantName={row.name}
+                              onOpenModal={openModal}
+                            />
                           </td>
                         </tr>
                       );
@@ -1728,7 +2656,77 @@ const Allconsultants = () => {
       <SuspendModal
         modal={modal}
         onClose={() => setModal(null)}
+        onConfirm={handleOldSuspendConfirm}
+      />
+
+      {/* Action Modals */}
+      <SuspendConsultantModal
+        open={actionModal.open && actionModal.type === "suspend"}
+        consultantName={actionModal.consultantName}
+        suspendReason={suspendReason}
+        setSuspendReason={setSuspendReason}
+        suspendType={suspendType}
+        setSuspendType={setSuspendType}
+        suspendUntil={suspendUntil}
+        setSuspendUntil={setSuspendUntil}
+        loading={actionLoading}
+        onClose={closeModal}
         onConfirm={handleSuspendConfirm}
+      />
+
+      <ChangeTierModal
+        open={actionModal.open && actionModal.type === "changeTier"}
+        consultantName={actionModal.consultantName}
+        selectedTier={selectedTier}
+        setSelectedTier={setSelectedTier}
+        tierPlans={tierPlans}
+        applyType={applyType}
+        setApplyType={setApplyType}
+        discountPercentage={discountPercentage}
+        setDiscountPercentage={setDiscountPercentage}
+        manualPrice={manualPrice}
+        setManualPrice={setManualPrice}
+        reason={tierChangeReason}
+        setReason={setTierChangeReason}
+        loading={actionLoading}
+        onClose={closeModal}
+        onConfirm={handleChangeTierConfirm}
+      />
+
+      <FlagReviewModal
+        open={actionModal.open && actionModal.type === "flagReview"}
+        consultantName={actionModal.consultantName}
+        flagCategory={flagCategory}
+        setFlagCategory={setFlagCategory}
+        flagSeverity={flagSeverity}
+        setFlagSeverity={setFlagSeverity}
+        flagNotes={flagNotes}
+        setFlagNotes={setFlagNotes}
+        loading={actionLoading}
+        onClose={closeModal}
+        onConfirm={handleFlagReviewConfirm}
+      />
+
+      <ForceAuditModal
+        open={actionModal.open && actionModal.type === "forceAudit"}
+        consultantName={actionModal.consultantName}
+        auditType={auditType}
+        setAuditType={setAuditType}
+        auditReason={auditReason}
+        setAuditReason={setAuditReason}
+        loading={actionLoading}
+        onClose={closeModal}
+        onConfirm={handleForceAuditConfirm}
+      />
+
+      <AddNoteModal
+        open={actionModal.open && actionModal.type === "addNote"}
+        consultantName={actionModal.consultantName}
+        noteText={noteText}
+        setNoteText={setNoteText}
+        loading={actionLoading}
+        onClose={closeModal}
+        onConfirm={handleAddNoteConfirm}
       />
     </div>
   );
