@@ -29,6 +29,11 @@ import {
   filterConsultations,
   mapConsultationToRow,
   getConsultationKpi,
+  suspendConsultation,
+  changeConsultantTier,
+  flagConsultationReview,
+  forceAuditConsultation,
+  addInternalNote,
 } from "../../../api/consultationApi";
 import { getTierPlans } from "../../../api/tierPlan.api";
 import { getStates, getAllCitiesFromSearch } from "../../../api/addressApi";
@@ -1017,6 +1022,8 @@ function AddNoteModal({
   consultantName,
   noteText,
   setNoteText,
+  noteVisibility,
+  setNoteVisibility,
   loading,
   onClose,
   onConfirm,
@@ -1052,23 +1059,58 @@ function AddNoteModal({
         </div>
 
         <div className="p-6">
-          <div className="mb-6 rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3">
-            <p className="text-sm font-semibold text-slate-700">
-              This note will be visible only to admin team members.
-            </p>
-          </div>
+          <div className="space-y-5">
+            {/* Visibility Selection */}
+            <div>
+              <label className="mb-3 block text-sm font-bold text-zinc-700">
+                Visibility <span className="text-slate-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setNoteVisibility("INTERNAL_ONLY")}
+                  className={cls(
+                    "rounded-2xl border-2 p-4 text-left transition-all",
+                    noteVisibility === "INTERNAL_ONLY"
+                      ? "border-slate-500 bg-slate-50"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  )}
+                >
+                  <div className="text-base font-bold text-zinc-900">Internal Only</div>
+                  <div className="mt-1 text-sm text-zinc-500">Visible to admin team only</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNoteVisibility("COMPLIANCE_TEAM")}
+                  className={cls(
+                    "rounded-2xl border-2 p-4 text-left transition-all",
+                    noteVisibility === "COMPLIANCE_TEAM"
+                      ? "border-slate-500 bg-slate-50"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  )}
+                >
+                  <div className="text-base font-bold text-zinc-900">Compliance Team</div>
+                  <div className="mt-1 text-sm text-zinc-500">Shared with compliance</div>
+                </button>
+              </div>
+            </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-bold text-zinc-700">
-              Note <span className="text-slate-500">*</span>
-            </label>
-            <textarea
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              rows={5}
-              placeholder="Enter internal note about this consultant..."
-              className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20"
-            />
+            {/* Note Text */}
+            <div>
+              <label className="mb-2 block text-sm font-bold text-zinc-700">
+                Note <span className="text-slate-500">*</span>
+              </label>
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                rows={5}
+                placeholder="Enter internal note about this consultant..."
+                className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20"
+              />
+              <p className="mt-2 text-xs text-zinc-500">
+                Minimum 5 characters required
+              </p>
+            </div>
           </div>
 
           <div className="mt-6 flex justify-end gap-3">
@@ -1081,7 +1123,7 @@ function AddNoteModal({
 
             <button
               onClick={onConfirm}
-              disabled={loading || !noteText.trim()}
+              disabled={loading || !noteText.trim() || noteText.trim().length < 5}
               className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <NotebookPen className="h-4 w-4" />
@@ -1403,7 +1445,7 @@ function PaginationBar({ page, totalPages, totalCount, loading, onPageChange }) 
   );
 }
 
-function TopCard({ title, value, icon: Icon = User }) {
+function TopCard({ title, value, icon: Icon = User, valueClass = "" }) {
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
       <div className="absolute inset-0 bg-gradient-to-br from-sky-50/80 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
@@ -1412,7 +1454,10 @@ function TopCard({ title, value, icon: Icon = User }) {
           <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
             {title}
           </div>
-          <div className="text-4xl font-extrabold tracking-tight text-slate-900">
+          <div className={cls(
+            "text-4xl font-extrabold tracking-tight",
+            valueClass || "text-slate-900"
+          )}>
             {value}
           </div>
         </div>
@@ -1464,13 +1509,6 @@ const Allconsultants = () => {
   const [verificationStatus, setVerificationStatus] = useState("ALL");
   const [draftVerificationStatus, setDraftVerificationStatus] = useState("ALL");
 
-  const [tierDropdownOpen, setTierDropdownOpen] = useState(false);
-  const [tierQuery, setTierQuery] = useState("");
-  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
-  const [statusQuery, setStatusQuery] = useState("");
-  const [verificationDropdownOpen, setVerificationDropdownOpen] = useState(false);
-  const [verificationQuery, setVerificationQuery] = useState("");
-
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [kpiLoading, setKpiLoading] = useState(false);
@@ -1517,6 +1555,7 @@ const Allconsultants = () => {
 
   // Add note modal states
   const [noteText, setNoteText] = useState("");
+  const [noteVisibility, setNoteVisibility] = useState("INTERNAL_ONLY");
 
   const loadKpi = useCallback(async () => {
     setKpiLoading(true);
@@ -1822,34 +1861,6 @@ const Allconsultants = () => {
     }
   }, [draftStateId, states]);
 
-  useEffect(() => {
-    const selectedTier = tierPlans.find(
-      (tier) => String(tier.id) === String(draftTierId)
-    );
-
-    if (selectedTier) {
-      setTierQuery(selectedTier.title || "");
-    } else if (!draftTierId || draftTierId === "ALL") {
-      setTierQuery("");
-    }
-  }, [draftTierId, tierPlans]);
-
-  useEffect(() => {
-    if (draftStatus && draftStatus !== "ALL") {
-      setStatusQuery(draftStatus.replace(/_/g, " "));
-    } else {
-      setStatusQuery("");
-    }
-  }, [draftStatus]);
-
-  useEffect(() => {
-    if (draftVerificationStatus && draftVerificationStatus !== "ALL") {
-      setVerificationQuery(draftVerificationStatus.replace(/_/g, " "));
-    } else {
-      setVerificationQuery("");
-    }
-  }, [draftVerificationStatus]);
-
   const handleRefresh = () => {
     lastFetchKeyRef.current = "";
     loadKpi();
@@ -1979,26 +1990,6 @@ const Allconsultants = () => {
     return states.filter((s) => s.name.toLowerCase().includes(q));
   }, [states, stateQuery]);
 
-  const filteredTierPlans = useMemo(() => {
-    if (!tierQuery.trim()) return tierPlans;
-    const q = tierQuery.toLowerCase();
-    return tierPlans.filter((t) => t.title.toLowerCase().includes(q));
-  }, [tierPlans, tierQuery]);
-
-  const filteredStatusOptions = useMemo(() => {
-    if (!statusQuery.trim()) return STATUS_OPTIONS.map(s => ({ id: s, name: s.replace(/_/g, " ") }));
-    const q = statusQuery.toLowerCase();
-    return STATUS_OPTIONS.map(s => ({ id: s, name: s.replace(/_/g, " ") }))
-      .filter((s) => s.name.toLowerCase().includes(q));
-  }, [statusQuery]);
-
-  const filteredVerificationOptions = useMemo(() => {
-    if (!verificationQuery.trim()) return VERIFY_OPTIONS.map(v => ({ id: v, name: v.replace(/_/g, " ") }));
-    const q = verificationQuery.toLowerCase();
-    return VERIFY_OPTIONS.map(v => ({ id: v, name: v.replace(/_/g, " ") }))
-      .filter((v) => v.name.toLowerCase().includes(q));
-  }, [verificationQuery]);
-
   // Modal handlers
   const openModal = (type, consultantId, consultantName) => {
     setActionModal({ open: true, type, consultantId, consultantName });
@@ -2017,30 +2008,34 @@ const Allconsultants = () => {
     setAuditType("");
     setAuditReason("");
     setNoteText("");
+    setNoteVisibility("INTERNAL_ONLY");
   };
 
   const closeModal = () => {
     setActionModal({ open: false, type: "", consultantId: null, consultantName: "" });
     setActionLoading(false);
   };
-
   const handleSuspendConfirm = async () => {
     try {
       setActionLoading(true);
 
-      // TODO: Replace with actual API call
-      // await suspendConsultation({
-      //   consultId: actionModal.consultantId,
-      //   reason: suspendReason,
-      //   suspensionType: suspendType,
-      //   suspendUntil: suspendType === "TEMPORARY" ? suspendUntil : null,
-      // });
+      await suspendConsultation({
+        consultId: actionModal.consultantId,
+        reason: suspendReason,
+        suspendType: suspendType,
+        suspendUntil: suspendType === "TEMPORARY" ? suspendUntil : null,
+      });
 
       toast.success("Consultant suspended successfully");
       closeModal();
       handleRefresh();
     } catch (e) {
-      toast.error("Failed to suspend consultant");
+      console.error("Failed to suspend consultant:", e);
+      toast.error(
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to suspend consultant"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -2050,21 +2045,25 @@ const Allconsultants = () => {
     try {
       setActionLoading(true);
 
-      // TODO: Replace with actual API call
-      // await changeTierPlan({
-      //   consultId: actionModal.consultantId,
-      //   newTierId: selectedTier,
-      //   applyType: applyType,
-      //   discountPercentage: discountPercentage ? parseFloat(discountPercentage) : null,
-      //   manualPrice: manualPrice ? parseFloat(manualPrice) : null,
-      //   reason: tierChangeReason,
-      // });
+      await changeConsultantTier({
+        consultId: actionModal.consultantId,
+        newTierId: selectedTier,
+        applyType: applyType,
+        discountPercentage: discountPercentage ? parseFloat(discountPercentage) : null,
+        manualPrice: manualPrice ? parseFloat(manualPrice) : null,
+        reason: tierChangeReason,
+      });
 
       toast.success("Tier plan changed successfully");
       closeModal();
       handleRefresh();
     } catch (e) {
-      toast.error("Failed to change tier plan");
+      console.error("Failed to change tier plan:", e);
+      toast.error(
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to change tier plan"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -2074,19 +2073,23 @@ const Allconsultants = () => {
     try {
       setActionLoading(true);
 
-      // TODO: Replace with actual API call
-      // await flagForReview({
-      //   consultId: actionModal.consultantId,
-      //   flagCategory: flagCategory,
-      //   severity: flagSeverity,
-      //   internalNotes: flagNotes,
-      // });
+      await flagConsultationReview({
+        consultId: actionModal.consultantId,
+        flagCategory: flagCategory,
+        severity: flagSeverity,
+        internalNotes: flagNotes,
+      });
 
       toast.success("Consultant flagged for review");
       closeModal();
       handleRefresh();
     } catch (e) {
-      toast.error("Failed to flag consultant");
+      console.error("Failed to flag consultant:", e);
+      toast.error(
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to flag consultant"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -2096,18 +2099,22 @@ const Allconsultants = () => {
     try {
       setActionLoading(true);
 
-      // TODO: Replace with actual API call
-      // await forceAudit({
-      //   consultId: actionModal.consultantId,
-      //   auditType: auditType,
-      //   reason: auditReason,
-      // });
+      await forceAuditConsultation({
+        consultId: actionModal.consultantId,
+        auditType: auditType,
+        reason: auditReason,
+      });
 
       toast.success("Audit initiated successfully");
       closeModal();
       handleRefresh();
     } catch (e) {
-      toast.error("Failed to initiate audit");
+      console.error("Failed to initiate audit:", e);
+      toast.error(
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to initiate audit"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -2117,17 +2124,23 @@ const Allconsultants = () => {
     try {
       setActionLoading(true);
 
-      // TODO: Replace with actual API call
-      // await addInternalNote({
-      //   consultId: actionModal.consultantId,
-      //   note: noteText,
-      // });
+      await addInternalNote({
+        consultId: actionModal.consultantId,
+        note: noteText,
+        visibility: noteVisibility,
+        attachmentUrl: null,
+      });
 
       toast.success("Internal note added successfully");
       closeModal();
       handleRefresh();
     } catch (e) {
-      toast.error("Failed to add note");
+      console.error("Failed to add note:", e);
+      toast.error(
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to add note"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -2172,21 +2185,25 @@ const Allconsultants = () => {
             title="Total Consultants"
             value={kpiLoading ? "..." : stats.total}
             icon={User}
+            valueClass="text-black-600"
           />
           <TopCard
             title="Active"
             value={kpiLoading ? "..." : stats.active}
             icon={BadgeCheck}
+            valueClass="text-emerald-600"
           />
           <TopCard
             title="Verified"
             value={kpiLoading ? "..." : stats.verified}
             icon={Star}
+            valueClass="text-amber-600"
           />
           <TopCard
             title="High Risk"
             value={loading ? "..." : stats.highRisk}
             icon={ShieldAlert}
+            valueClass="text-rose-600"
           />
         </section>
 
@@ -2581,47 +2598,71 @@ const Allconsultants = () => {
                     <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Consultant Details</h4>
                   </div>
 
-                  <SearchableCombobox
-                    label="Tier Plan"
-                    value={draftTierId}
-                    onChange={(val) => setDraftTierId(val)}
-                    query={tierQuery}
-                    setQuery={setTierQuery}
-                    open={tierDropdownOpen}
-                    setOpen={setTierDropdownOpen}
-                    options={filteredTierPlans}
-                    allOptions={tierPlans}
-                    loading={tierLoading}
-                    placeholder="All Tiers"
-                  />
+                  {/* Tier Plan Dropdown */}
+                  <div>
+                    <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Tier Plan
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={draftTierId}
+                        onChange={(e) => setDraftTierId(e.target.value)}
+                        className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 shadow-sm"
+                      >
+                        <option value="ALL">All Tiers</option>
+                        {tierPlans.map((tier) => (
+                          <option key={tier.id} value={tier.id}>
+                            {tier.title}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                    </div>
+                  </div>
 
-                  <SearchableCombobox
-                    label="Status"
-                    value={draftStatus}
-                    onChange={(val) => setDraftStatus(val)}
-                    query={statusQuery}
-                    setQuery={setStatusQuery}
-                    open={statusDropdownOpen}
-                    setOpen={setStatusDropdownOpen}
-                    options={filteredStatusOptions}
-                    allOptions={STATUS_OPTIONS.map(s => ({ id: s, name: s.replace(/_/g, " ") }))}
-                    loading={false}
-                    placeholder="All Status"
-                  />
+                  {/* Status Dropdown */}
+                  <div>
+                    <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Status
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={draftStatus}
+                        onChange={(e) => setDraftStatus(e.target.value)}
+                        className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 shadow-sm"
+                      >
+                        <option value="ALL">All Status</option>
+                        {STATUS_OPTIONS.map((status) => (
+                          <option key={status} value={status}>
+                            {status.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                    </div>
+                  </div>
 
-                  <SearchableCombobox
-                    label="Verification Status"
-                    value={draftVerificationStatus}
-                    onChange={(val) => setDraftVerificationStatus(val)}
-                    query={verificationQuery}
-                    setQuery={setVerificationQuery}
-                    open={verificationDropdownOpen}
-                    setOpen={setVerificationDropdownOpen}
-                    options={filteredVerificationOptions}
-                    allOptions={VERIFY_OPTIONS.map(v => ({ id: v, name: v.replace(/_/g, " ") }))}
-                    loading={false}
-                    placeholder="All Verification"
-                  />
+                  {/* Verification Status Dropdown */}
+                  <div>
+                    <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Verification Status
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={draftVerificationStatus}
+                        onChange={(e) => setDraftVerificationStatus(e.target.value)}
+                        className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 shadow-sm"
+                      >
+                        <option value="ALL">All Verification</option>
+                        {VERIFY_OPTIONS.map((verify) => (
+                          <option key={verify} value={verify}>
+                            {verify.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -2724,6 +2765,8 @@ const Allconsultants = () => {
         consultantName={actionModal.consultantName}
         noteText={noteText}
         setNoteText={setNoteText}
+        noteVisibility={noteVisibility}
+        setNoteVisibility={setNoteVisibility}
         loading={actionLoading}
         onClose={closeModal}
         onConfirm={handleAddNoteConfirm}

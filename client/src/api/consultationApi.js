@@ -180,6 +180,57 @@ export const suspendConsultation = async ({
 };
 
 /* =======================================================
+   ✅ CONSULTATION: CHANGE TIER (PATCH)
+   BODY:
+   {
+     consultId,
+     newTierId,
+     applyType,
+     discountPercentage,
+     manualPrice,
+     reason
+   }
+======================================================= */
+export const changeConsultantTier = async ({
+  consultId,
+  newTierId,
+  applyType,
+  discountPercentage = null,
+  manualPrice = null,
+  reason,
+}) => {
+  if (!consultId) {
+    throw new Error("consultId is required");
+  }
+
+  if (!newTierId) {
+    throw new Error("newTierId is required");
+  }
+
+  if (!applyType) {
+    throw new Error("applyType is required");
+  }
+
+  if (!reason || !String(reason).trim()) {
+    throw new Error("reason is required");
+  }
+
+  const payload = {
+    consultId,
+    newTierId,
+    applyType,
+    discountPercentage: discountPercentage
+      ? parseFloat(discountPercentage)
+      : null,
+    manualPrice: manualPrice ? parseFloat(manualPrice) : null,
+    reason: String(reason).trim(),
+  };
+
+  const res = await api.patch("/consultation/change-tier", payload);
+  return res.data;
+};
+
+/* =======================================================
    ✅ MAPPER: API → TABLE ROW
 ======================================================= */
 export const mapConsultationToRow = (item = {}) => ({
@@ -213,27 +264,130 @@ export const mapConsultationToRow = (item = {}) => ({
 
 /* =======================================================
    ✅ FLAG FOR REVIEW (PATCH)
-   BODY: { consultId, flagCategory, severity, internalNotes }
+   BODY:
+   {
+     consultId,
+     flagCategory,
+     severity,
+     internalNotes
+   }
 ======================================================= */
-export const flagConsultationReview = async (payload) => {
+export const flagConsultationReview = async ({
+  consultId,
+  flagCategory,
+  severity,
+  internalNotes,
+}) => {
+  if (!consultId) {
+    throw new Error("consultId is required");
+  }
+
+  if (!flagCategory) {
+    throw new Error("flagCategory is required");
+  }
+
+  if (!severity) {
+    throw new Error("severity is required");
+  }
+
+  if (!internalNotes || !String(internalNotes).trim()) {
+    throw new Error("internalNotes is required");
+  }
+
+  if (String(internalNotes).trim().length < 10) {
+    throw new Error("internalNotes must be at least 10 characters");
+  }
+
+  const payload = {
+    consultId,
+    flagCategory,
+    severity,
+    internalNotes: String(internalNotes).trim(),
+  };
+
   const res = await api.patch("/consultation/flag-review", payload);
   return res.data;
 };
 
 /* =======================================================
    ✅ FORCE AUDIT (PATCH)
-   BODY: { consultId, auditType, reason }
+   BODY:
+   {
+     consultId,
+     auditType,
+     reason
+   }
 ======================================================= */
-export const forceAuditConsultation = async (payload) => {
+export const forceAuditConsultation = async ({
+  consultId,
+  auditType,
+  reason,
+}) => {
+  if (!consultId) {
+    throw new Error("consultId is required");
+  }
+
+  if (!auditType) {
+    throw new Error("auditType is required");
+  }
+
+  if (!reason || !String(reason).trim()) {
+    throw new Error("reason is required");
+  }
+
+  if (String(reason).trim().length < 10) {
+    throw new Error("reason must be at least 10 characters");
+  }
+
+  const payload = {
+    consultId,
+    auditType,
+    reason: String(reason).trim(),
+  };
+
   const res = await api.patch("/consultation/force-audit", payload);
   return res.data;
 };
 
 /* =======================================================
    ✅ INTERNAL NOTE (POST)
-   BODY: { consultId, note, visibility, attachmentUrl }
+   BODY:
+   {
+     consultId,
+     note,
+     visibility,
+     attachmentUrl
+   }
 ======================================================= */
-export const addInternalNote = async (payload) => {
+export const addInternalNote = async ({
+  consultId,
+  note,
+  visibility = "INTERNAL_ONLY",
+  attachmentUrl = null,
+}) => {
+  if (!consultId) {
+    throw new Error("consultId is required");
+  }
+
+  if (!note || !String(note).trim()) {
+    throw new Error("note is required");
+  }
+
+  if (String(note).trim().length < 5) {
+    throw new Error("note must be at least 5 characters");
+  }
+
+  if (!visibility) {
+    throw new Error("visibility is required");
+  }
+
+  const payload = {
+    consultId,
+    note: String(note).trim(),
+    visibility,
+    attachmentUrl,
+  };
+
   const res = await api.post("/consultation/internal-note", payload);
   return res.data;
 };
