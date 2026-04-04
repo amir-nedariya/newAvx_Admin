@@ -36,7 +36,7 @@ import {
   addInternalNote,
 } from "../../../api/consultationApi";
 import { getTierPlans } from "../../../api/tierPlan.api";
-import { getStates, getAllCitiesFromSearch } from "../../../api/addressApi";
+import { getStates, getAllCitiesFromSearch, getCities } from "../../../api/addressApi";
 
 /* =========================================================
    HELPERS
@@ -1477,6 +1477,7 @@ const Allconsultants = () => {
   const didInit = useRef(false);
   const lastFetchKeyRef = useRef("");
   const searchDebounceRef = useRef(null);
+  const citiesLoadedRef = useRef(false);
 
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -1557,6 +1558,14 @@ const Allconsultants = () => {
   const [noteText, setNoteText] = useState("");
   const [noteVisibility, setNoteVisibility] = useState("INTERNAL_ONLY");
 
+  // Filter verification options based on status
+  const filteredVerifyOptions = useMemo(() => {
+    if (draftStatus === "ACTIVE") {
+      return VERIFY_OPTIONS.filter(option => option !== "REQUESTED");
+    }
+    return VERIFY_OPTIONS;
+  }, [draftStatus]);
+
   const loadKpi = useCallback(async () => {
     setKpiLoading(true);
     try {
@@ -1636,8 +1645,9 @@ const Allconsultants = () => {
   );
 
   const loadCitiesOnce = useCallback(async () => {
-    if (cities.length > 0 || citiesLoading) return;
+    if (citiesLoadedRef.current || citiesLoading) return;
 
+    citiesLoadedRef.current = true;
     setCitiesLoading(true);
     try {
       const res = await getAllCitiesFromSearch("");
@@ -1656,10 +1666,72 @@ const Allconsultants = () => {
       console.error(e);
       setCities([]);
       toast.error("Failed to load cities");
+      citiesLoadedRef.current = false; // Reset on error so it can retry
     } finally {
       setCitiesLoading(false);
     }
-  }, [cities.length, citiesLoading]);
+  }, [citiesLoading]);
+
+  const loadCitiesByState = useCallback(async (stateId) => {
+    if (!stateId || stateId === "ALL") {
+      // Load all cities if no state selected
+      setCitiesLoading(true);
+      try {
+        const res = await getAllCitiesFromSearch("");
+        const list =
+          (Array.isArray(res?.data) && res.data) || (Array.isArray(res) && res) || [];
+
+        setCities(
+          list
+            .map((c) => ({
+              id: c?.cityId ?? c?.id ?? c?._id,
+              name: c?.cityName ?? c?.name ?? "City",
+            }))
+            .filter((x) => x.id != null)
+        );
+      } catch (e) {
+        console.error(e);
+        setCities([]);
+        toast.error("Failed to load cities");
+      } finally {
+        setCitiesLoading(false);
+      }
+      return;
+    }
+
+    setCitiesLoading(true);
+    try {
+      const res = await getCities(stateId);
+      const list =
+        (Array.isArray(res?.data) && res.data) || (Array.isArray(res) && res) || [];
+
+      const mappedCities = list
+        .map((c) => ({
+          id: c?.cityId ?? c?.id ?? c?._id,
+          name: c?.cityName ?? c?.name ?? "City",
+        }))
+        .filter((x) => x.id != null);
+
+      setCities(mappedCities);
+
+      // Reset city selection if current city is not in the new list
+      setDraftCityId((currentCityId) => {
+        if (currentCityId && currentCityId !== "ALL") {
+          const cityExists = mappedCities.some(c => String(c.id) === String(currentCityId));
+          if (!cityExists) {
+            return "ALL";
+          }
+        }
+        return currentCityId;
+      });
+    } catch (e) {
+      console.error(e);
+      setCities([]);
+      toast.error("Failed to load cities for selected state");
+    } finally {
+      setCitiesLoading(false);
+    }
+  }, []);
 
   const buildPayload = useCallback(
     ({
@@ -1827,7 +1899,6 @@ const Allconsultants = () => {
   useEffect(() => {
     if (!filtersOpen) return;
     loadStatesForCountry(countryId);
-    loadCitiesOnce();
 
     // Sync draft values with applied values when opening filter sidebar
     setDraftTierId(tierId);
@@ -1835,7 +1906,7 @@ const Allconsultants = () => {
     setDraftCityId(cityId);
     setDraftStatus(status);
     setDraftVerificationStatus(verificationStatus);
-  }, [filtersOpen, loadCitiesOnce, loadStatesForCountry, countryId, tierId, stateId, cityId, status, verificationStatus]);
+  }, [filtersOpen, loadStatesForCountry, countryId, tierId, stateId, cityId, status, verificationStatus]);
 
   useEffect(() => {
     const selectedCity = cities.find(
@@ -1860,6 +1931,14 @@ const Allconsultants = () => {
       setStateQuery("");
     }
   }, [draftStateId, states]);
+
+  // Load cities when state changes (but not on initial sync)
+  useEffect(() => {
+    if (!didInit.current) return;
+    if (!filtersOpen) return; // Only load when filters are open
+
+    loadCitiesByState(draftStateId);
+  }, [draftStateId, loadCitiesByState, filtersOpen]);
 
   const handleRefresh = () => {
     lastFetchKeyRef.current = "";
@@ -2562,30 +2641,24 @@ const Allconsultants = () => {
                     <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Location</h4>
                   </div>
                   <div className="space-y-4">
-                    <SearchableCombobox
+                    <SimpleDropdown
+                      key="state-dropdown"
                       label="State"
-                      value={draftStateId}
-                      onChange={(val) => setDraftStateId(val)}
-                      query={stateQuery}
-                      setQuery={setStateQuery}
-                      open={stateDropdownOpen}
-                      setOpen={setStateDropdownOpen}
-                      options={filteredStates}
-                      allOptions={states}
+                      value={String(draftStateId || "ALL")}
+                      onChange={(val) => {
+                        setDraftStateId(val);
+                      }}
+                      options={states}
                       loading={statesLoading}
                       placeholder="All States"
                     />
 
-                    <SearchableCombobox
+                    <SimpleDropdown
+                      key="city-dropdown"
                       label="City"
-                      value={draftCityId}
+                      value={String(draftCityId || "ALL")}
                       onChange={(val) => setDraftCityId(val)}
-                      query={cityQuery}
-                      setQuery={setCityQuery}
-                      open={cityDropdownOpen}
-                      setOpen={setCityDropdownOpen}
-                      options={filteredCities}
-                      allOptions={cities}
+                      options={cities}
                       loading={citiesLoading}
                       placeholder="All Cities"
                     />
@@ -2628,7 +2701,14 @@ const Allconsultants = () => {
                     <div className="relative">
                       <select
                         value={draftStatus}
-                        onChange={(e) => setDraftStatus(e.target.value)}
+                        onChange={(e) => {
+                          const newStatus = e.target.value;
+                          setDraftStatus(newStatus);
+                          // Reset verification status if ACTIVE is selected and current is REQUESTED
+                          if (newStatus === "ACTIVE" && draftVerificationStatus === "REQUESTED") {
+                            setDraftVerificationStatus("ALL");
+                          }
+                        }}
                         className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 shadow-sm"
                       >
                         <option value="ALL">All Status</option>
@@ -2654,7 +2734,7 @@ const Allconsultants = () => {
                         className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 shadow-sm"
                       >
                         <option value="ALL">All Verification</option>
-                        {VERIFY_OPTIONS.map((verify) => (
+                        {filteredVerifyOptions.map((verify) => (
                           <option key={verify} value={verify}>
                             {verify.replace(/_/g, " ")}
                           </option>
@@ -2774,6 +2854,47 @@ const Allconsultants = () => {
     </div>
   );
 };
+
+function SimpleDropdown({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "Select...",
+  loading = false,
+}) {
+  // Ensure value is always a string for comparison
+  const normalizedValue = String(value || "ALL");
+
+  return (
+    <div className="block">
+      <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+        {label}
+      </div>
+
+      <div className="relative">
+        <select
+          value={normalizedValue}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            onChange(newValue);
+          }}
+          disabled={loading}
+          className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <option value="ALL">{placeholder}</option>
+          {options.map((item) => (
+            <option key={String(item.id)} value={String(item.id)}>
+              {item.title || item.name}
+            </option>
+          ))}
+        </select>
+
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+      </div>
+    </div>
+  );
+}
 
 function SearchableCombobox({
   label,

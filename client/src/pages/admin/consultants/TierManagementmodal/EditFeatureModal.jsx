@@ -7,16 +7,16 @@ const cls = (...a) => a.filter(Boolean).join(" ");
 const Button = ({ children, variant = "primary", className = "", ...props }) => {
   const styles = {
     primary:
-      "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-90",
+      "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-90 shadow-sm",
     secondary:
-      "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200",
+      "bg-white text-slate-700 hover:bg-slate-50 border-2 border-slate-200",
     danger: "bg-rose-600 text-white hover:bg-rose-700",
   };
   return (
     <button
       {...props}
       className={cls(
-        "px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed",
+        "px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]",
         styles[variant] || styles.primary,
         className
       )}
@@ -41,24 +41,25 @@ const ModalShell = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
       onMouseDown={(e) => {
         if (lockClose) return;
         if (e.target === e.currentTarget) onClose?.();
       }}
     >
-      <div className="w-full max-w-[620px] max-h-[90vh] bg-white border border-gray-200 rounded-2xl shadow-[0_30px_90px_-50px_rgba(2,6,23,0.55)] overflow-hidden flex flex-col">
-        <div className="px-5 py-4 border-b border-gray-200 flex items-start justify-between bg-white">
+      <div className="w-full max-w-[700px] max-h-[90vh] bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-slate-200 flex items-start justify-between bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
-              <Icon size={18} className="text-blue-700" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30">
+              <Icon size={24} />
             </div>
             <div className="min-w-0">
-              <h3 className="text-[15px] font-extrabold text-gray-900 leading-tight">
+              <h3 className="text-xl font-extrabold text-slate-900 leading-tight tracking-tight">
                 {title}
               </h3>
               {subtitle ? (
-                <p className="text-[12px] text-gray-500 mt-0.5">{subtitle}</p>
+                <p className="text-sm text-slate-500 mt-1 leading-relaxed">{subtitle}</p>
               ) : null}
             </div>
           </div>
@@ -66,22 +67,24 @@ const ModalShell = ({
           <button
             onClick={() => !lockClose && onClose?.()}
             className={cls(
-              "w-9 h-9 rounded-xl border transition flex items-center justify-center",
+              "w-10 h-10 rounded-xl border-2 transition-all flex items-center justify-center",
               lockClose
-                ? "opacity-50 cursor-not-allowed border-transparent"
-                : "hover:bg-gray-50 border-transparent hover:border-gray-200"
+                ? "opacity-50 cursor-not-allowed border-slate-200 bg-slate-50"
+                : "hover:bg-slate-50 border-slate-200 hover:border-slate-300 active:scale-95"
             )}
             aria-label="Close"
             type="button"
             disabled={lockClose}
           >
-            <X size={18} className="text-gray-500" />
+            <X size={18} className="text-slate-500" />
           </button>
         </div>
 
-        <div className="px-5 py-4 overflow-y-auto flex-1">{children}</div>
+        {/* Content */}
+        <div className="px-6 py-5 overflow-y-auto flex-1 bg-slate-50/30">{children}</div>
 
-        <div className="px-5 py-4 border-t border-gray-200 flex items-center justify-end gap-3 bg-white">
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3 bg-white">
           {footer}
         </div>
       </div>
@@ -109,7 +112,7 @@ const EditFeatureModal = ({
       open={open}
       icon={Pencil}
       title="Edit Tier Feature"
-      subtitle="PUT /api/tier-plan-features/{tierFeaturesID}"
+      subtitle=""
       onClose={onClose}
       lockClose={lockClose}
       footer={
@@ -139,19 +142,28 @@ const EditFeatureModal = ({
         </>
       }
     >
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-          <p className="text-sm font-extrabold text-gray-900">
-            {selectedFeature?.featureName || "Feature"}
-          </p>
-          <p className="text-[12px] text-gray-600 mt-1">
-            Feature ID:{" "}
-            <span className="font-semibold">{safeId(selectedFeature) || "—"}</span>
-          </p>
+      <div className="space-y-5">
+        {/* Feature Info Card */}
+        <div className="rounded-2xl border-2 border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-lg font-extrabold text-slate-900 mb-1">
+                {selectedFeature?.featureName || "Feature"}
+              </p>
+              <p className="text-xs text-slate-500 font-medium">
+                Feature ID:{" "}
+                <span className="font-bold text-slate-700">{safeId(selectedFeature) || "—"}</span>
+              </p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
+              <Pencil size={18} />
+            </div>
+          </div>
         </div>
 
+        {/* Feature Name */}
         <div>
-          <label className="text-sm font-semibold text-gray-700">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
             Feature Name *
           </label>
           <input
@@ -159,14 +171,15 @@ const EditFeatureModal = ({
             onChange={(e) =>
               setEditForm((p) => ({ ...p, featureName: e.target.value }))
             }
-            className="mt-1 w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
-            placeholder="Advanced Analytics Dashboard"
+            className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400"
+            placeholder="e.g., Advanced Analytics Dashboard"
             disabled={lockClose}
           />
         </div>
 
+        {/* Feature Description */}
         <div>
-          <label className="text-sm font-semibold text-gray-700">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
             Feature Description *
           </label>
           <textarea
@@ -174,20 +187,24 @@ const EditFeatureModal = ({
             onChange={(e) =>
               setEditForm((p) => ({ ...p, featureDescription: e.target.value }))
             }
-            className="mt-1 w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none min-h-[110px]"
-            placeholder="Provides detailed insights about listing performance..."
+            className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium text-slate-900 transition-all placeholder:text-slate-400 resize-none"
+            placeholder="e.g., Provides detailed insights about listing performance and user engagement"
+            rows={4}
             disabled={lockClose}
           />
         </div>
 
+        {/* Status */}
         <div>
-          <label className="text-sm font-semibold text-gray-700">Status</label>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            Status
+          </label>
           <select
             value={editForm.status}
             onChange={(e) =>
               setEditForm((p) => ({ ...p, status: e.target.value }))
             }
-            className="mt-1 w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+            className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-semibold text-slate-900 transition-all"
             disabled={lockClose}
           >
             <option value="ACTIVE">ACTIVE</option>
@@ -195,10 +212,12 @@ const EditFeatureModal = ({
             <option value="DELETED">DELETED</option>
           </select>
 
-          <p className="text-[12px] text-gray-500 mt-2">
-            Note: If you choose <span className="font-semibold">DELETED</span>,
-            backend may treat it as soft-delete.
-          </p>
+          {/* <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+            <p className="text-xs text-amber-800 leading-relaxed">
+              <span className="font-bold">Note:</span> If you choose{" "}
+              <span className="font-extrabold">DELETED</span>, backend may treat it as soft-delete.
+            </p>
+          </div> */}
         </div>
       </div>
     </ModalShell>

@@ -49,7 +49,7 @@ const ModalShell = ({
     >
       <div className="w-full max-w-[620px] max-h-[90vh] bg-white border border-gray-200 rounded-2xl shadow-[0_30px_90px_-50px_rgba(2,6,23,0.55)] overflow-hidden flex flex-col">
         <div className="px-5 py-4 border-b border-gray-200 flex items-start justify-between bg-white">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center">
               <Icon size={18} className="text-rose-700" />
             </div>
@@ -106,7 +106,7 @@ const DeleteFeatureModal = ({
       open={open}
       icon={AlertTriangle}
       title="Delete Feature"
-      subtitle="DELETE /api/tier-plan-features/{tierFeaturesID}"
+      subtitle=""
       onClose={onClose}
       lockClose={lockClose}
       footer={
@@ -139,14 +139,14 @@ const DeleteFeatureModal = ({
     >
       <div className="space-y-4">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white border border-rose-200 flex items-center justify-center">
               <AlertTriangle className="text-rose-700" size={18} />
             </div>
 
             <div className="min-w-0">
               <p className="text-sm font-extrabold text-gray-900">
-                This action cannot be undone.
+                This action delete the feature
               </p>
               <p className="text-[12px] text-gray-700 mt-1">
                 You are deleting:{" "}
@@ -154,19 +154,19 @@ const DeleteFeatureModal = ({
                   {selectedFeature?.featureName || "Feature"}
                 </span>
               </p>
-              <p className="text-[12px] text-gray-600 mt-1">
+              {/* <p className="text-[12px] text-gray-600 mt-1">
                 Feature ID:{" "}
                 <span className="font-semibold">{safeId(selectedFeature) || "—"}</span>
-              </p>
+              </p> */}
             </div>
           </div>
         </div>
 
-        <p className="text-sm text-gray-600">
+        {/* <p className="text-sm text-gray-600">
           If your backend supports soft delete via status, use Edit → Status =
           <span className="font-semibold"> DELETED</span>. Otherwise this will
           permanently delete.
-        </p>
+        </p> */}
       </div>
     </ModalShell>
   );

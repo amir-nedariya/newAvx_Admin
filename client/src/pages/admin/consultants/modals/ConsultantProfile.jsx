@@ -1616,7 +1616,7 @@ const ConsultantProfile = () => {
           <span className="font-semibold text-zinc-900">Consultant Details</span>
         </div>
 
-        <div className="rounded-[34px] border border-zinc-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.06)]">
+        <div className=" border border-zinc-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.06)]">
           <div className="border-b border-zinc-100 bg-white px-5 py-5 md:px-6">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1666,137 +1666,164 @@ const ConsultantProfile = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Three Dot Menu for All Actions */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setActionModal({ ...actionModal, menuOpen: !actionModal.menuOpen })}
-                      className="inline-flex cursor-pointer h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900"
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </button>
+                  {/* Show KYC buttons directly when verification is REQUESTED */}
+                  {profile?.verification === "REQUESTED" ? (
+                    <>
+                      <button
+                        onClick={() => openKycModal("approve")}
+                        disabled={kycActionLoading === "approve"}
+                        className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition-all hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        {kycActionLoading === "approve" ? "Approving..." : "Approve KYC"}
+                      </button>
 
-                    {actionModal.menuOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setActionModal({ ...actionModal, menuOpen: false })}
-                        />
-                        <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl">
-                          {/* KYC Actions */}
-                          <button
-                            onClick={() => openKycModal("approve")}
-                            disabled={kycActionLoading === "approve"}
-                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                            {kycActionLoading === "approve" ? "Approving..." : "Approve KYC"}
-                          </button>
+                      <button
+                        onClick={() => openKycModal("reject")}
+                        disabled={kycActionLoading === "reject"}
+                        className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        {kycActionLoading === "reject" ? "Rejecting..." : "Reject KYC"}
+                      </button>
 
-                          <button
-                            onClick={() => openKycModal("reject")}
-                            disabled={kycActionLoading === "reject"}
-                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
-                          >
-                            <XCircle className="h-4 w-4" />
-                            {kycActionLoading === "reject" ? "Rejecting..." : "Reject KYC"}
-                          </button>
+                      <button
+                        onClick={() => openKycModal("request")}
+                        disabled={kycActionLoading === "request"}
+                        className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        {kycActionLoading === "request" ? "Requesting..." : "Request Re-upload"}
+                      </button>
+                    </>
+                  ) : (
+                    /* Three Dot Menu for All Actions when verification is not REQUESTED */
+                    <div className="relative">
+                      <button
+                        onClick={() => setActionModal({ ...actionModal, menuOpen: !actionModal.menuOpen })}
+                        className="inline-flex cursor-pointer h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900"
+                      >
+                        <MoreHorizontal className="h-5 w-5" />
+                      </button>
 
-                          <button
-                            onClick={() => openKycModal("request")}
-                            disabled={kycActionLoading === "request"}
-                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-50"
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                            {kycActionLoading === "request" ? "Requesting..." : "Request Re-upload"}
-                          </button>
+                      {actionModal.menuOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setActionModal({ ...actionModal, menuOpen: false })}
+                          />
+                          <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl">
+                            {/* KYC Actions */}
+                            <button
+                              onClick={() => openKycModal("approve")}
+                              disabled={kycActionLoading === "approve"}
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              {kycActionLoading === "approve" ? "Approving..." : "Approve KYC"}
+                            </button>
 
-                          {/* Show admin actions only if verification is not REQUESTED */}
-                          {profile?.verification !== "REQUESTED" && (
-                            <>
-                              <div className="my-1 border-t border-zinc-100" />
+                            <button
+                              onClick={() => openKycModal("reject")}
+                              disabled={kycActionLoading === "reject"}
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
+                            >
+                              <XCircle className="h-4 w-4" />
+                              {kycActionLoading === "reject" ? "Rejecting..." : "Reject KYC"}
+                            </button>
 
-                              {/* Other Actions */}
+                            <button
+                              onClick={() => openKycModal("request")}
+                              disabled={kycActionLoading === "request"}
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-50"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                              {kycActionLoading === "request" ? "Requesting..." : "Request Re-upload"}
+                            </button>
+
+                            <div className="my-1 border-t border-zinc-100" />
+
+                            {/* Other Actions */}
+                            <button
+                              onClick={() => {
+                                setActionModal({ open: true, type: "penalty", menuOpen: false });
+                              }}
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-blue-700 transition-colors hover:bg-blue-50"
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                              Apply Penalty
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setActionModal({ open: true, type: "changeTier", menuOpen: false });
+                              }}
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-sky-700 transition-colors hover:bg-sky-50"
+                            >
+                              <BadgeCheck className="h-4 w-4" />
+                              Change Tier
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setActionModal({ open: true, type: "flagReview", menuOpen: false });
+                              }}
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-50"
+                            >
+                              <ShieldAlert className="h-4 w-4" />
+                              Flag Review
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setActionModal({ open: true, type: "forceAudit", menuOpen: false });
+                              }}
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-violet-700 transition-colors hover:bg-violet-50"
+                            >
+                              <Activity className="h-4 w-4" />
+                              Force Audit
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setActionModal({ open: true, type: "addNote", menuOpen: false });
+                              }}
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                            >
+                              <NotebookPen className="h-4 w-4" />
+                              Add Internal Note
+                            </button>
+
+                            <div className="my-1 border-t border-zinc-100" />
+
+                            {/* Suspend/Unsuspend */}
+                            {isInactive ? (
                               <button
                                 onClick={() => {
-                                  setActionModal({ open: true, type: "penalty", menuOpen: false });
+                                  setActionModal({ open: true, type: "unsuspend", menuOpen: false });
                                 }}
-                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-blue-700 transition-colors hover:bg-blue-50"
+                                disabled={actionLoading}
+                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
                               >
-                                <AlertTriangle className="h-4 w-4" />
-                                Apply Penalty
+                                <RotateCcw className="h-4 w-4" />
+                                {actionLoading ? "Unsuspending..." : "Unsuspend"}
                               </button>
-
+                            ) : (
                               <button
                                 onClick={() => {
-                                  setActionModal({ open: true, type: "changeTier", menuOpen: false });
+                                  setActionModal({ open: true, type: "suspend", menuOpen: false });
                                 }}
-                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-sky-700 transition-colors hover:bg-sky-50"
+                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
                               >
-                                <BadgeCheck className="h-4 w-4" />
-                                Change Tier
+                                <Ban className="h-4 w-4" />
+                                Suspend
                               </button>
-
-                              <button
-                                onClick={() => {
-                                  setActionModal({ open: true, type: "flagReview", menuOpen: false });
-                                }}
-                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-50"
-                              >
-                                <ShieldAlert className="h-4 w-4" />
-                                Flag Review
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setActionModal({ open: true, type: "forceAudit", menuOpen: false });
-                                }}
-                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-violet-700 transition-colors hover:bg-violet-50"
-                              >
-                                <Activity className="h-4 w-4" />
-                                Force Audit
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setActionModal({ open: true, type: "addNote", menuOpen: false });
-                                }}
-                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                              >
-                                <NotebookPen className="h-4 w-4" />
-                                Add Internal Note
-                              </button>
-
-                              <div className="my-1 border-t border-zinc-100" />
-
-                              {/* Suspend/Unsuspend */}
-                              {isInactive ? (
-                                <button
-                                  onClick={() => {
-                                    setActionModal({ open: true, type: "unsuspend", menuOpen: false });
-                                  }}
-                                  disabled={actionLoading}
-                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-                                >
-                                  <RotateCcw className="h-4 w-4" />
-                                  {actionLoading ? "Unsuspending..." : "Unsuspend"}
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    setActionModal({ open: true, type: "suspend", menuOpen: false });
-                                  }}
-                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
-                                >
-                                  <Ban className="h-4 w-4" />
-                                  Suspend
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1933,8 +1960,8 @@ const ConsultantProfile = () => {
                   <DocChip
                     ok={!!profile.addressVerifiedStatus}
                     text={`Address Proof${profile.verification === "REQUESTED"
-                        ? ""
-                        : ` • ${profile.addressVerifiedStatus ? "Verified" : "Pending"}`
+                      ? ""
+                      : ` • ${profile.addressVerifiedStatus ? "Verified" : "Pending"}`
                       }`}
                   />
                 </div>

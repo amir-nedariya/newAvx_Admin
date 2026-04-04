@@ -431,7 +431,10 @@ const TierManagement = () => {
         getTierLimitsByTierPlanId(tierPlanId),
       ]);
 
-      setLimitNames(namesRes?.data?.data || {});
+      console.log("🔍 TierManagement - namesRes:", namesRes);
+      console.log("🔍 TierManagement - namesRes.data:", namesRes?.data);
+
+      setLimitNames(namesRes?.data || namesRes?.data?.data || {});
       const limitsArr = limitsRes?.data?.data || limitsRes?.data || [];
       setTierLimits(Array.isArray(limitsArr) ? limitsArr : []);
     } catch (e) {
@@ -457,9 +460,13 @@ const TierManagement = () => {
       showToast("success", "Limits saved successfully");
       setAddLimitsOpen(false);
 
+      // Reload the limits for the current tier
       const res = await getTierLimitsByTierPlanId(payload.tierPlanId);
       const arr = res?.data?.data || res?.data || [];
       setTierLimits(Array.isArray(arr) ? arr : []);
+
+      // Reopen the Manage Tier Limits modal
+      setLimitsOpen(true);
     } catch (e) {
       showToast(
         "error",
@@ -477,8 +484,19 @@ const TierManagement = () => {
     try {
       setDeletingLimitId(id);
       await deleteTierLimitById(id);
-      showToast("success", "Limit deleted");
+      showToast("success", "Limit deleted successfully");
+
+      // Update local state
       setTierLimits((p) => p.filter((x) => (x?.id || x?._id) !== id));
+
+      // Close the modal
+      setLimitsOpen(false);
+      setSelectedTier(null);
+      setTierLimits([]);
+      setLimitNames({});
+
+      // Reload tier data to reflect changes in UI
+      await loadAll("reload");
     } catch (e) {
       showToast(
         "error",
@@ -508,213 +526,275 @@ const TierManagement = () => {
   }, [tiers]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-10">
+    <div className="min-h-screen bg-slate-50 p-6">
       <Toast show={toast.show} type={toast.type} text={toast.text} />
 
-      <div className="max-w-7xl mx-auto">
-        <PageHeader
-          title="Tier Management"
-          subtitle="Create tiers and manage tier plan features + limits"
-          actions={
+      <div className="mx-auto max-w-[1600px]">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+                Tier Management
+              </h1>
+            </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="secondary"
+              <button
                 onClick={() => loadAll("reload")}
                 disabled={reloading}
                 type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-60"
               >
-                <span className="inline-flex items-center gap-2">
-                  <RefreshCw size={16} className={reloading ? "animate-spin" : ""} />
-                  Refresh
-                </span>
-              </Button>
+                <RefreshCw size={16} className={reloading ? "animate-spin" : ""} />
+                Refresh
+              </button>
 
-              <Button onClick={() => setCreateOpen(true)} type="button">
-                <span className="inline-flex items-center gap-2">
-                  <Plus size={16} /> Create New Tier
-                </span>
-              </Button>
+              <button
+                onClick={() => setCreateOpen(true)}
+                type="button"
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800"
+              >
+                <Plus size={16} /> Create New Tier
+              </button>
             </div>
-          }
-        />
+          </div>
+        </div>
 
         {loading ? (
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-10 flex items-center gap-3">
-            <Loader2 className="animate-spin" />
-            <p className="text-gray-600 font-semibold">Loading tiers...</p>
+          <div className="rounded-[28px] border border-slate-200 bg-white p-12 shadow-sm">
+            <div className="flex items-center justify-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
+              <p className="text-sm font-semibold text-slate-600">Loading tiers...</p>
+            </div>
           </div>
         ) : cards.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-10">
-            <p className="text-gray-700 font-semibold">No tiers found.</p>
-            <p className="text-gray-500 text-sm mt-1">Create a tier to get started.</p>
+          <div className="rounded-[28px] border border-slate-200 bg-white p-12 shadow-sm text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+              <Crown className="h-8 w-8 text-slate-400" />
+            </div>
+            <p className="text-base font-bold text-slate-900">No tiers found</p>
+            <p className="text-sm text-slate-500 mt-1">Create your first tier to get started</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {cards.map(({ tier, title, Icon, isPopular, feats, limits, monthly, yearly }) => (
               <div
                 key={tier?.id || tier?._id || title}
                 className={cls(
-                  "relative bg-white rounded-3xl border shadow-sm hover:shadow-xl transition-all duration-300 p-8",
-                  isPopular ? "border-blue-600 scale-[1.02]" : "border-gray-200"
+                  "relative rounded-3xl border bg-white shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border-slate-200"
                 )}
               >
-                {isPopular ? (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs px-4 py-1 rounded-full font-semibold shadow">
-                    MOST POPULAR
+                {/* {isPopular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 px-4 py-1.5 text-xs font-extrabold text-white shadow-lg shadow-indigo-500/30">
+                      <Star size={12} className="fill-white" />
+                      MOST POPULAR
+                    </span>
                   </div>
-                ) : null}
+                )} */}
 
-                <div className="flex items-center justify-between gap-3 mb-6">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="bg-blue-600 w-12 h-12 rounded-2xl flex items-center justify-center shadow-md overflow-hidden">
-                      {tier?.tierBadgeUrl || tier?.badgeUrl || tier?.badgeLogoUrl ? (
-                        <img
-                          src={tier?.tierBadgeUrl || tier?.badgeUrl || tier?.badgeLogoUrl}
-                          alt="tier badge"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Icon className="text-white" size={22} />
-                      )}
+                {/* Card Header with Badge and Title */}
+                <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6 pb-8">
+                  {/* Background decoration */}
+                  <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-slate-100/50 blur-2xl" />
+
+                  <div className="relative">
+                    <div className="mb-4 flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        {/* Badge Icon */}
+                        <div className={cls(
+                          "relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg overflow-hidden border-2",
+                          isPopular
+                            ? "bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600 border-indigo-400"
+                            : "bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700"
+                        )}>
+                          {tier?.tierBadgeUrl || tier?.badgeUrl || tier?.badgeLogoUrl ? (
+                            <img
+                              src={tier?.tierBadgeUrl || tier?.badgeUrl || tier?.badgeLogoUrl}
+                              alt="tier badge"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Icon className="text-white" size={28} />
+                          )}
+                        </div>
+
+                        {/* Title and Duration */}
+                        <div>
+                          <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">{title}</h3>
+                          <p className="text-xs font-medium text-slate-500 mt-1">
+                            {tier?.monthlyDurationInDays || 30}d / {tier?.yearlyDurationInDays || 365}d
+                          </p>
+                        </div>
+                      </div>
+
+                      <StatusPill status={tier?.status} />
                     </div>
 
-                    <div className="min-w-0">
-                      <h3 className="text-xl font-bold text-gray-900 truncate">{title}</h3>
-                      <p className="text-sm text-gray-500">
-                        {tier?.monthlyDurationInDays || 30} days /{" "}
-                        {tier?.yearlyDurationInDays || 365} days
-                      </p>
+                    {/* Pricing */}
+                    <div className="space-y-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-black text-slate-900 tracking-tight">
+                          ₹{moneyIN(monthly)}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-500">/ month</span>
+                      </div>
+                      <div className="text-sm font-medium text-slate-600">
+                        Yearly: <span className="font-bold text-slate-900">₹{moneyIN(yearly)}</span>
+                      </div>
                     </div>
-                  </div>
 
-                  <StatusPill status={tier?.status} />
-                </div>
-
-                <div className="mb-6">
-                  <span className="text-4xl font-extrabold text-gray-900">
-                    ₹{moneyIN(monthly)}
-                  </span>
-                  <span className="text-gray-500 text-sm ml-2">/ month</span>
-
-                  <div className="mt-2 text-sm text-gray-600">
-                    Yearly:{" "}
-                    <span className="font-bold text-gray-900">₹{moneyIN(yearly)}</span>
+                    {/* Description */}
+                    <p className="mt-4 text-sm leading-relaxed text-slate-600 line-clamp-2">
+                      {tier?.description || "No description"}
+                    </p>
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-600 mb-6 line-clamp-3">
-                  {tier?.description || "—"}
-                </p>
+                {/* Limits Section */}
+                <div className="border-t border-slate-100 bg-white p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                      Limits
+                    </h4>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
+                      {limits.length} configured
+                    </span>
+                  </div>
 
-                <div className="mb-6">
-                  <p className="text-sm font-bold text-gray-900 mb-2">Limits</p>
                   {limits.length === 0 ? (
-                    <p className="text-sm text-gray-500">No limits</p>
+                    <div className="mb-3 rounded-xl bg-slate-50 px-4 py-6 text-center">
+                      <p className="text-xs font-medium text-slate-400 italic">No limits configured</p>
+                    </div>
                   ) : (
-                    <div className="space-y-2">
-                      {limits.slice(0, 4).map((l) => (
+                    <div className="space-y-2 mb-3">
+                      {limits.slice(0, 3).map((l) => (
                         <div
                           key={l?.id || l?._id || l?.limitsName}
-                          className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-2"
+                          className="flex items-center justify-between rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5 transition-all hover:border-slate-300"
                         >
-                          <span className="text-[12px] font-semibold text-gray-700">
-                            {l?.limitsName}
+                          <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            {l?.limitsName?.replace(/_/g, ' ')}
                           </span>
-                          <span className="text-[12px] font-extrabold text-gray-900">
+                          <span className={cls(
+                            "rounded-lg px-2.5 py-1 text-xs font-extrabold",
+                            String(l?.limitsValue).toLowerCase() === 'false'
+                              ? "bg-rose-100 text-rose-700"
+                              : String(l?.limitsValue).toLowerCase() === 'true'
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-slate-900 text-white"
+                          )}>
                             {String(l?.limitsValue ?? "—")}
                           </span>
                         </div>
                       ))}
+                      {limits.length > 3 && (
+                        <p className="text-xs font-semibold text-slate-400 text-center pt-1">
+                          +{limits.length - 3} more limits
+                        </p>
+                      )}
                     </div>
                   )}
 
-                  <Button
-                    variant="secondary"
-                    className="w-full mt-3"
+                  <button
                     onClick={() => openLimitsManager(tier)}
                     type="button"
+                    className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
                   >
                     Manage Limits
-                  </Button>
+                  </button>
                 </div>
 
-                <div className="space-y-3 mb-6">
-                  <p className="text-sm font-bold text-gray-900">Features</p>
+                {/* Features Section */}
+                <div className="border-t border-slate-100 bg-white p-5 rounded-b-3xl">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                      Features
+                    </h4>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
+                      {feats.length} added
+                    </span>
+                  </div>
 
                   {feats.length === 0 ? (
-                    <p className="text-sm text-gray-500">No features added yet.</p>
+                    <div className="mb-4 rounded-xl bg-slate-50 px-4 py-6 text-center">
+                      <p className="text-xs font-medium text-slate-400 italic">No features added yet</p>
+                    </div>
                   ) : (
-                    feats.slice(0, 6).map((f) => {
-                      const fid = safeId(f);
-                      const rowBusy = busyFeatureId && busyFeatureId === fid;
+                    <div className="space-y-2 mb-4 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+                      {feats.map((f) => {
+                        const fid = safeId(f);
+                        const rowBusy = busyFeatureId && busyFeatureId === fid;
 
-                      return (
-                        <div
-                          key={fid || f?.featureName}
-                          className="rounded-2xl border border-gray-200 bg-white p-3"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-start gap-2 min-w-0">
-                              <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="text-sm font-extrabold text-gray-900">
-                                    {f?.featureName || "Feature"}
-                                  </p>
-                                  <FeatureStatusPill status={f?.status} />
+                        return (
+                          <div
+                            key={fid || f?.featureName}
+                            className="group rounded-xl border border-slate-200 bg-gradient-to-r from-white to-slate-50/50 p-3 transition-all hover:border-slate-300 hover:shadow-sm"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                                <div className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 flex-shrink-0">
+                                  <Check className="h-3 w-3 text-emerald-600" strokeWidth={3} />
                                 </div>
-                                <p className="text-[12px] text-gray-500 mt-0.5">
-                                  {f?.featureDescription || ""}
-                                </p>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <p className="text-sm font-bold text-slate-900 leading-tight">
+                                      {f?.featureName || "Feature"}
+                                    </p>
+                                    <FeatureStatusPill status={f?.status} />
+                                  </div>
+                                  <p className="text-xs leading-relaxed text-slate-500 line-clamp-2">
+                                    {f?.featureDescription || ""}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => openEditFeature(f)}
+                                  disabled={rowBusy}
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white transition-all hover:bg-slate-50 hover:border-slate-300 disabled:opacity-60"
+                                  title="Edit"
+                                  type="button"
+                                >
+                                  {rowBusy ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : (
+                                    <Pencil size={13} className="text-slate-600" />
+                                  )}
+                                </button>
+
+                                <button
+                                  onClick={() => openDeleteFeature(f)}
+                                  disabled={rowBusy}
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-200 bg-white transition-all hover:bg-rose-50 hover:border-rose-300 disabled:opacity-60"
+                                  title="Delete"
+                                  type="button"
+                                >
+                                  {rowBusy ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : (
+                                    <Trash2 size={13} className="text-rose-600" />
+                                  )}
+                                </button>
                               </div>
                             </div>
-
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <button
-                                onClick={() => openEditFeature(f)}
-                                disabled={rowBusy}
-                                className="w-9 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center disabled:opacity-60"
-                                title="Edit feature"
-                                type="button"
-                              >
-                                {rowBusy ? (
-                                  <Loader2 size={16} className="animate-spin" />
-                                ) : (
-                                  <Pencil size={16} className="text-gray-700" />
-                                )}
-                              </button>
-
-                              <button
-                                onClick={() => openDeleteFeature(f)}
-                                disabled={rowBusy}
-                                className="w-9 h-9 rounded-xl border border-rose-200 hover:bg-rose-50 flex items-center justify-center disabled:opacity-60"
-                                title="Delete feature"
-                                type="button"
-                              >
-                                {rowBusy ? (
-                                  <Loader2 size={16} className="animate-spin" />
-                                ) : (
-                                  <Trash2 size={16} className="text-rose-700" />
-                                )}
-                              </button>
-                            </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+                    </div>
                   )}
-                </div>
 
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => openFeatureModal(tier)}
-                  type="button"
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <ListPlus size={16} /> Add Features
-                  </span>
-                </Button>
+                  <button
+                    onClick={() => openFeatureModal(tier)}
+                    type="button"
+                    className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <ListPlus size={16} /> Add Features
+                    </span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -820,7 +900,6 @@ const TierManagement = () => {
         open={addLimitsOpen}
         tierPlanId={selectedTier?.id || selectedTier?._id}
         tierTitle={selectedTier?.title}
-        limitNames={limitNames}
         saving={savingLimits}
         onClose={() => {
           if (savingLimits) return;
