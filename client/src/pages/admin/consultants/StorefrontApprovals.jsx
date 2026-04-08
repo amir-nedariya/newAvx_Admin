@@ -941,27 +941,27 @@ const StorefrontApprovals = () => {
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <TopCard
             title="Total Requests"
-            value={loading ? "..." : stats.total}
+            value={loading ? "..." : stats?.total}
             icon={Clock3}
             iconWrapClass="border-sky-100 bg-sky-50 text-sky-600"
           />
           <TopCard
             title="Requested"
-            value={loading ? "..." : stats.requested}
+            value={loading ? "..." : stats?.requested}
             icon={ShieldAlert}
             iconWrapClass="border-amber-100 bg-amber-50 text-amber-600"
             valueClass="text-amber-600"
           />
           <TopCard
             title="Verified"
-            value={loading ? "..." : stats.verified}
+            value={loading ? "..." : stats?.verified}
             icon={CheckCircle2}
             iconWrapClass="border-emerald-100 bg-emerald-50 text-emerald-600"
             valueClass="text-emerald-600"
           />
           <TopCard
             title="Rejected"
-            value={loading ? "..." : stats.rejected}
+            value={loading ? "..." : stats?.rejected}
             icon={XCircle}
             iconWrapClass="border-rose-100 bg-rose-50 text-rose-600"
             valueClass="text-rose-600"

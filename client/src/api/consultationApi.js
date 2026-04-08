@@ -17,6 +17,24 @@ export const getSuspendedConsultations = async () => {
 };
 
 /* =======================================================
+   ✅ CONSULTATION: FILTER FLAGGED (POST)
+   BODY:
+   {
+     searchText,
+     cityId,
+     severity,
+     flaggedAfter,
+     flaggedBefore,
+     pageNo,
+     pageSize
+   }
+======================================================= */
+export const filterFlaggedConsultations = async (payload = {}) => {
+  const res = await api.post("/consultation/flagged/filter", payload);
+  return res.data;
+};
+
+/* =======================================================
    ✅ CONSULTATION: GET KPI (GET)
 ======================================================= */
 export const getConsultationKpi = async () => {
@@ -37,16 +55,16 @@ export const getConsultationById = async (consultId) => {
 };
 
 /* =======================================================
-   ✅ CONSULTATION: UNSUSPEND (PATCH)
+   ✅ CONSULTATION: UNSUSPEND (POST)
    BODY:
    {
-     consultId,
+     consultationId,
      reason
    }
 ======================================================= */
 export const unsuspendConsultation = async ({ consultId, reason }) => {
   if (!consultId) {
-    throw new Error("consultId is required");
+    throw new Error("consultationId is required");
   }
 
   if (!reason || !String(reason).trim()) {
@@ -141,12 +159,12 @@ export const requestUploadKYCConsultation = async ({ consultId, remark }) => {
 };
 
 /* =======================================================
-   ✅ CONSULTATION: SUSPEND (PATCH)
+   ✅ CONSULTATION: SUSPEND (POST)
    BODY:
    {
-     consultId,
+     consultationId,
      reason,
-     suspendType,
+     suspenseType,
      suspendUntil
    }
 ======================================================= */
@@ -157,7 +175,7 @@ export const suspendConsultation = async ({
   suspendUntil = null,
 }) => {
   if (!consultId) {
-    throw new Error("consultId is required");
+    throw new Error("consultationId is required");
   }
 
   if (!reason || !String(reason).trim()) {
@@ -165,7 +183,7 @@ export const suspendConsultation = async ({
   }
 
   if (!suspendType) {
-    throw new Error("suspendType is required");
+    throw new Error("suspenseType is required");
   }
 
   const payload = {
@@ -394,9 +412,27 @@ export const addInternalNote = async ({
 
 /* =======================================================
    ✅ APPLY PENALTY (PATCH)
-   BODY: { consultId, deductionCount, reason }
+   BODY: { userId, deductionCount, reason }
 ======================================================= */
-export const addPenalty = async (payload) => {
+export const addPenalty = async ({ userId, deductionCount, reason }) => {
+  if (!userId) {
+    throw new Error("userId is required");
+  }
+
+  if (!deductionCount || deductionCount < 1) {
+    throw new Error("deductionCount must be at least 1");
+  }
+
+  if (!reason || !String(reason).trim()) {
+    throw new Error("reason is required");
+  }
+
+  const payload = {
+    userId,
+    deductionCount: Number(deductionCount),
+    reason: String(reason).trim(),
+  };
+
   const res = await api.patch("/consultation/addPenalty", payload);
   return res.data;
 };
@@ -420,5 +456,137 @@ export const clearFlaggedConsultation = async ({ flagId, reason }) => {
   };
 
   const res = await api.patch("/consultation/clear-flag", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ GET GLOBAL RANKING CONFIG (GET)
+======================================================= */
+export const getGlobalRankingConfig = async () => {
+  const res = await api.get("/consultation/ranking/config");
+  return res.data;
+};
+
+/* =======================================================
+   ✅ UPDATE GLOBAL RANKING CONFIG (PUT)
+   BODY: GlobalRankingConfigUpdateRequest
+======================================================= */
+export const updateGlobalRankingConfig = async (payload) => {
+  if (!payload) {
+    throw new Error("Ranking config data is required");
+  }
+
+  const res = await api.put("/consultation/ranking/config", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ GET CONSULTANT OVERRIDES (GET)
+======================================================= */
+export const getConsultantOverrides = async () => {
+  const res = await api.get("/consultation/ranking/overrides");
+  return res.data;
+};
+
+/* =======================================================
+   ✅ GET CONSULTANT PENALTIES (GET)
+======================================================= */
+export const getConsultantPenalties = async () => {
+  const res = await api.get("/consultation/ranking/penalties");
+  return res.data;
+};
+
+/* =======================================================
+   ✅ GET ALL CONSULTANT NAMES (GET)
+======================================================= */
+export const getAllConsultantNames = async () => {
+  const res = await api.get("/consultation/getAllConsultName");
+  return res.data;
+};
+
+/* =======================================================
+   ✅ APPLY OVERRIDE (POST)
+   BODY: {
+     userId,
+     manualBoostScore,
+     manualBoostScoreReason,
+     manualBoostScoreType
+   }
+======================================================= */
+export const applyOverride = async ({
+  userId,
+  manualBoostScore,
+  manualBoostScoreReason,
+  manualBoostScoreType,
+}) => {
+  if (!userId) {
+    throw new Error("userId is required");
+  }
+
+  if (!manualBoostScore || parseFloat(manualBoostScore) <= 0) {
+    throw new Error("manualBoostScore must be greater than 0");
+  }
+
+  if (!manualBoostScoreReason || !String(manualBoostScoreReason).trim()) {
+    throw new Error("manualBoostScoreReason is required");
+  }
+
+  if (!manualBoostScoreType) {
+    throw new Error("manualBoostScoreType is required");
+  }
+
+  const payload = {
+    userId,
+    manualBoostScore: parseFloat(manualBoostScore),
+    manualBoostScoreReason: String(manualBoostScoreReason).trim(),
+    manualBoostScoreType,
+  };
+
+  const res = await api.post("/consultation/ranking/override", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ APPLY PENALTIES (POST)
+   BODY: {
+     userId,
+     manualDeductionScore,
+     manualDeductionScoreReason,
+     manualDeductionScoreType
+   }
+======================================================= */
+export const applyPenalties = async ({
+  userId,
+  manualDeductionScore,
+  manualDeductionScoreReason,
+  manualDeductionScoreType,
+}) => {
+  if (!userId) {
+    throw new Error("userId is required");
+  }
+
+  if (!manualDeductionScore || parseFloat(manualDeductionScore) <= 0) {
+    throw new Error("manualDeductionScore must be greater than 0");
+  }
+
+  if (
+    !manualDeductionScoreReason ||
+    !String(manualDeductionScoreReason).trim()
+  ) {
+    throw new Error("manualDeductionScoreReason is required");
+  }
+
+  if (!manualDeductionScoreType) {
+    throw new Error("manualDeductionScoreType is required");
+  }
+
+  const payload = {
+    userId,
+    manualDeductionScore: parseFloat(manualDeductionScore),
+    manualDeductionScoreReason: String(manualDeductionScoreReason).trim(),
+    manualDeductionScoreType,
+  };
+
+  const res = await api.post("/consultation/ranking/penalties", payload);
   return res.data;
 };

@@ -13,7 +13,7 @@ import {
     ChevronDown,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import { filterConsultations, unsuspendConsultation } from "../../../api/consultationApi";
+import { getSuspendedConsultations, unsuspendConsultation } from "../../../api/consultationApi";
 import SuspendedConsultantsRowActions from "./suspended-consultants/SuspendedConsultantsRowActions";
 import SuspendedConsultantsConfirmModal from "./suspended-consultants/SuspendedConsultantsConfirmModal";
 
@@ -40,6 +40,14 @@ const formatDateTime = (value) => {
         hour: "2-digit",
         minute: "2-digit",
     });
+};
+
+const tierBadge = (tierTitle) => {
+    const t = String(tierTitle || "").toLowerCase();
+    if (t.includes("premium"))
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (t.includes("pro")) return "bg-sky-50 text-sky-700 border-sky-200";
+    return "bg-slate-100 text-slate-700 border-slate-200";
 };
 
 const suspensionTypeBadge = (type) => {
@@ -132,15 +140,13 @@ const SuspendedConsultants = () => {
                 setLoading(true);
             }
 
-            const res = await filterConsultations({
-                isSuspended: true,
-            });
+            const res = await getSuspendedConsultations();
 
-            const list =
-                (Array.isArray(res?.data?.content) && res.data.content) ||
-                (Array.isArray(res?.data) && res.data) ||
-                (Array.isArray(res) && res) ||
-                [];
+            // Extract data from the response structure
+            const list = res?.data || [];
+
+            console.log("🔍 Suspended consultants API response:", res);
+            console.log("🔍 Extracted list:", list);
 
             setRows(list);
 
@@ -172,26 +178,32 @@ const SuspendedConsultants = () => {
         return rows.filter((item) => {
             const matchesSearch =
                 !q ||
-                String(item?.consultName || "")
+                String(item?.consultationName || "")
                     .toLowerCase()
                     .includes(q) ||
                 String(item?.username || "")
                     .toLowerCase()
                     .includes(q) ||
-                String(item?.cityName || "")
+                String(item?.city || "")
                     .toLowerCase()
                     .includes(q) ||
-                String(item?.suspensionReason || "")
+                String(item?.reason || "")
                     .toLowerCase()
                     .includes(q) ||
-                String(item?.consultId || "")
+                String(item?.consultationId || "")
                     .toLowerCase()
                     .includes(q) ||
                 String(item?.suspensionId || "")
                     .toLowerCase()
+                    .includes(q) ||
+                String(item?.email || "")
+                    .toLowerCase()
+                    .includes(q) ||
+                String(item?.phoneNumber || "")
+                    .toLowerCase()
                     .includes(q);
 
-            const matchesType = !typeFilter || item?.suspensionType === typeFilter;
+            const matchesType = !typeFilter || item?.suspenseType === typeFilter;
 
             return matchesSearch && matchesType;
         });
@@ -200,8 +212,8 @@ const SuspendedConsultants = () => {
     const stats = useMemo(() => {
         return {
             total: rows.length,
-            permanent: rows.filter((item) => item?.suspensionType === "PERMANENT").length,
-            temporary: rows.filter((item) => item?.suspensionType === "TEMPORARY").length,
+            permanent: rows.filter((item) => item?.suspenseType === "PERMANENT").length,
+            temporary: rows.filter((item) => item?.suspenseType === "TEMPORARY").length,
             active: rows.filter((item) => item?.isActive).length,
         };
     }, [rows]);
@@ -212,13 +224,14 @@ const SuspendedConsultants = () => {
     };
 
     const handleActionConfirm = async (payload) => {
-        if (!payload?.item?.consultId) return;
+        if (!payload?.item?.consultationId) return;
 
         try {
             setActionLoading(true);
             if (payload.type === "unsuspend") {
+                console.log(payload.item);
                 await unsuspendConsultation({
-                    consultId: payload.item.consultId,
+                    consultId: payload.item.consultationId,
                     reason: payload.reason,
                 });
 
@@ -315,7 +328,7 @@ const SuspendedConsultants = () => {
                                     <input
                                         value={searchText}
                                         onChange={(e) => setSearchText(e.target.value)}
-                                        placeholder="Search name, username, city, reason, consultant ID..."
+                                        placeholder="Search name, username, email, phone, city, reason..."
                                         className="h-11 md:h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-[13px] md:text-[14px] font-medium text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 placeholder:text-slate-400"
                                     />
                                 </div>
@@ -374,10 +387,13 @@ const SuspendedConsultants = () => {
                                 <thead>
                                     <tr className="bg-slate-50/80 backdrop-blur-sm">
                                         <th className="border-b border-r border-slate-200/60 px-6 py-4.5 text-left text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
-                                            Consultant
+                                            Consultation
                                         </th>
                                         <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
-                                            Username
+                                            Email
+                                        </th>
+                                        <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
+                                            Phone
                                         </th>
                                         <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
                                             City
@@ -397,9 +413,6 @@ const SuspendedConsultants = () => {
                                         <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
                                             Suspend Until
                                         </th>
-                                        <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
-                                            Status
-                                        </th>
                                         <th className="border-b border-slate-200 px-6 py-4.5 text-right text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
                                             Actions
                                         </th>
@@ -409,7 +422,7 @@ const SuspendedConsultants = () => {
                                 <tbody>
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={10} className="px-6 py-24 text-center">
+                                            <td colSpan={11} className="px-6 py-24 text-center">
                                                 <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                                                     <Loader2 className="h-4 w-4 animate-spin" />
                                                     Loading suspended...
@@ -419,7 +432,7 @@ const SuspendedConsultants = () => {
                                     ) : filteredRows.length > 0 ? (
                                         filteredRows.map((item, index) => (
                                             <tr
-                                                key={item?.suspensionId || item?.consultId || index}
+                                                key={item?.suspensionId || item?.consultationId || index}
                                                 className={cls(
                                                     "group transition-colors duration-200 hover:bg-sky-50/45",
                                                     index % 2 === 0 ? "bg-white" : "bg-slate-50/35"
@@ -429,19 +442,25 @@ const SuspendedConsultants = () => {
                                                     <div className="flex min-w-[280px] items-center gap-4">
                                                         <ConsultantLogo
                                                             src={item?.logoUrl}
-                                                            alt={item?.consultName || "Consultant"}
+                                                            alt={item?.consultationName || "Consultation"}
                                                         />
                                                         <div className="min-w-0">
                                                             <div className="truncate text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700">
-                                                                {safeText(item?.consultName)}
+                                                                {safeText(item?.consultationName)}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </td>
 
                                                 <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                                                    <div className="text-[13px] font-medium text-slate-600">
+                                                        {safeText(item?.email)}
+                                                    </div>
+                                                </td>
+
+                                                <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
                                                     <div className="text-[13px] font-semibold text-slate-700">
-                                                        {safeText(item?.username)}
+                                                        {safeText(item?.phoneNumber)}
                                                     </div>
                                                 </td>
 
@@ -449,33 +468,44 @@ const SuspendedConsultants = () => {
                                                     <div
                                                         className={cls(
                                                             "inline-flex items-center justify-center gap-2 text-[13px] font-medium",
-                                                            item?.cityName ? "text-slate-600" : "text-slate-400"
+                                                            item?.city ? "text-slate-600" : "text-slate-400"
                                                         )}
                                                     >
-                                                        <span>{safeText(item?.cityName)}</span>
+                                                        <span>{safeText(item?.city)}</span>
                                                     </div>
                                                 </td>
 
-                                                <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                                                {/* <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
                                                     <div className="text-[13px] font-semibold text-slate-700">
-                                                        {safeText(item?.tierTitle)}
+                                                        {safeText(item?.tierPlan)}
                                                     </div>
+                                                </td> */}
+
+                                                <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                                                    <span
+                                                        className={cls(
+                                                            "inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.03em] whitespace-nowrap",
+                                                            tierBadge(item?.tierPlan)
+                                                        )}
+                                                    >
+                                                        {item?.tierPlan || "N/A"}
+                                                    </span>
                                                 </td>
 
                                                 <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
                                                     <span
                                                         className={cls(
                                                             "inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.03em] whitespace-nowrap",
-                                                            suspensionTypeBadge(item?.suspensionType)
+                                                            suspensionTypeBadge(item?.suspenseType)
                                                         )}
                                                     >
-                                                        {safeText(item?.suspensionType)}
+                                                        {safeText(item?.suspenseType)}
                                                     </span>
                                                 </td>
 
                                                 <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
                                                     <div className="mx-auto max-w-[240px] truncate rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12.5px] font-semibold text-slate-700">
-                                                        {safeText(item?.suspensionReason)}
+                                                        {safeText(item?.reason)}
                                                     </div>
                                                 </td>
 
@@ -487,7 +517,7 @@ const SuspendedConsultants = () => {
                                                 </td>
 
                                                 <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
-                                                    {item?.suspensionType === "PERMANENT" ? (
+                                                    {item?.suspenseType === "PERMANENT" ? (
                                                         <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-bold text-rose-700 whitespace-nowrap">
                                                             Permanent
                                                         </span>
@@ -499,21 +529,10 @@ const SuspendedConsultants = () => {
                                                     )}
                                                 </td>
 
-                                                <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
-                                                    <span
-                                                        className={cls(
-                                                            "inline-flex rounded-full border px-3 py-1 text-[11px] font-bold whitespace-nowrap",
-                                                            statusBadge(item?.isActive)
-                                                        )}
-                                                    >
-                                                        {item?.isActive ? "Active" : "Inactive"}
-                                                    </span>
-                                                </td>
-
                                                 <td className="border-b border-slate-100 px-6 py-4.5 text-right align-middle">
                                                     <SuspendedConsultantsRowActions
                                                         onViewDetails={() => {
-                                                            navigate(`/admin/consultants/${item.consultId}`, {
+                                                            navigate(`/admin/consultants/profile/${item.consultationId}`, {
                                                                 state: { from: '/admin/consultants/suspended' }
                                                             });
                                                         }}
@@ -530,7 +549,7 @@ const SuspendedConsultants = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={10} className="px-6 py-28 text-center">
+                                            <td colSpan={11} className="px-6 py-28 text-center">
                                                 <div className="flex flex-col items-center justify-center">
                                                     <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
                                                         <ShieldAlert size={28} />

@@ -24,9 +24,10 @@ import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
 import {
-    filterConsultations,
+    filterFlaggedConsultations,
     suspendConsultation,
     addPenalty,
+    clearFlaggedConsultation,
 } from "../../../api/consultationApi";
 import { getAllCitiesFromSearch } from "../../../api/addressApi";
 import FlaggedConsultationsFilterBar from "./flagged-consultations/FlaggedConsultationsFilterBar";
@@ -48,6 +49,14 @@ const riskBadge = (risk) => {
     if (risk === "HIGH") return "border-rose-200 bg-rose-50 text-rose-700";
     if (risk === "MODERATE") return "border-amber-200 bg-amber-50 text-amber-700";
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
+};
+
+const verificationStatusBadge = (status) => {
+    if (status === "APPROVED") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    if (status === "REJECTED") return "border-rose-200 bg-rose-50 text-rose-700";
+    if (status === "REQUEST_CHANGES") return "border-amber-200 bg-amber-50 text-amber-700";
+    if (status === "REQUESTED") return "border-blue-200 bg-blue-50 text-blue-700";
+    return "border-slate-200 bg-slate-50 text-slate-700";
 };
 
 const formatEnumLabel = (str) => {
@@ -92,25 +101,30 @@ export default function FlaggedConsultations() {
             const flaggedAfter = filters.dateFrom ? `${filters.dateFrom}T00:00:00` : null;
             const flaggedBefore = filters.dateTo ? `${filters.dateTo}T23:59:59` : null;
 
-            const payload = await filterConsultations({
+            const payload = {
                 searchText: search?.trim() || filters.consultantName?.trim() || null,
                 cityId: filters.cityId ? Number(filters.cityId) : null,
                 severity: filters.severity || null,
                 flaggedAfter,
                 flaggedBefore,
-                isFlagged: true,
                 pageNo,
                 pageSize: PAGE_SIZE,
-            });
+            };
 
-            const list = (Array.isArray(payload?.data?.content) && payload.data.content) ||
-                (Array.isArray(payload?.data) && payload.data) ||
-                (Array.isArray(payload) && payload) || [];
+            console.log("🔍 Flagged consultations request payload:", payload);
 
-            setRows(list || []);
-            setServerTotalPages(Math.max(1, Number(payload?.data?.totalPages || 1)));
-            setServerTotal(Number(payload?.data?.totalElements || 0));
-            setPage(Number(payload?.data?.number || pageNo));
+            const res = await filterFlaggedConsultations(payload);
+
+            console.log("🔍 Flagged consultations API response:", res);
+
+            // Extract data from the new response structure
+            const list = res?.data || [];
+            const pageResponse = res?.pageResponse || {};
+
+            setRows(list);
+            setServerTotalPages(Math.max(1, Number(pageResponse?.totalPages || 1)));
+            setServerTotal(Number(pageResponse?.totalElements || 0));
+            setPage(Number(pageResponse?.currentPage || pageNo));
         } catch (err) {
             console.error("Fetch error:", err);
             toast.error("Failed to fetch flagged consultations");
@@ -238,26 +252,34 @@ export default function FlaggedConsultations() {
 
     const handleActionConfirm = async (payload) => {
         if (!payload?.item) return;
-        const consultId = payload.item.consultId || payload.item.id;
+        const consultationId = payload.item.consultationId;
         const flagId = payload.item.flagReviewId;
+        const userId = payload.item.userId;
+
+        console.log("payload", payload);
 
         try {
             setActionLoading(true);
             if (payload.type === "suspend") {
                 await suspendConsultation({
-                    consultId,
-                    reason: payload.meta?.reason || payload.reason,
-                    suspendType: (payload.meta?.suspensionType || "TEMPORARY").toUpperCase(),
-                    suspendUntil: payload.meta?.date
+                    consultId: consultationId,
+                    reason: payload.reason || payload.meta?.reason,
+                    suspendType: (payload?.meta?.suspensionType || "TEMPORARY").toUpperCase(),
+                    suspendUntil: payload.meta?.date || null
                 });
                 toast.success("Consultant suspended successfully");
             } else if (payload.type === "clear") {
                 if (!flagId) throw new Error("Flag ID not found");
+                await clearFlaggedConsultation({
+                    flagId,
+                    reason: payload.meta?.reason || payload.reason,
+                });
                 toast.success("Flag cleared successfully");
             } else if (payload.type === "penalty") {
+                if (!userId) throw new Error("User ID not found");
                 await addPenalty({
-                    consultId,
-                    deductionCount: payload.meta?.deduction,
+                    userId,
+                    deductionCount: Number(payload.meta?.deduction),
                     reason: payload.meta?.reason,
                 });
                 toast.success("Penalty applied successfully");
@@ -266,14 +288,19 @@ export default function FlaggedConsultations() {
             setModal(null);
         } catch (err) {
             console.error("Action error:", err);
-            toast.error(err?.response?.data?.message || "Action failed");
+            toast.error(err?.response?.data?.message || err?.message || "Action failed");
         } finally {
             setActionLoading(false);
         }
     };
 
     const handleReview = (row) => {
-        navigate(`/admin/consultants/flagged-consultations/${row?.flagReviewId || row?.id}`, {
+        const consultId = row?.consultationId || row?.consultId;
+        if (!consultId) {
+            toast.error("Consultation ID not found");
+            return;
+        }
+        navigate(`/admin/consultants/profile/${consultId}`, {
             state: { from: '/admin/consultants/flagged-consultations' }
         });
     };
@@ -341,6 +368,9 @@ export default function FlaggedConsultations() {
                                     <th className="w-[200px] border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
                                         Category
                                     </th>
+                                    <th className="w-[180px] border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
+                                        Verification
+                                    </th>
                                     <th className="w-[350px] border-b border-r border-slate-200/60 px-6 py-4.5 text-left text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
                                         Description
                                     </th>
@@ -355,7 +385,7 @@ export default function FlaggedConsultations() {
                             <tbody className="divide-y divide-slate-50">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={8} className="px-6 py-24 text-center">
+                                        <td colSpan={9} className="px-6 py-24 text-center">
                                             <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                                 Loading flagged consultations...
@@ -401,6 +431,11 @@ export default function FlaggedConsultations() {
                                                     {formatEnumLabel(row.flagCategory)}
                                                 </span>
                                             </td>
+                                            <td className="border-b border-r border-slate-100 px-5 py-4.5 text-center align-middle">
+                                                <span className={cls("inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm whitespace-nowrap", verificationStatusBadge(row.verificationStatus))}>
+                                                    {formatEnumLabel(row.verificationStatus) || "-"}
+                                                </span>
+                                            </td>
                                             <td className="border-b border-r border-slate-100 px-6 py-4.5 align-middle">
                                                 <div className="text-[11px] font-medium text-slate-500 line-clamp-2 italic leading-relaxed whitespace-pre-wrap max-w-[250px]">
                                                     {row.internalNotes || "No internal notes provided"}
@@ -429,7 +464,7 @@ export default function FlaggedConsultations() {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={8} className="px-6 py-32 text-center">
+                                        <td colSpan={9} className="px-6 py-32 text-center">
                                             <div className="flex flex-col items-center justify-center">
                                                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
                                                     <AlertTriangle size={28} />

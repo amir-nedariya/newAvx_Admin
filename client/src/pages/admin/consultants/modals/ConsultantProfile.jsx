@@ -29,8 +29,9 @@ import {
   NotebookPen,
   ChevronDown,
   MoreHorizontal,
+  Star,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   getConsultationById,
   unsuspendConsultation,
@@ -39,6 +40,7 @@ import {
   requestUploadKYCConsultation,
   addPenalty,
   suspendConsultation,
+  clearFlaggedConsultation,
 } from "../../../../api/consultationApi";
 import { getTierPlans } from "../../../../api/tierPlan.api";
 
@@ -884,10 +886,99 @@ function PenaltyActionModal({
   );
 }
 
+/* ================= CLEAR FLAG MODAL ================= */
+function ClearFlagModal({
+  open,
+  consultantName,
+  reason,
+  setReason,
+  loading,
+  onClose,
+  onConfirm,
+}) {
+  if (!open) return null;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[111] w-[95%] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-zinc-100 px-6 py-5">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50">
+              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900">Clear Flag</h3>
+              {consultantName && (
+                <p className="mt-1 text-sm text-zinc-500">{consultantName}</p>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-6 rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+            <p className="text-sm font-semibold text-emerald-800">
+              This will remove the flag from this consultant. They will no longer appear in the flagged consultations list.
+            </p>
+          </div>
+
+          <div className="mb-6">
+            <label className="mb-2 block text-sm font-bold text-zinc-700">
+              Reason for Clearing Flag <span className="text-emerald-500">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={4}
+              placeholder="Enter reason for clearing this flag..."
+              className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-zinc-200 bg-white px-6 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={loading || !reason.trim()}
+              className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Clearing..." : "Confirm Clear Flag"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ================= MAIN ================= */
 const ConsultantProfile = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+
+  // Check if navigated from suspended consultants page
+  const isFromSuspended = location?.state?.from === '/admin/consultants/suspended';
+
+  // Check if navigated from flagged consultations page
+  const isFromFlagged = location?.state?.from === '/admin/consultants/flagged-consultations';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -946,6 +1037,9 @@ const ConsultantProfile = () => {
 
   // Add note modal states
   const [noteText, setNoteText] = useState("");
+
+  // Clear flag modal states
+  const [clearFlagReason, setClearFlagReason] = useState("");
 
   // Tier plans
   const [tierPlans, setTierPlans] = useState([]);
@@ -1023,6 +1117,7 @@ const ConsultantProfile = () => {
     return {
       raw: d,
       consultId: d?.id || id,
+      userId: d?.userId || null,
       name,
       username,
       ownerName: d?.ownerName || "—",
@@ -1078,6 +1173,7 @@ const ConsultantProfile = () => {
       suspensions: d?.suspensions || [],
       internalNotes: d?.internalNotes || [],
       activityLogs: d?.activityLogs || [],
+      reviews: d?.reviews || [],
     };
   }, [data, id]);
 
@@ -1208,6 +1304,7 @@ const ConsultantProfile = () => {
     setRejectionReason("");
     setRejectionReasonText("");
     setPenaltyReason("");
+    setPenaltyDeduction("");
     setSuspendReason("");
     setSuspendType("TEMPORARY");
     setSuspendUntil("");
@@ -1222,6 +1319,7 @@ const ConsultantProfile = () => {
     setAuditType("");
     setAuditReason("");
     setNoteText("");
+    setClearFlagReason("");
   };
 
   const handleUnsuspend = async () => {
@@ -1340,23 +1438,26 @@ const ConsultantProfile = () => {
 
   const handleApplyPenalty = async () => {
     try {
-      const consultId = getConsultId();
-      if (!consultId) return;
+      const userId = profile?.userId;
+      if (!userId) {
+        toast.error("User ID not found");
+        return;
+      }
 
       if (!penaltyReason.trim()) {
         toast.error("Reason is required");
         return;
       }
 
-      if (!penaltyDeduction || isNaN(penaltyDeduction)) {
-        toast.error("Valid deduction amount is required");
+      if (!penaltyDeduction || isNaN(penaltyDeduction) || Number(penaltyDeduction) < 1) {
+        toast.error("Valid deduction amount is required (minimum 1)");
         return;
       }
 
       setActionLoading(true);
 
       await addPenalty({
-        consultId,
+        userId,
         deductionCount: Number(penaltyDeduction),
         reason: penaltyReason.trim(),
       });
@@ -1391,7 +1492,7 @@ const ConsultantProfile = () => {
       await suspendConsultation({
         consultId,
         reason: suspendReason,
-        suspendType,
+        suspendType: suspendType,
         suspendUntil: suspendType === "TEMPORARY" ? suspendUntil : null,
       });
 
@@ -1519,6 +1620,38 @@ const ConsultantProfile = () => {
       await fetchProfile({ silent: true });
     } catch (e) {
       toast.error(getErrorMessage(e, "Failed to add note"));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleClearFlag = async () => {
+    try {
+      // Get flagId from profile data (you may need to adjust this based on your data structure)
+      const flagId = profile?.raw?.flagReviewId || profile?.raw?.flagId;
+
+      if (!flagId) {
+        toast.error("Flag ID not found");
+        return;
+      }
+
+      if (!clearFlagReason.trim()) {
+        toast.error("Reason is required");
+        return;
+      }
+
+      setActionLoading(true);
+
+      await clearFlaggedConsultation({
+        flagId,
+        reason: clearFlagReason.trim(),
+      });
+
+      toast.success("Flag cleared successfully");
+      closeActionModal();
+      await fetchProfile({ silent: true });
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Failed to clear flag"));
     } finally {
       setActionLoading(false);
     }
@@ -1713,111 +1846,183 @@ const ConsultantProfile = () => {
                             onClick={() => setActionModal({ ...actionModal, menuOpen: false })}
                           />
                           <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl">
-                            {/* KYC Actions */}
-                            <button
-                              onClick={() => openKycModal("approve")}
-                              disabled={kycActionLoading === "approve"}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                              {kycActionLoading === "approve" ? "Approving..." : "Approve KYC"}
-                            </button>
+                            {isFromSuspended ? (
+                              /* Limited menu when coming from Suspended Consultants */
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "unsuspend", menuOpen: false });
+                                  }}
+                                  disabled={actionLoading}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                  {actionLoading ? "Unsuspending..." : "Unsuspend"}
+                                </button>
 
-                            <button
-                              onClick={() => openKycModal("reject")}
-                              disabled={kycActionLoading === "reject"}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
-                            >
-                              <XCircle className="h-4 w-4" />
-                              {kycActionLoading === "reject" ? "Rejecting..." : "Reject KYC"}
-                            </button>
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "addNote", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                                >
+                                  <NotebookPen className="h-4 w-4" />
+                                  Add Internal Note
+                                </button>
+                              </>
+                            ) : isFromFlagged ? (
+                              /* Limited menu when coming from Flagged Consultations */
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "clearFlag", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  Clear Flag
+                                </button>
 
-                            <button
-                              onClick={() => openKycModal("request")}
-                              disabled={kycActionLoading === "request"}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-50"
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                              {kycActionLoading === "request" ? "Requesting..." : "Request Re-upload"}
-                            </button>
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "penalty", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-blue-700 transition-colors hover:bg-blue-50"
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                  Apply Penalty
+                                </button>
 
-                            <div className="my-1 border-t border-zinc-100" />
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "suspend", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
+                                >
+                                  <Ban className="h-4 w-4" />
+                                  Suspend
+                                </button>
 
-                            {/* Other Actions */}
-                            <button
-                              onClick={() => {
-                                setActionModal({ open: true, type: "penalty", menuOpen: false });
-                              }}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-blue-700 transition-colors hover:bg-blue-50"
-                            >
-                              <AlertTriangle className="h-4 w-4" />
-                              Apply Penalty
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActionModal({ open: true, type: "changeTier", menuOpen: false });
-                              }}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-sky-700 transition-colors hover:bg-sky-50"
-                            >
-                              <BadgeCheck className="h-4 w-4" />
-                              Change Tier
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActionModal({ open: true, type: "flagReview", menuOpen: false });
-                              }}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-50"
-                            >
-                              <ShieldAlert className="h-4 w-4" />
-                              Flag Review
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActionModal({ open: true, type: "forceAudit", menuOpen: false });
-                              }}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-violet-700 transition-colors hover:bg-violet-50"
-                            >
-                              <Activity className="h-4 w-4" />
-                              Force Audit
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActionModal({ open: true, type: "addNote", menuOpen: false });
-                              }}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                            >
-                              <NotebookPen className="h-4 w-4" />
-                              Add Internal Note
-                            </button>
-
-                            <div className="my-1 border-t border-zinc-100" />
-
-                            {/* Suspend/Unsuspend */}
-                            {isInactive ? (
-                              <button
-                                onClick={() => {
-                                  setActionModal({ open: true, type: "unsuspend", menuOpen: false });
-                                }}
-                                disabled={actionLoading}
-                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                                {actionLoading ? "Unsuspending..." : "Unsuspend"}
-                              </button>
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "addNote", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                                >
+                                  <NotebookPen className="h-4 w-4" />
+                                  Add Internal Note
+                                </button>
+                              </>
                             ) : (
-                              <button
-                                onClick={() => {
-                                  setActionModal({ open: true, type: "suspend", menuOpen: false });
-                                }}
-                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
-                              >
-                                <Ban className="h-4 w-4" />
-                                Suspend
-                              </button>
+                              /* Full menu for other pages */
+                              <>
+                                {/* KYC Actions */}
+                                <button
+                                  onClick={() => openKycModal("approve")}
+                                  disabled={kycActionLoading === "approve"}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  {kycActionLoading === "approve" ? "Approving..." : "Approve KYC"}
+                                </button>
+
+                                <button
+                                  onClick={() => openKycModal("reject")}
+                                  disabled={kycActionLoading === "reject"}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  {kycActionLoading === "reject" ? "Rejecting..." : "Reject KYC"}
+                                </button>
+
+                                <button
+                                  onClick={() => openKycModal("request")}
+                                  disabled={kycActionLoading === "request"}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-50"
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                  {kycActionLoading === "request" ? "Requesting..." : "Request Re-upload"}
+                                </button>
+
+                                <div className="my-1 border-t border-zinc-100" />
+
+                                {/* Other Actions */}
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "penalty", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-blue-700 transition-colors hover:bg-blue-50"
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                  Apply Penalty
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "changeTier", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-sky-700 transition-colors hover:bg-sky-50"
+                                >
+                                  <BadgeCheck className="h-4 w-4" />
+                                  Change Tier
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "flagReview", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-50"
+                                >
+                                  <ShieldAlert className="h-4 w-4" />
+                                  Flag Review
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "forceAudit", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-violet-700 transition-colors hover:bg-violet-50"
+                                >
+                                  <Activity className="h-4 w-4" />
+                                  Force Audit
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setActionModal({ open: true, type: "addNote", menuOpen: false });
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                                >
+                                  <NotebookPen className="h-4 w-4" />
+                                  Add Internal Note
+                                </button>
+
+                                <div className="my-1 border-t border-zinc-100" />
+
+                                {/* Suspend/Unsuspend */}
+                                {isInactive ? (
+                                  <button
+                                    onClick={() => {
+                                      setActionModal({ open: true, type: "unsuspend", menuOpen: false });
+                                    }}
+                                    disabled={actionLoading}
+                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                    {actionLoading ? "Unsuspending..." : "Unsuspend"}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      setActionModal({ open: true, type: "suspend", menuOpen: false });
+                                    }}
+                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                    Suspend
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         </>
@@ -1851,11 +2056,12 @@ const ConsultantProfile = () => {
                 "Ranking Breakdown",
                 "Financial",
                 "Complaints",
+                "Reviews",
                 "Activity Logs",
               ]
                 .filter((tab) => {
                   // Hide Inventory tab when verification is REQUESTED
-                  if ((tab === "Inventory" || tab === "Ranking Breakdown" || tab === "Financial" || tab === "Complaints") && profile?.verification === "REQUESTED") {
+                  if ((tab === "Inventory" || tab === "Ranking Breakdown" || tab === "Financial" || tab === "Complaints" || tab === "Reviews") && profile?.verification === "REQUESTED") {
                     return false;
                   }
                   return true;
@@ -2236,16 +2442,16 @@ const ConsultantProfile = () => {
           )}
 
           {activeTab === "Complaints" && (
-            <SectionCard title="Complaints & Issues" subtitle={`${profile?.flagReviews?.length || 0} complaints found`}>
-              {profile?.flagReviews && profile.flagReviews.length > 0 ? (
+            <SectionCard title="Complaints & Issues" subtitle={`${profile?.complaints?.length || 0} complaints found`}>
+              {profile?.complaints && profile.complaints.length > 0 ? (
                 <div className="space-y-3">
-                  {profile.flagReviews.map((flag) => (
+                  {profile.complaints.map((cmp) => (
                     <div
-                      key={flag.id}
+                      key={cmp.id}
                       className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
                     >
-                      <div className="text-sm font-semibold text-zinc-900">{flag.reason || "Complaint"}</div>
-                      <div className="mt-1 text-xs text-zinc-500">{flag.createdAt}</div>
+                      <div className="text-sm font-semibold text-zinc-900">{cmp.reason || "Complaint"}</div>
+                      <div className="mt-1 text-xs text-zinc-500">{cmp.createdAt}</div>
                     </div>
                   ))}
                 </div>
@@ -2343,6 +2549,98 @@ const ConsultantProfile = () => {
               )}
             </SectionCard>
           )}
+
+          {activeTab === "Reviews" && (
+            <SectionCard title="Customer Reviews" subtitle={`${profile?.reviews?.length || 0} reviews found`}>
+              {profile?.reviews && profile.reviews.length > 0 ? (
+                <div className="space-y-4">
+                  {profile.reviews.map((review) => (
+                    <div
+                      key={review.reviewId}
+                      className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-lg shadow-sky-500/20">
+                              <User className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-base font-bold text-zinc-900">{review.userName || "Anonymous"}</h4>
+                                {review.isEdited && (
+                                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                    Edited
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-1 flex items-center gap-2">
+                                <div className="flex items-center gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={cls(
+                                        "h-4 w-4",
+                                        star <= review.rating
+                                          ? "fill-amber-400 text-amber-400"
+                                          : "fill-zinc-200 text-zinc-200"
+                                      )}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-sm font-semibold text-zinc-600">
+                                  {review.rating.toFixed(1)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {review.reviewTitle && (
+                            <h5 className="mt-3 text-sm font-bold text-zinc-900">{review.reviewTitle}</h5>
+                          )}
+
+                          {review.reviewText && (
+                            <p className="mt-2 text-sm leading-relaxed text-zinc-600">{review.reviewText}</p>
+                          )}
+
+                          <div className="mt-4 flex items-center gap-4">
+                            <div className="flex items-center gap-1 text-xs font-semibold text-zinc-400">
+                              <Clock3 className="h-3.5 w-3.5" />
+                              {new Date(review.createdAt).toLocaleString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                            {review.status && (
+                              <span
+                                className={cls(
+                                  "rounded-full px-2 py-0.5 text-xs font-semibold",
+                                  review.status === "APPROVED"
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : review.status === "PENDING"
+                                      ? "bg-amber-50 text-amber-700"
+                                      : "bg-rose-50 text-rose-700"
+                                )}
+                              >
+                                {review.status}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <div className="text-sm font-semibold text-zinc-500">No reviews found</div>
+                </div>
+              )}
+            </SectionCard>
+          )}
         </div>
       </div >
 
@@ -2411,6 +2709,16 @@ const ConsultantProfile = () => {
         loading={actionLoading}
         onClose={closeActionModal}
         onConfirm={handleApplyPenalty}
+      />
+
+      <ClearFlagModal
+        open={actionModal.open && actionModal.type === "clearFlag"}
+        consultantName={profile?.name}
+        reason={clearFlagReason}
+        setReason={setClearFlagReason}
+        loading={actionLoading}
+        onClose={closeActionModal}
+        onConfirm={handleClearFlag}
       />
 
       <SuspendConsultantModal
