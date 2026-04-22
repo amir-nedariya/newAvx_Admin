@@ -63,6 +63,7 @@ const initialFilters = {
   inspectionStatus: "",
   isTierBoostActive: "",
   marketplaceStatus: "",
+  verificationStatus: "",
   listedAfter: "",
   listedBefore: "",
 };
@@ -101,7 +102,7 @@ const statusBadge = (status) => {
   const map = {
     ACTIVE: "border-emerald-200 bg-emerald-50 text-emerald-700",
     INACTIVE: "border-slate-200 bg-slate-100 text-slate-700",
-    SOLD: "border-violet-200 bg-violet-50 text-violet-700",
+    SOLD: "border-red-200 bg-violet-50 text-red-700",
     DELETED: "border-rose-200 bg-rose-50 text-rose-700",
     DRAFT: "border-slate-200 bg-slate-100 text-slate-700",
   };
@@ -226,6 +227,10 @@ export default function Allvehicles() {
       displayName = v?.ownerName || "-";
     }
 
+    // Determine display status: if vehicle is sold, show SOLD, otherwise show original status
+    const isVehicleSold = Boolean(v?.isVehicleSold);
+    const displayStatus = isVehicleSold ? "SOLD" : (v?.status || "-");
+
     return {
       id: v?.vehicleId || "-",
       thumb: v?.thumbnailUrl || FALLBACK_VEHICLE_IMAGE,
@@ -237,12 +242,14 @@ export default function Allvehicles() {
       type: vehicleType === "USER_SELLER" ? "SELLER" : vehicleType,
       city: v?.cityName || "-",
       price: Number(v?.price ?? 0),
+      closingPrice: v?.closingPrice !== null && v?.closingPrice !== undefined ? Number(v?.closingPrice) : null,
       inspectionStatus: v?.inspectionStatus || "-",
       rankScore: Number(v?.rankScore ?? 0),
       inquiries: Number(v?.totalInquiries ?? 0),
       notes: v?.notes || "-",
       boost: Boolean(v?.isTierBoostActive ?? false),
-      status: v?.status || "-",
+      status: displayStatus,
+      isVehicleSold: isVehicleSold,
       verificationStatus: v?.verificationStatus || "-",
       risk: v?.risk || "Low",
       ownerName: v?.ownerName || "-",
@@ -348,6 +355,7 @@ export default function Allvehicles() {
             ? null
             : filters.isTierBoostActive === "true",
         marketplaceStatus: filters.marketplaceStatus || null,
+        verificationStatus: filters.verificationStatus || null,
         listedAfter: filters.listedAfter ? `${filters.listedAfter}T00:00:00` : null,
         listedBefore: filters.listedBefore ? `${filters.listedBefore}T23:59:59` : null,
         pageNo: pageNo,
@@ -524,6 +532,7 @@ export default function Allvehicles() {
       appliedFilters.inspectionStatus,
       appliedFilters.isTierBoostActive,
       appliedFilters.marketplaceStatus,
+      appliedFilters.verificationStatus,
       appliedFilters.listedAfter,
       appliedFilters.listedBefore,
     ].filter(Boolean).length;
@@ -706,6 +715,12 @@ export default function Allvehicles() {
                     <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
                       Risk
                     </th>
+                    <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
+                      Status
+                    </th>
+                    <th className="border-b border-r border-slate-200/60 px-5 py-4.5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
+                      Closing Price
+                    </th>
                     <th className="border-b border-slate-200 px-6 py-4.5 text-right text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90 shadow-[inset_0_-1px_0_rgba(0,0,0,0.02)]">
                       Actions
                     </th>
@@ -715,7 +730,7 @@ export default function Allvehicles() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={12} className="px-6 py-24 text-center">
+                      <td colSpan={14} className="px-6 py-24 text-center">
                         <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Loading vehicles...
@@ -736,7 +751,13 @@ export default function Allvehicles() {
                           <div className="flex min-w-[320px] items-center gap-4">
                             <VehicleThumb src={v.thumb} alt={v.title || "Vehicle"} />
                             <div className="min-w-0">
-                              <div className="truncate text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700">
+                              <div className="truncate text-[14px] font-bold text-slate-900 cursor-pointer transition-colors group-hover:text-sky-700"
+                                title="View Vehicles Details"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/admin/vehicles/${v.id}`);
+                                }}
+                              >
                                 {v.title || "-"}
                               </div>
                             </div>
@@ -851,6 +872,23 @@ export default function Allvehicles() {
                           </span>
                         </td>
 
+                        <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                          <span
+                            className={cls(
+                              "inline-flex rounded-full border px-3 py-1 text-[11px] font-bold whitespace-nowrap",
+                              statusBadge(v.status)
+                            )}
+                          >
+                            {formatEnumLabel(v.status)}
+                          </span>
+                        </td>
+
+                        <td className="border-b border-slate-100 px-5 py-4.5 text-center align-middle">
+                          <div className="text-[13.5px] font-bold text-slate-900 whitespace-nowrap tracking-tight">
+                            {v.closingPrice !== null ? formatPrice(v.closingPrice) : "-"}
+                          </div>
+                        </td>
+
                         <td className="border-b border-slate-100 px-6 py-4.5 text-right align-middle">
                           <VehicleRowActions vehicle={v} onAction={onRowAction} />
                         </td>
@@ -858,7 +896,7 @@ export default function Allvehicles() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={12} className="px-6 py-28 text-center">
+                      <td colSpan={14} className="px-6 py-28 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
                             <CarFront size={28} />
@@ -1130,6 +1168,15 @@ export default function Allvehicles() {
                       setDraftFilters((p) => ({ ...p, marketplaceStatus: val }))
                     }
                     options={["", "ACTIVE", "SOLD", "INACTIVE", "DELETED", "DRAFT"]}
+                  />
+
+                  <Select
+                    label="Verification Status"
+                    value={draftFilters.verificationStatus}
+                    onChange={(val) =>
+                      setDraftFilters((p) => ({ ...p, verificationStatus: val }))
+                    }
+                    options={["", "REQUESTED", "REQUEST_CHANGES", "VERIFIED", "REJECTED"]}
                   />
                 </div>
 

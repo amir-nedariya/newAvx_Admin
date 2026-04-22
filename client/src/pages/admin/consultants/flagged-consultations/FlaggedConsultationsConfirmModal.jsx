@@ -229,13 +229,14 @@ export default function FlaggedConsultationsConfirmModal({
                                         Suspend Until
                                     </label>
                                     <input
-                                        type="datetime-local"
+                                        type="date"
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
+                                        min={new Date().toISOString().slice(0, 10)}
                                         className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
                                     />
                                     <p className="mt-2 text-xs text-slate-500">
-                                        Select a future date and time for suspension end
+                                        Select a future date for suspension end
                                     </p>
                                 </div>
                             )}

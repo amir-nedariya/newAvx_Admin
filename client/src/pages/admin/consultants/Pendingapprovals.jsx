@@ -29,6 +29,7 @@ import {
   approveKYCConsultation,
   rejectKYCConsultation,
   requestUploadKYCConsultation,
+  getConsultationUpdateRequests,
 } from "../../../api/consultationApi";
 import { getTierPlans } from "../../../api/tierPlan.api";
 import { getStates, getAllCitiesFromSearch, getCities } from "../../../api/addressApi";
@@ -162,7 +163,7 @@ function TopCard({ title, value, icon: Icon = User, valueClass = "" }) {
 /* =========================================================
    ROW ACTIONS
 ========================================================= */
-function RowActions({ item, onApprove, onReject, onRequestReupload }) {
+function RowActions({ item, onApprove, onReject, onRequestReupload, isUpdation = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
@@ -199,12 +200,12 @@ function RowActions({ item, onApprove, onReject, onRequestReupload }) {
       {open && (
         <div className="absolute right-0 top-11 z-30 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
           <button
-            onClick={() => go(`/admin/consultants/profile/${item.id}`)}
+            onClick={() => go(isUpdation ? `/admin/consultants/update-detail/${item.id}` : `/admin/consultants/profile/${item.id}`)}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-50"
             type="button"
           >
             <Eye className="h-4 w-4 text-slate-500" />
-            View Profile
+            {isUpdation ? "View Update Details" : "View Profile"}
           </button>
 
           <div className="my-1 border-t border-slate-100" />
@@ -572,6 +573,7 @@ const Pendingapprovals = () => {
   const lastFetchKeyRef = useRef("");
   const searchDebounceRef = useRef(null);
   const citiesLoadedRef = useRef(false);
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -623,6 +625,12 @@ const Pendingapprovals = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [rejectReasonText, setRejectReasonText] = useState("");
   const [reuploadRemark, setReuploadRemark] = useState("");
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState("pending"); // "pending" or "updation"
+  const [updationRows, setUpdationRows] = useState([]);
+  const [updationLoading, setUpdationLoading] = useState(false);
+  const [updationError, setUpdationError] = useState("");
 
   const loadKpi = useCallback(async () => {
     setKpiLoading(true);
@@ -739,6 +747,37 @@ const Pendingapprovals = () => {
       setCitiesLoading(false);
     }
   }, [citiesLoading]);
+
+  const loadUpdationRequests = useCallback(async () => {
+    setUpdationLoading(true);
+    setUpdationError("");
+
+    try {
+      const res = await getConsultationUpdateRequests();
+      const list = Array.isArray(res?.data) ? res.data : [];
+
+      // Map updation requests to match the row structure
+      const mapped = list.map((item) => ({
+        id: item?.consultationUpdateId || "-",
+        name: item?.consultationName || "-",
+        tierTitle: item?.tierPlan || "-",
+        city: item?.cityName || "-",
+        status: item?.status || "ACTIVE",
+        verificationStatus: item?.verificationStatus || "REQUESTED",
+        logoURL: item?.logoUrl || null, // Include logoUrl from API
+      }));
+
+      setUpdationRows(mapped);
+    } catch (e) {
+      console.error(e);
+      const message = safeErrorMessage(e);
+      setUpdationError(message);
+      setUpdationRows([]);
+      toast.error(message);
+    } finally {
+      setUpdationLoading(false);
+    }
+  }, []);
 
   const loadCitiesByState = useCallback(async (stateId) => {
     if (!stateId || stateId === "ALL") {
@@ -907,6 +946,7 @@ const Pendingapprovals = () => {
     loadTiersOnce();
     loadStatesForCountry(countryId);
     loadCitiesOnce();
+    loadUpdationRequests();
 
     fetchList({
       nextPage: 1,
@@ -918,7 +958,7 @@ const Pendingapprovals = () => {
       silent: false,
       force: true,
     });
-  }, [countryId, fetchList, loadCitiesOnce, loadKpi, loadStatesForCountry, loadTiersOnce]);
+  }, [countryId, fetchList, loadCitiesOnce, loadKpi, loadStatesForCountry, loadTiersOnce, loadUpdationRequests]);
 
   useEffect(() => {
     if (!didInit.current) return;
@@ -1021,21 +1061,25 @@ const Pendingapprovals = () => {
   const handleRefresh = async () => {
     lastFetchKeyRef.current = "";
 
-    await Promise.all([
-      loadKpi(),
-      fetchList({
-        nextPage: page,
-        nextSearch: search,
-        nextTierId: tierId,
-        nextCityId: cityId,
-        nextStateId: stateId,
-        nextStatus: status,
-        silent: false,
-        force: true,
-      }),
-    ]);
+    if (activeTab === "pending") {
+      await Promise.all([
+        loadKpi(),
+        fetchList({
+          nextPage: page,
+          nextSearch: search,
+          nextTierId: tierId,
+          nextCityId: cityId,
+          nextStateId: stateId,
+          nextStatus: status,
+          silent: false,
+          force: true,
+        }),
+      ]);
+    } else {
+      await loadUpdationRequests();
+    }
 
-    toast.success("Pending approvals refreshed");
+    toast.success(activeTab === "pending" ? "Pending approvals refreshed" : "Updation requests refreshed");
   };
 
   const closeKycModal = () => {
@@ -1234,6 +1278,35 @@ const Pendingapprovals = () => {
           />
         </section>
 
+        {/* Tab Navigation */}
+        <section className="flex items-center gap-3 px-6">
+          <button
+            onClick={() => setActiveTab("pending")}
+            className={cls(
+              "px-6 rounded-[10px] py-3 text-sm font-bold transition-all",
+              activeTab === "pending"
+                ? "bg-amber-500 text-white border-2 border-amber-500 shadow-lg shadow-amber-500/20"
+                : "bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-300"
+            )}
+            type="button"
+          >
+            Pending
+          </button>
+
+          <button
+            onClick={() => setActiveTab("updation")}
+            className={cls(
+              "rounded-[10px] px-6 py-3 text-sm font-bold transition-all",
+              activeTab === "updation"
+                ? "bg-amber-500 text-white border-2 border-amber-500 shadow-lg shadow-amber-500/20"
+                : "bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-300"
+            )}
+            type="button"
+          >
+            Updation
+          </button>
+        </section>
+
         <section className="relative flex flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
           <div className="pointer-events-none absolute -top-10 right-10 h-48 w-48 rounded-full bg-sky-100/60 blur-3xl" />
           <div className="pointer-events-none absolute bottom-0 left-0 h-40 w-40 rounded-full bg-indigo-50 blur-3xl" />
@@ -1261,40 +1334,52 @@ const Pendingapprovals = () => {
               </div>
 
               <div className="flex shrink-0 items-center gap-2 md:gap-3">
-                <button
-                  onClick={() => setFiltersOpen(true)}
-                  className="inline-flex h-11 md:h-12 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 md:px-5 text-[13px] font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
-                  type="button"
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  <span className="hidden md:inline">Filters</span>
-                  {activeFilters && (
-                    <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[10px] font-black text-white">
-                      {[tierId !== "ALL", stateId !== "ALL", cityId !== "ALL", status !== "ALL"].filter(Boolean).length}
-                    </span>
-                  )}
-                </button>
+                {activeTab === "pending" && (
+                  <>
+                    <button
+                      onClick={() => setFiltersOpen(true)}
+                      className="inline-flex h-11 md:h-12 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 md:px-5 text-[13px] font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
+                      type="button"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      <span className="hidden md:inline">Filters</span>
+                      {activeFilters && (
+                        <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[10px] font-black text-white">
+                          {[tierId !== "ALL", stateId !== "ALL", cityId !== "ALL", status !== "ALL"].filter(Boolean).length}
+                        </span>
+                      )}
+                    </button>
 
-                <button
-                  onClick={handleRefresh}
-                  className="flex h-11 w-11 md:h-12 md:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
-                  title="Refresh List"
-                  type="button"
-                >
-                  {loading || kpiLoading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin text-sky-500" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </button>
+                    <button
+                      onClick={handleRefresh}
+                      className="flex h-11 w-11 md:h-12 md:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
+                      title="Refresh List"
+                      type="button"
+                    >
+                      {loading || kpiLoading ? (
+                        <RefreshCw className="h-4 w-4 animate-spin text-sky-500" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {error ? (
+          {error && activeTab === "pending" ? (
             <div className="px-6 pt-5 relative z-10 shrink-0">
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700">
                 {error}
+              </div>
+            </div>
+          ) : null}
+
+          {updationError && activeTab === "updation" ? (
+            <div className="px-6 pt-5 relative z-10 shrink-0">
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700">
+                {updationError}
               </div>
             </div>
           ) : null}
@@ -1320,17 +1405,17 @@ const Pendingapprovals = () => {
                 </thead>
 
                 <tbody>
-                  {loading ? (
+                  {(activeTab === "pending" ? loading : updationLoading) ? (
                     <tr>
                       <td colSpan={12} className="px-6 py-24 text-center">
                         <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                           <RefreshCw className="h-4 w-4 animate-spin" />
-                          Loading pending approvals...
+                          Loading {activeTab === "pending" ? "pending approvals" : "updation requests"}...
                         </div>
                       </td>
                     </tr>
-                  ) : rows.length ? (
-                    rows.map((row, idx) => (
+                  ) : (activeTab === "pending" ? rows : updationRows).length ? (
+                    (activeTab === "pending" ? rows : updationRows).map((row, idx) => (
                       <motion.tr
                         key={row.id || idx}
                         initial={{ opacity: 0, y: 8 }}
@@ -1352,13 +1437,23 @@ const Pendingapprovals = () => {
                                 />
                               ) : (
                                 <span className="text-xs font-bold text-slate-500">
-                                  {(row.name || "C").charAt(0)}
+                                  {(row.name || "-").charAt(0)}
                                 </span>
                               )}
                             </div>
 
                             <div className="min-w-0">
-                              <div className="truncate text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700">
+                              <div className="truncate text-[14px] font-bold cursor-pointer text-slate-900 transition-colors group-hover:text-sky-700"
+                                title={activeTab === "updation" ? "View Update Details" : "View Consultant Details"}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (activeTab === "updation") {
+                                    navigate(`/admin/consultants/update-detail/${row.id}`);
+                                  } else {
+                                    navigate(`/admin/consultants/profile/${row.id}`);
+                                  }
+                                }}
+                              >
                                 {row.name || "-"}
                               </div>
                             </div>
@@ -1479,6 +1574,7 @@ const Pendingapprovals = () => {
                             onApprove={(consultant) => setKycModal({ open: true, type: "approve", consultant })}
                             onReject={(consultant) => setKycModal({ open: true, type: "reject", consultant })}
                             onRequestReupload={(consultant) => setKycModal({ open: true, type: "reupload", consultant })}
+                            isUpdation={activeTab === "updation"}
                           />
                         </td>
                       </motion.tr>
@@ -1492,12 +1588,13 @@ const Pendingapprovals = () => {
                           </div>
 
                           <div className="text-lg font-bold tracking-tight text-slate-900">
-                            No pending approvals found
+                            No {activeTab === "pending" ? "pending approvals" : "updation requests"} found
                           </div>
 
                           <div className="mx-auto mt-1 max-w-sm text-[14px] text-slate-500">
-                            Try adjusting your search or refresh the list to load
-                            the latest pending consultants.
+                            {activeTab === "pending"
+                              ? "Try adjusting your search or refresh the list to load the latest pending consultants."
+                              : "No consultation update requests are currently pending."}
                           </div>
                         </div>
                       </td>
@@ -1509,31 +1606,39 @@ const Pendingapprovals = () => {
           </div>
 
           <div className="relative z-10 flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
-            <div className="text-sm text-slate-500">
-              Page <span className="font-semibold text-slate-900">{page}</span> /{" "}
-              <span className="font-semibold text-slate-900">{totalPages}</span>
-              <span className="ml-2">• {totalCount} total records</span>
-            </div>
+            {activeTab === "pending" ? (
+              <>
+                <div className="text-sm text-slate-500">
+                  Page <span className="font-semibold text-slate-900">{page}</span> /{" "}
+                  <span className="font-semibold text-slate-900">{totalPages}</span>
+                  <span className="ml-2">• {totalCount} total records</span>
+                </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || loading}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                type="button"
-              >
-                Prev
-              </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1 || loading}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                  >
+                    Prev
+                  </button>
 
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages || loading}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                type="button"
-              >
-                Next
-              </button>
-            </div>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages || loading}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-slate-500">
+                <span className="font-semibold text-slate-900">{updationRows.length}</span> updation requests
+              </div>
+            )}
           </div>
         </section>
       </div>

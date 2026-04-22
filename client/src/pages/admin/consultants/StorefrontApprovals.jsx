@@ -784,8 +784,8 @@ const StorefrontApprovals = () => {
   }, [tierPlans, tierQuery]);
 
   const handleViewDetails = (item) => {
-    navigate(`/admin/consultants/storefront-approvals/${item.storeDraftId}`, {
-      state: { from: '/admin/consultants/storefront-approvals' }
+    navigate(`/admin/storefront-manager/approvals/${item.storeDraftId}`, {
+      state: { from: '/admin/storefront-manager/approvals' }
     });
   };
 

@@ -206,12 +206,31 @@ const AddLimitsModal = ({
   const valid = rows.every((r) => {
     const nameOk = String(r.limitsName || "").trim().length > 0;
     const val = String(r.limitsValue ?? "").trim();
-    if (!nameOk) return false;
+
+    console.log("🔍 AddLimitsModal - Validating row:", r);
+    console.log("🔍 AddLimitsModal - nameOk:", nameOk);
+    console.log("🔍 AddLimitsModal - val:", val);
+
+    if (!nameOk) {
+      console.log("❌ AddLimitsModal - Name not valid");
+      return false;
+    }
 
     const t = guessType(r.limitsName);
-    if (t === "boolean") return ["true", "false"].includes(val.toLowerCase());
-    return val.length > 0 && !Number.isNaN(Number(val));
+    console.log("🔍 AddLimitsModal - guessed type:", t);
+
+    if (t === "boolean") {
+      const isValidBoolean = ["true", "false"].includes(val.toLowerCase());
+      console.log("🔍 AddLimitsModal - boolean validation:", isValidBoolean);
+      return isValidBoolean;
+    }
+
+    const isValidNumber = val.length > 0 && !Number.isNaN(Number(val));
+    console.log("🔍 AddLimitsModal - number validation:", isValidNumber);
+    return isValidNumber;
   });
+
+  console.log("🔍 AddLimitsModal - Overall valid:", valid);
 
   const addRow = () =>
     setRows((p) => [...p, { limitsName: "", limitsValue: "" }]);
@@ -220,16 +239,37 @@ const AddLimitsModal = ({
     setRows((p) => (p.length === 1 ? p : p.filter((_, i) => i !== idx)));
 
   const handleSave = () => {
-    if (!tierPlanId) return;
-    if (!valid || saving) return;
+    console.log("🔍 AddLimitsModal - handleSave called");
+    console.log("🔍 AddLimitsModal - tierPlanId:", tierPlanId);
+    console.log("🔍 AddLimitsModal - valid:", valid);
+    console.log("🔍 AddLimitsModal - saving:", saving);
+    console.log("🔍 AddLimitsModal - rows:", rows);
 
-    onSave?.({
+    if (!tierPlanId) {
+      console.log("❌ AddLimitsModal - No tierPlanId, returning");
+      return;
+    }
+
+    if (!valid) {
+      console.log("❌ AddLimitsModal - Form not valid, returning");
+      return;
+    }
+
+    if (saving) {
+      console.log("❌ AddLimitsModal - Already saving, returning");
+      return;
+    }
+
+    const payload = {
       tierPlanId,
       limits: rows.map((r) => ({
         limitsName: String(r.limitsName), // ✅ ENUM KEY
         limitsValue: String(r.limitsValue).trim(), // "100" or "true"
       })),
-    });
+    };
+
+    console.log("✅ AddLimitsModal - Calling onSave with payload:", payload);
+    onSave?.(payload);
   };
 
   return (

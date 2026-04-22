@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   ArrowLeft,
   User,
@@ -14,6 +14,7 @@ import {
   FileText,
   Camera,
   MessageSquare,
+  MessageSquareWarning,
   Activity,
   RefreshCw,
   Flag,
@@ -26,14 +27,22 @@ import {
   StickyNote,
   Eye,
   XCircle,
+  MoreHorizontal,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   getVehicleById,
   normalizeVehicleDetailResponse,
   getVehicleDetailsEnhanced,
 } from "../../../../../api/vehicle.api";
+import {
+  approvePendingVehicle,
+  rejectPendingVehicle,
+  requestChangesPendingVehicle,
+} from "../../../../../api/pendingApprovals.api";
 import SuspendListingModal from "../actions/SuspendListing";
+import UnsuspendListingModal from "../actions/UnsuspendListing";
 import FlagForReviewModal from "../actions/FlagForReview";
 import AddInternalNoteModal from "../actions/AddInternalNote";
 
@@ -191,6 +200,7 @@ const mapVehicleDetails = (data) => {
     verificationStatus: safeText(data?.verificationStatus),
     inspectionStatus: safeText(data?.inspectionStatus),
     isVehicleSold: Boolean(data?.isVehicleSold),
+    soldAt: safeText(data?.soldAt),
     verifiedAt: safeText(data?.verifiedAt),
     adminRemark: safeText(data?.adminRemark),
     status: safeText(data?.status),
@@ -228,14 +238,26 @@ const mapVehicleDetails = (data) => {
 
     vehicleDocument: data?.vehicleDocument || null,
 
+    // Suspension info
+    isSuspended: Array.isArray(data?.suspensions) && data.suspensions.length > 0
+      ? data.suspensions[0]?.isSuspended || false
+      : false,
+    suspensions: data?.suspensions || [],
+
     raw: data,
   };
 };
 
 const VehicleDetails = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const params = useParams();
   const resolvedVehicleId = params.id || params.vehicleId || "";
+
+  // Check if navigation came from user inventory tab or consultant inventory tab or pending approvals
+  const fromUserInventory = location.state?.fromUserInventory || false;
+  const fromConsultantInventory = location.state?.fromConsultantInventory || false;
+  const fromPendingApprovals = location.state?.fromPendingApprovals || false;
 
   const [activeTab, setActiveTab] = useState("Overview");
   const [loading, setLoading] = useState(true);
@@ -246,6 +268,12 @@ const VehicleDetails = () => {
   const [previewTitle, setPreviewTitle] = useState("");
 
   const [suspendModal, setSuspendModal] = useState({
+    open: false,
+    vehicleId: null,
+    vehicleTitle: "",
+  });
+
+  const [unsuspendModal, setUnsuspendModal] = useState({
     open: false,
     vehicleId: null,
     vehicleTitle: "",
@@ -262,6 +290,21 @@ const VehicleDetails = () => {
     vehicleId: null,
     vehicleTitle: "",
   });
+
+  // Approval modals for pending approvals
+  const [approvalModal, setApprovalModal] = useState({
+    open: false,
+    type: null, // 'approve', 'reject', 'changes'
+    vehicleId: null,
+    vehicleTitle: "",
+  });
+
+  const [approvalRemark, setApprovalRemark] = useState("");
+  const [approvalLoading, setApprovalLoading] = useState(false);
+
+  // Three-dot menu state for REQUEST_CHANGES
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const actionsMenuRef = useRef(null);
 
   const fetchVehicleDetails = async () => {
     try {
@@ -301,6 +344,60 @@ const VehicleDetails = () => {
     fetchVehicleDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedVehicleId]);
+
+  // Close actions menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target)) {
+        setActionsMenuOpen(false);
+      }
+    };
+
+    if (actionsMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [actionsMenuOpen]);
+
+  // Approval handlers
+  const handleApprovalConfirm = async () => {
+    try {
+      setApprovalLoading(true);
+      const { type, vehicleId } = approvalModal;
+
+      if (type === "approve") {
+        await approvePendingVehicle(vehicleId, approvalRemark || null);
+        toast.success("Vehicle approved successfully!");
+      } else if (type === "reject") {
+        if (!approvalRemark.trim()) {
+          toast.error("Rejection reason is required");
+          return;
+        }
+        await rejectPendingVehicle(vehicleId, approvalRemark);
+        toast.success("Vehicle rejected successfully!");
+      } else if (type === "changes") {
+        if (!approvalRemark.trim()) {
+          toast.error("Change request reason is required");
+          return;
+        }
+        await requestChangesPendingVehicle(vehicleId, approvalRemark);
+        toast.success("Change request sent successfully!");
+      }
+
+      setApprovalModal({ open: false, type: null, vehicleId: null, vehicleTitle: "" });
+      setApprovalRemark("");
+
+      // Navigate back to pending approvals
+      setTimeout(() => {
+        navigate("/admin/vehicles/pending-approvals");
+      }, 1000);
+    } catch (error) {
+      console.error("Approval action failed:", error);
+      toast.error(error?.response?.data?.message || "Action failed. Please try again.");
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
 
   const missingFields = useMemo(() => {
     if (!vehicle) return [];
@@ -386,26 +483,32 @@ const VehicleDetails = () => {
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
-          <ChevronRight className="h-4 w-4" />
+          {/* <ChevronRight className="h-4 w-4" />
           <span>Marketplace</span>
           <ChevronRight className="h-4 w-4" />
-          <span>All Vehicles</span>
+          <span>All Vehicles</span> */}
           <ChevronRight className="h-4 w-4" />
           <span className="font-semibold text-zinc-900">Vehicle Details</span>
         </div>
 
-        <div className="overflow-hidden rounded-[34px] border border-zinc-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.06)]">
+        <div className=" rounded-[34px] border border-zinc-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.06)]">
           <div className="border-b border-zinc-100 bg-white px-5 py-5 md:px-6">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm">
+                  <button
+                    onClick={() => {
+                      setPreviewImage(vehicle.thumb || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&auto=format&fit=crop&q=60");
+                      setPreviewTitle(vehicle.title);
+                    }}
+                    className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm transition-all hover:ring-2 hover:ring-zinc-400 hover:shadow-md cursor-pointer active:scale-95"
+                  >
                     <img
                       src={vehicle.thumb || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&auto=format&fit=crop&q=60"}
                       alt={vehicle.title}
                       className="h-full w-full object-cover"
                     />
-                  </div>
+                  </button>
                   <div className="min-w-0">
                     <h1 className="text-xl font-bold tracking-tight text-zinc-900 md:text-2xl">
                       {vehicle.title}
@@ -441,63 +544,268 @@ const VehicleDetails = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSuspendModal({
-                        open: true,
-                        vehicleId: vehicle.id,
-                        vehicleTitle: vehicle.title,
-                      });
-                    }}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-rose-600 hover:shadow-md active:scale-95"
-                  >
-                    <Ban className="h-4 w-4" />
-                    Suspend
-                  </button>
+                {!fromUserInventory && !fromConsultantInventory && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {vehicle.verificationStatus === "REQUESTED" ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setApprovalModal({
+                              open: true,
+                              type: "approve",
+                              vehicleId: vehicle.id,
+                              vehicleTitle: vehicle.title,
+                            });
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-md active:scale-95"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Approve
+                        </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFlagModal({
-                        open: true,
-                        vehicleId: vehicle.id,
-                        vehicleTitle: vehicle.title,
-                      });
-                    }}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-600 hover:shadow-md active:scale-95"
-                  >
-                    <Flag className="h-4 w-4" />
-                    Flag
-                  </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setApprovalModal({
+                              open: true,
+                              type: "reject",
+                              vehicleId: vehicle.id,
+                              vehicleTitle: vehicle.title,
+                            });
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition-all hover:bg-rose-700 hover:shadow-md active:scale-95"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Reject
+                        </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab("Inquiries");
-                    }}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-sky-600 hover:shadow-md active:scale-95"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    Inquiries
-                  </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setApprovalModal({
+                              open: true,
+                              type: "changes",
+                              vehicleId: vehicle.id,
+                              vehicleTitle: vehicle.title,
+                            });
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-amber-600/20 transition-all hover:bg-amber-700 hover:shadow-md active:scale-95"
+                        >
+                          <MessageSquareWarning className="h-4 w-4" />
+                          Changes
+                        </button>
+                      </>
+                    ) : vehicle.verificationStatus === "REQUEST_CHANGES" ? (
+                      <div className="relative" ref={actionsMenuRef}>
+                        <button
+                          type="button"
+                          onClick={() => setActionsMenuOpen(!actionsMenuOpen)}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition-all hover:bg-zinc-50 hover:border-zinc-400 active:scale-95"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNoteModal({
-                        open: true,
-                        vehicleId: vehicle.id,
-                        vehicleTitle: vehicle.title,
-                      });
-                    }}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-slate-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-700 hover:shadow-md active:scale-95"
-                  >
-                    <StickyNote className="h-4 w-4" />
-                    Note
-                  </button>
-                </div>
+                        {actionsMenuOpen && (
+                          <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-zinc-200 bg-white shadow-2xl">
+                            {/* Approve and Reject at the top */}
+                            <div className="border-b border-zinc-100 p-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setApprovalModal({
+                                    open: true,
+                                    type: "approve",
+                                    vehicleId: vehicle.id,
+                                    vehicleTitle: vehicle.title,
+                                  });
+                                  setActionsMenuOpen(false);
+                                }}
+                                className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-emerald-700 transition-all hover:bg-emerald-50 active:scale-95"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                                Approve KYC
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setApprovalModal({
+                                    open: true,
+                                    type: "reject",
+                                    vehicleId: vehicle.id,
+                                    vehicleTitle: vehicle.title,
+                                  });
+                                  setActionsMenuOpen(false);
+                                }}
+                                className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-rose-700 transition-all hover:bg-rose-50 active:scale-95"
+                              >
+                                <XCircle className="h-4 w-4" />
+                                Reject KYC
+                              </button>
+                            </div>
+
+                            {/* Other admin actions */}
+                            <div className="p-2">
+                              {vehicle.isSuspended ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setUnsuspendModal({
+                                      open: true,
+                                      vehicleId: vehicle.id,
+                                      vehicleTitle: vehicle.title,
+                                    });
+                                    setActionsMenuOpen(false);
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  Unsuspend Listing
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSuspendModal({
+                                      open: true,
+                                      vehicleId: vehicle.id,
+                                      vehicleTitle: vehicle.title,
+                                    });
+                                    setActionsMenuOpen(false);
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95"
+                                >
+                                  <Ban className="h-4 w-4" />
+                                  Suspend Listing
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFlagModal({
+                                    open: true,
+                                    vehicleId: vehicle.id,
+                                    vehicleTitle: vehicle.title,
+                                  });
+                                  setActionsMenuOpen(false);
+                                }}
+                                className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95"
+                              >
+                                <Flag className="h-4 w-4" />
+                                Flag for Review
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveTab("Inquiries");
+                                  setActionsMenuOpen(false);
+                                }}
+                                className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                                View Inquiries
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNoteModal({
+                                    open: true,
+                                    vehicleId: vehicle.id,
+                                    vehicleTitle: vehicle.title,
+                                  });
+                                  setActionsMenuOpen(false);
+                                }}
+                                className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95"
+                              >
+                                <StickyNote className="h-4 w-4" />
+                                Add Internal Note
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {vehicle.isSuspended ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUnsuspendModal({
+                                open: true,
+                                vehicleId: vehicle.id,
+                                vehicleTitle: vehicle.title,
+                              });
+                            }}
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-600 hover:shadow-md active:scale-95"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            Unsuspend
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSuspendModal({
+                                open: true,
+                                vehicleId: vehicle.id,
+                                vehicleTitle: vehicle.title,
+                              });
+                            }}
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-rose-600 hover:shadow-md active:scale-95"
+                          >
+                            <Ban className="h-4 w-4" />
+                            Suspend
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFlagModal({
+                              open: true,
+                              vehicleId: vehicle.id,
+                              vehicleTitle: vehicle.title,
+                            });
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-600 hover:shadow-md active:scale-95"
+                        >
+                          <Flag className="h-4 w-4" />
+                          Flag
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab("Inquiries");
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-sky-600 hover:shadow-md active:scale-95"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          Inquiries
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNoteModal({
+                              open: true,
+                              vehicleId: vehicle.id,
+                              vehicleTitle: vehicle.title,
+                            });
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-slate-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-700 hover:shadow-md active:scale-95"
+                        >
+                          <StickyNote className="h-4 w-4" />
+                          Note
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3 border-t border-zinc-100 pt-4 md:grid-cols-4">
@@ -551,6 +859,7 @@ const VehicleDetails = () => {
                     <InfoItem label="KM Driven" value={vehicle.kmDriven} />
                     <InfoItem label="Price" value={formatCurrency(vehicle.price)} />
                     <InfoItem label="Closing Price" value={vehicle.closingPrice} />
+                    <InfoItem label="Sold At" value={formatDateTime(vehicle.soldAt)} />
                     <InfoItem label="Inspection Status" value={formatEnumLabel(vehicle.inspectionStatus)} />
                     <InfoItem label="Verification Status" value={formatEnumLabel(vehicle.verificationStatus)} />
                     <InfoItem label="Has Challan" value={vehicle.hasChallan ? "Yes" : "No"} />
@@ -579,7 +888,7 @@ const VehicleDetails = () => {
                   <SectionCard title="Vehicle Media" subtitle={`${vehicle.galleryImages?.length || 0} images/videos`}>
                     {vehicle.galleryImages?.length ? (
                       <div className="space-y-4">
-                        <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-100">
+                        <div className="relative overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-100 group">
                           {selectedImage?.isVideo ? (
                             <video
                               src={selectedImage.videoUrl}
@@ -587,17 +896,31 @@ const VehicleDetails = () => {
                               className="h-[320px] w-full object-cover"
                             />
                           ) : (
-                            <img
-                              src={selectedImage?.url || vehicle.galleryImages[0]?.url}
-                              alt="vehicle"
-                              className="h-[320px] w-full object-cover"
-                            />
+                            <>
+                              <img
+                                src={selectedImage?.url || vehicle.galleryImages[0]?.url}
+                                alt="vehicle"
+                                className="h-[320px] w-full object-cover"
+                              />
+                              <button
+                                onClick={() => {
+                                  setPreviewImage(selectedImage?.url || vehicle.galleryImages[0]?.url);
+                                  setPreviewTitle(selectedImage?.imageKey?.replace(/_/g, " ") || "Vehicle Image");
+                                }}
+                                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                              >
+                                <div className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-lg transition-transform hover:scale-105 active:scale-95">
+                                  <Eye className="h-4 w-4" />
+                                  Preview Image
+                                </div>
+                              </button>
+                            </>
                           )}
                         </div>
 
                         <div className="grid grid-cols-3 gap-3">
                           {vehicle.galleryImages.map((img) => (
-                            <button
+                            <div
                               key={img.id}
                               onClick={() => setSelectedImage(img)}
                               className={cls(
@@ -615,7 +938,7 @@ const VehicleDetails = () => {
                               <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
 
                               {img.isVideo && (
-                                <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                   <div className="rounded-full bg-white/95 p-2 shadow-lg">
                                     <svg className="h-5 w-5 text-zinc-900" fill="currentColor" viewBox="0 0 24 24">
                                       <path d="M8 5v14l11-7z" />
@@ -623,10 +946,10 @@ const VehicleDetails = () => {
                                   </div>
                                 </div>
                               )}
-                              <div className="absolute bottom-2 left-2 rounded-md bg-black/80 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg backdrop-blur-sm">
+                              <div className="absolute bottom-2 left-2 rounded-md bg-black/80 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg backdrop-blur-sm pointer-events-none">
                                 {img.imageKey?.replace(/_/g, " ")}
                               </div>
-                            </button>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -714,11 +1037,25 @@ const VehicleDetails = () => {
                         {vehicle.vehicleDocument.rcFrontUrl && (
                           <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">RC Front Image</p>
-                            <img
-                              src={vehicle.vehicleDocument.rcFrontUrl}
-                              alt="RC Front"
-                              className="h-48 w-full rounded-xl object-cover border border-zinc-200"
-                            />
+                            <div className="relative overflow-hidden rounded-xl border border-zinc-200 group">
+                              <img
+                                src={vehicle.vehicleDocument.rcFrontUrl}
+                                alt="RC Front"
+                                className="h-48 w-full object-cover"
+                              />
+                              <button
+                                onClick={() => {
+                                  setPreviewImage(vehicle.vehicleDocument.rcFrontUrl);
+                                  setPreviewTitle("RC Front Image");
+                                }}
+                                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                              >
+                                <div className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-lg transition-transform hover:scale-105 active:scale-95">
+                                  <Eye className="h-4 w-4" />
+                                  Preview Image
+                                </div>
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1109,6 +1446,14 @@ const VehicleDetails = () => {
         onSuccess={() => fetchVehicleDetails()}
       />
 
+      <UnsuspendListingModal
+        isOpen={unsuspendModal.open}
+        onClose={() => setUnsuspendModal({ open: false, vehicleId: null, vehicleTitle: "" })}
+        vehicleId={unsuspendModal.vehicleId}
+        vehicleTitle={unsuspendModal.vehicleTitle}
+        onSuccess={() => fetchVehicleDetails()}
+      />
+
       <FlagForReviewModal
         isOpen={flagModal.open}
         onClose={() => setFlagModal({ open: false, vehicleId: null, vehicleTitle: "" })}
@@ -1124,6 +1469,22 @@ const VehicleDetails = () => {
         vehicleTitle={noteModal.vehicleTitle}
         onSuccess={() => fetchVehicleDetails()}
       />
+
+      {approvalModal.open && (
+        <ApprovalModal
+          open={approvalModal.open}
+          type={approvalModal.type}
+          vehicleTitle={approvalModal.vehicleTitle}
+          remark={approvalRemark}
+          setRemark={setApprovalRemark}
+          loading={approvalLoading}
+          onClose={() => {
+            setApprovalModal({ open: false, type: null, vehicleId: null, vehicleTitle: "" });
+            setApprovalRemark("");
+          }}
+          onConfirm={handleApprovalConfirm}
+        />
+      )}
 
       {previewImage && (
         <ImagePreviewModal
@@ -1144,7 +1505,7 @@ function ImagePreviewModal({ imageUrl, title, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div
@@ -1250,6 +1611,124 @@ function RankRow({ label, value, color, negative = false }) {
         <div className={cls("h-full rounded-full", color)} style={{ width: `${width}%` }} />
       </div>
     </div>
+  );
+}
+
+function ApprovalModal({ open, type, vehicleTitle, remark, setRemark, loading, onClose, onConfirm }) {
+  if (!open) return null;
+
+  const config = {
+    approve: {
+      title: "Approve Vehicle",
+      icon: <CheckCircle2 className="h-6 w-6 text-emerald-600" />,
+      bgColor: "bg-emerald-50",
+      borderColor: "border-emerald-100",
+      textColor: "text-emerald-800",
+      buttonColor: "bg-emerald-600 hover:bg-emerald-700",
+      message: "Vehicle will be approved and made visible on the marketplace.",
+      label: "Approval Remark",
+      placeholder: "Enter approval remark (optional)...",
+      required: false,
+    },
+    reject: {
+      title: "Reject Vehicle",
+      icon: <XCircle className="h-6 w-6 text-rose-600" />,
+      bgColor: "bg-rose-50",
+      borderColor: "border-rose-100",
+      textColor: "text-rose-800",
+      buttonColor: "bg-rose-600 hover:bg-rose-700",
+      message: "Vehicle will be rejected. Consultant will be notified with the rejection reason.",
+      label: "Rejection Reason",
+      placeholder: "Enter rejection reason...",
+      required: true,
+    },
+    changes: {
+      title: "Request Changes",
+      icon: <MessageSquareWarning className="h-6 w-6 text-amber-600" />,
+      bgColor: "bg-amber-50",
+      borderColor: "border-amber-100",
+      textColor: "text-amber-800",
+      buttonColor: "bg-amber-600 hover:bg-amber-700",
+      message: "Consultant will be notified to make changes with your feedback.",
+      label: "Change Request Reason",
+      placeholder: "Enter what changes are needed...",
+      required: true,
+    },
+  };
+
+  const currentConfig = config[type] || config.approve;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[111] w-[95%] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-zinc-100 px-6 py-5">
+          <div className="flex items-start gap-4">
+            <div className={cls("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl", currentConfig.bgColor)}>
+              {currentConfig.icon}
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900">{currentConfig.title}</h3>
+              {vehicleTitle && (
+                <p className="mt-1 text-sm text-zinc-500">{vehicleTitle}</p>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <XCircle size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className={cls("mb-6 rounded-2xl border px-4 py-3", currentConfig.bgColor, currentConfig.borderColor)}>
+            <p className={cls("text-sm font-semibold", currentConfig.textColor)}>
+              {currentConfig.message}
+            </p>
+          </div>
+
+          <div className="mb-6">
+            <label className="mb-2 block text-sm font-bold text-zinc-700">
+              {currentConfig.label} {currentConfig.required && <span className="text-rose-500">*</span>}
+            </label>
+            <textarea
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+              rows={4}
+              placeholder={currentConfig.placeholder}
+              className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-zinc-200 bg-white px-6 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={loading || (currentConfig.required && !remark.trim())}
+              className={cls(
+                "inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-60",
+                currentConfig.buttonColor
+              )}
+            >
+              {currentConfig.icon}
+              {loading ? "Processing..." : `Confirm ${currentConfig.title.split(" ")[0]}`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 

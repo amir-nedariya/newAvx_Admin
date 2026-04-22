@@ -892,7 +892,10 @@ const TierManagement = () => {
           setLimitNames({});
           setAddLimitsOpen(false);
         }}
-        onAdd={() => setAddLimitsOpen(true)}
+        onAdd={() => {
+          setLimitsOpen(false); // Close Manage Limits modal
+          setAddLimitsOpen(true); // Open Add Limits modal
+        }}
         onDelete={handleDeleteLimit}
       />
 

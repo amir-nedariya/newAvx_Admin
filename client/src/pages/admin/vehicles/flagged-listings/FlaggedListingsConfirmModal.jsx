@@ -212,10 +212,10 @@ export default function FlaggedListingsConfirmModal({
                   </div>
                   <div className="relative group">
                     <input
-                      type="datetime-local"
+                      type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
-                      min={new Date().toISOString().slice(0, 16)}
+                      min={new Date().toISOString().slice(0, 10)}
                       className="h-12 w-full rounded-[18px] border border-slate-200 bg-white px-4 text-[14px] font-bold text-slate-900 shadow-sm outline-none ring-sky-100 transition-all focus:border-sky-400 focus:ring-4 hover:border-slate-300"
                     />
                   </div>

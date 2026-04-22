@@ -450,10 +450,10 @@ function SuspendConsultantModal({
                   Suspend Until
                 </label>
                 <input
-                  type="datetime-local"
+                  type="date"
                   value={suspendUntil}
                   onChange={(e) => setSuspendUntil(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={new Date().toISOString().slice(0, 10)}
                   className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
                 />
                 <p className="mt-2 text-xs text-zinc-500">Select a future date and time for suspension end</p>
@@ -1059,12 +1059,13 @@ const ConsultantProfile = () => {
 
     const verification = d?.verificationStatus
       ? String(d.verificationStatus).toUpperCase()
-      : "PENDING";
+      : "-";
 
     const risk = d?.risk ? String(d.risk) : "Low";
 
     const name = d?.consultationName || d?.consultName || d?.ownerName || "Consultant";
     const username = d?.username || "—";
+    const adminRemark = d?.adminRemark || "-";
 
     const city = addressInfo?.cityName || "—";
     const state = addressInfo?.stateName || "—";
@@ -1121,6 +1122,7 @@ const ConsultantProfile = () => {
       name,
       username,
       ownerName: d?.ownerName || "—",
+      adminRemark,
 
       tierId: tierInfo?.tierPlanId || null,
       tierTitle,
@@ -1754,7 +1756,16 @@ const ConsultantProfile = () => {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm">
+                  <button
+                    onClick={() => {
+                      if (profile?.logoUrl) {
+                        setPreviewImage(profile.logoUrl);
+                        setPreviewTitle(profile.name || "Consultant Logo");
+                      }
+                    }}
+                    disabled={!profile?.logoUrl}
+                    className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm transition-all hover:ring-2 hover:ring-zinc-400 hover:shadow-md cursor-pointer active:scale-95 disabled:cursor-default disabled:hover:ring-0 disabled:hover:shadow-sm"
+                  >
                     {profile?.logoUrl ? (
                       <img
                         src={profile.logoUrl}
@@ -1769,7 +1780,7 @@ const ConsultantProfile = () => {
                         {String(profile?.name || "C").trim().slice(0, 1).toUpperCase()}
                       </div>
                     )}
-                  </div>
+                  </button>
                   <div className="min-w-0">
                     <h1 className="text-xl font-bold tracking-tight text-zinc-900 md:text-2xl">
                       {profile?.name || "Consultant"}
@@ -1916,37 +1927,35 @@ const ConsultantProfile = () => {
                             ) : (
                               /* Full menu for other pages */
                               <>
-                                {/* KYC Actions */}
-                                <button
-                                  onClick={() => openKycModal("approve")}
-                                  disabled={kycActionLoading === "approve"}
-                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-                                >
-                                  <CheckCircle2 className="h-4 w-4" />
-                                  {kycActionLoading === "approve" ? "Approving..." : "Approve KYC"}
-                                </button>
+                                {/* Show KYC actions when verification is REQUEST_CHANGES */}
+                                {profile?.verification === "REQUEST_CHANGES" && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setActionModal({ open: true, type: "approve", menuOpen: false });
+                                      }}
+                                      disabled={kycActionLoading === "approve"}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                                    >
+                                      <CheckCircle2 className="h-4 w-4" />
+                                      {kycActionLoading === "approve" ? "Approving..." : "Approve KYC"}
+                                    </button>
 
-                                <button
-                                  onClick={() => openKycModal("reject")}
-                                  disabled={kycActionLoading === "reject"}
-                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  {kycActionLoading === "reject" ? "Rejecting..." : "Reject KYC"}
-                                </button>
+                                    <button
+                                      onClick={() => {
+                                        setActionModal({ open: true, type: "reject", menuOpen: false });
+                                      }}
+                                      disabled={kycActionLoading === "reject"}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-rose-700 transition-colors hover:bg-rose-50"
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                      {kycActionLoading === "reject" ? "Rejecting..." : "Reject KYC"}
+                                    </button>
 
-                                <button
-                                  onClick={() => openKycModal("request")}
-                                  disabled={kycActionLoading === "request"}
-                                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-50"
-                                >
-                                  <RotateCcw className="h-4 w-4" />
-                                  {kycActionLoading === "request" ? "Requesting..." : "Request Re-upload"}
-                                </button>
+                                    <div className="my-1 border-t border-zinc-100" />
+                                  </>
+                                )}
 
-                                <div className="my-1 border-t border-zinc-100" />
-
-                                {/* Other Actions */}
                                 <button
                                   onClick={() => {
                                     setActionModal({ open: true, type: "penalty", menuOpen: false });
@@ -2047,6 +2056,29 @@ const ConsultantProfile = () => {
               )}
             </div>
           </div>
+
+          {/* Admin Remarks Section - Show when verification is REQUEST_CHANGES */}
+          {profile?.verification === "REQUEST_CHANGES" && profile?.adminRemark && (
+            <div className="border-b border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-4 md:px-6">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-amber-900">
+                      Admin Remarks - Changes Requested
+                    </h3>
+                  </div>
+                  <div className="rounded-xl border border-amber-200 px-4 py-3">
+                    <p className="text-sm leading-relaxed text-amber-900 whitespace-pre-wrap">
+                      {profile.adminRemark}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="border-b border-zinc-100 bg-white px-3 py-3 md:px-4">
             <div className="flex gap-2 overflow-x-auto">
@@ -2295,7 +2327,13 @@ const ConsultantProfile = () => {
                             <tr key={vehicle.vehicleId} className="transition-colors hover:bg-zinc-50">
                               <td className="px-5 py-4">
                                 <div className="flex items-center gap-3">
-                                  <div className="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100">
+                                  <button
+                                    onClick={() => {
+                                      setPreviewImage(vehicle.thumbnailUrl || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&auto=format&fit=crop&q=60");
+                                      setPreviewTitle(vehicle.vehicleTitle);
+                                    }}
+                                    className="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 shadow-sm transition-all hover:ring-2 hover:ring-zinc-400 hover:shadow-md cursor-pointer active:scale-95"
+                                  >
                                     {vehicle.thumbnailUrl ? (
                                       <img
                                         src={vehicle.thumbnailUrl}
@@ -2307,7 +2345,7 @@ const ConsultantProfile = () => {
                                         <ImageIcon className="h-5 w-5" />
                                       </div>
                                     )}
-                                  </div>
+                                  </button>
                                   <div className="min-w-0">
                                     <div className="text-sm font-semibold text-zinc-900 line-clamp-1">
                                       {vehicle.vehicleTitle}
@@ -2368,7 +2406,7 @@ const ConsultantProfile = () => {
                               </td>
                               <td className="px-5 py-4 text-center">
                                 <button
-                                  onClick={() => navigate(`/admin/vehicles/${vehicle.vehicleId}`)}
+                                  onClick={() => navigate(`/admin/vehicles/${vehicle.vehicleId}`, { state: { fromConsultantInventory: true } })}
                                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition-all hover:bg-zinc-50 hover:text-zinc-900"
                                   title="View Vehicle Details"
                                 >
@@ -3363,7 +3401,7 @@ function ImagePreviewModal({ imageUrl, title, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div

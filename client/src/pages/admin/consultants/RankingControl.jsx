@@ -23,10 +23,26 @@ import {
   Activity,
   Scale,
   Loader2,
+  Edit2,
 } from "lucide-react";
-import { getGlobalRankingConfig, updateGlobalRankingConfig, getConsultantOverrides, getConsultantPenalties, getAllConsultantNames, applyOverride, applyPenalties } from "../../../api/consultationApi";
+import { getGlobalRankingConfig, updateGlobalRankingConfig, getConsultantOverrides, getConsultantPenalties, getAllConsultantNames, applyOverride, applyPenalties, updateOverride, updatePenalties } from "../../../api/consultationApi";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
+
+// Format date from yyyy-MM-dd to dd-MM-yyyy
+const formatDate = (dateString) => {
+  if (!dateString || dateString === "—") return "—";
+
+  try {
+    const [year, month, day] = dateString.split("-");
+    if (year && month && day) {
+      return `${day}-${month}-${year}`;
+    }
+    return dateString;
+  } catch (error) {
+    return dateString;
+  }
+};
 
 /* =========================================================
    DUMMY DATA
@@ -451,6 +467,12 @@ const RankingControl = () => {
   const [penaltiesLoading, setPenaltiesLoading] = useState(false);
   const [addOverrideLoading, setAddOverrideLoading] = useState(false);
   const [addPenaltyLoading, setAddPenaltyLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingOverride, setEditingOverride] = useState(null);
+  const [isPenaltyEditMode, setIsPenaltyEditMode] = useState(false);
+  const [editingPenalty, setEditingPenalty] = useState(null);
+  const [overridesSearchQuery, setOverridesSearchQuery] = useState("");
+  const [penaltiesSearchQuery, setPenaltiesSearchQuery] = useState("");
 
   const [consultantsList, setConsultantsList] = useState([]);
   const [consultantsLoading, setConsultantsLoading] = useState(false);
@@ -533,24 +555,32 @@ const RankingControl = () => {
     );
   }, [consultantsList, penaltyConsultantSearch]);
 
+  // Filter overrides based on search query
+  const filteredOverrides = useMemo(() => {
+    if (!overridesSearchQuery.trim()) return overrides;
+
+    const searchLower = overridesSearchQuery.toLowerCase();
+    return overrides.filter(override =>
+      override.consultant?.toLowerCase().includes(searchLower)
+    );
+  }, [overrides, overridesSearchQuery]);
+
+  // Filter penalties based on search query
+  const filteredPenalties = useMemo(() => {
+    if (!penaltiesSearchQuery.trim()) return penalties;
+
+    const searchLower = penaltiesSearchQuery.toLowerCase();
+    return penalties.filter(penalty =>
+      penalty.consultant?.toLowerCase().includes(searchLower)
+    );
+  }, [penalties, penaltiesSearchQuery]);
+
   // Fetch ranking config on mount
   useEffect(() => {
     fetchRankingConfig();
+    fetchConsultantOverrides();
+    fetchConsultantPenalties();
   }, []);
-
-  // Fetch overrides when overrides tab is active
-  useEffect(() => {
-    if (activeTab === "overrides") {
-      fetchConsultantOverrides();
-    }
-  }, [activeTab]);
-
-  // Fetch penalties when penalties tab is active
-  useEffect(() => {
-    if (activeTab === "penalties") {
-      fetchConsultantPenalties();
-    }
-  }, [activeTab]);
 
   // Scroll selected dropdown item into view
   useEffect(() => {
@@ -798,12 +828,12 @@ const RankingControl = () => {
 
   const stats = useMemo(() => {
     return {
-      totalOverrides: overrides.filter((i) => i.status === "Active").length,
-      totalPenalties: penalties.filter((i) => i.status === "Active").length,
-      highFrauds: fraudSignals.filter((i) => i.severity === "HIGH").length,
-      immutableLogs: logs.length,
+      totalOverrides: overrides.length,
+      totalPenalties: penalties.length,
+      finalCalculationWeights: layerTotal,
+      preferenceRawScore: preferenceRawTotal,
     };
-  }, [overrides, penalties, fraudSignals, logs]);
+  }, [overrides, penalties, layerTotal, preferenceRawTotal]);
 
   const updateLayer = (key, value) => {
     setLayerWeights((prev) => ({ ...prev, [key]: Number(value) }));
@@ -930,11 +960,12 @@ const RankingControl = () => {
           id: item.userId || item.consultationId,
           consultantId: item.consultationId,
           consultant: item.consultationName || "—",
+          username: item.username || "—",
           currentScore: item.manualBoostScore || 0,
           override: item.manualBoostScore ? `+${item.manualBoostScore}` : "—",
           type: item.manualBoostScoreType || "Score Boost",
           reason: item.manualBoostScoreReason || "—",
-          expiry: "—", // Not provided in API
+          expireDate: item.expireDate || "—",
           status: item.manualBoostScore > 0 ? "Active" : "Inactive",
           tierPlan: item.tierPlan || "—",
         }));
@@ -965,7 +996,7 @@ const RankingControl = () => {
           penalty: item.manualDeductionScoreType || "Ranking Reduction",
           value: item.manualDeductionScore ? `-${item.manualDeductionScore}` : "—",
           reason: item.manualDeductionScoreReason || "—",
-          expiry: "—", // Not provided in API
+          expireDate: item.expireDate || "—",
           status: item.manualDeductionScore > 0 ? "Active" : "Inactive",
           tierPlan: item.tierPlan || "—",
         }));
@@ -1007,6 +1038,8 @@ const RankingControl = () => {
     setConsultantSearch("");
     setDropdownOpen(false);
     setSelectedDropdownIndex(-1);
+    setIsEditMode(false);
+    setEditingOverride(null);
     setOverrideForm({
       consultationId: "",
       userId: "",
@@ -1017,9 +1050,39 @@ const RankingControl = () => {
     });
   };
 
+  const openEditOverrideModal = (row) => {
+    setIsEditMode(true);
+    setEditingOverride(row);
+    setOverrideModal(true);
+    setConsultantSearch(row.consultant);
+    setOverrideForm({
+      consultationId: row.consultantId,
+      userId: row.id,
+      type: row.type,
+      value: row.currentScore,
+      reason: row.reason,
+      expiry: row.expireDate,
+    });
+  };
+
   const openPenaltyModal = () => {
     setPenaltyModal(true);
     fetchConsultantNames();
+  };
+
+  const openEditPenaltyModal = (row) => {
+    setIsPenaltyEditMode(true);
+    setEditingPenalty(row);
+    setPenaltyModal(true);
+    setPenaltyConsultantSearch(row.consultant);
+    setPenaltyForm({
+      consultationId: row.consultantId,
+      userId: row.id,
+      type: row.penalty,
+      value: Math.abs(parseFloat(row.value.replace('-', ''))),
+      reason: row.reason,
+      expiry: row.expireDate,
+    });
   };
 
   const closePenaltyModal = () => {
@@ -1027,6 +1090,8 @@ const RankingControl = () => {
     setPenaltyConsultantSearch("");
     setPenaltyDropdownOpen(false);
     setPenaltySelectedDropdownIndex(-1);
+    setIsPenaltyEditMode(false);
+    setEditingPenalty(null);
     setPenaltyForm({
       consultationId: "",
       userId: "",
@@ -1038,12 +1103,15 @@ const RankingControl = () => {
   };
 
   const handleAddOverride = async () => {
-    if (!overrideForm.consultationId || !overrideForm.userId || !overrideForm.value || !overrideForm.reason) {
+    if (!overrideForm.consultationId || !overrideForm.userId || !overrideForm.value || !overrideForm.reason || !overrideForm.expiry) {
       toast.error("Please fill all required fields");
       return;
     }
 
-    const consultant = consultantsList.find((c) => c.consultationId === overrideForm.consultationId);
+    const consultant = isEditMode
+      ? { consultationId: overrideForm.consultationId, consultationName: consultantSearch }
+      : consultantsList.find((c) => c.consultationId === overrideForm.consultationId);
+
     if (!consultant) {
       toast.error("Please select a valid consultant");
       return;
@@ -1052,14 +1120,29 @@ const RankingControl = () => {
     try {
       setAddOverrideLoading(true);
 
-      await applyOverride({
-        userId: overrideForm.userId,
-        manualBoostScore: overrideForm.value,
-        manualBoostScoreReason: overrideForm.reason,
-        manualBoostScoreType: overrideForm.type,
-      });
+      if (isEditMode) {
+        // Update existing override
+        await updateOverride({
+          userId: overrideForm.userId,
+          manualBoostScore: overrideForm.value,
+          manualBoostScoreReason: overrideForm.reason,
+          manualBoostScoreType: overrideForm.type,
+          boostExpireDate: overrideForm.expiry
+        });
 
-      toast.success("Override applied successfully");
+        toast.success("Override updated successfully");
+      } else {
+        // Add new override
+        await applyOverride({
+          userId: overrideForm.userId,
+          manualBoostScore: overrideForm.value,
+          manualBoostScoreReason: overrideForm.reason,
+          manualBoostScoreType: overrideForm.type,
+          expireDate: overrideForm.expiry
+        });
+
+        toast.success("Override applied successfully");
+      }
 
       // Refresh overrides list
       await fetchConsultantOverrides();
@@ -1070,7 +1153,7 @@ const RankingControl = () => {
           id: `LOG-${String(prev.length + 1).padStart(3, "0")}`,
           adminId: "ADM-01",
           consultantId: consultant.consultationId,
-          actionType: "Override Applied",
+          actionType: isEditMode ? "Override Updated" : "Override Applied",
           oldScore: "—",
           newScore: "—",
           reason: overrideForm.reason,
@@ -1091,12 +1174,15 @@ const RankingControl = () => {
   };
 
   const handleAddPenalty = async () => {
-    if (!penaltyForm.consultationId || !penaltyForm.userId || !penaltyForm.value || !penaltyForm.reason) {
+    if (!penaltyForm.consultationId || !penaltyForm.userId || !penaltyForm.value || !penaltyForm.reason || !penaltyForm.expiry) {
       toast.error("Please fill all required fields");
       return;
     }
 
-    const consultant = consultantsList.find((c) => c.consultationId === penaltyForm.consultationId);
+    const consultant = isPenaltyEditMode
+      ? { consultationId: penaltyForm.consultationId, consultationName: penaltyConsultantSearch }
+      : consultantsList.find((c) => c.consultationId === penaltyForm.consultationId);
+
     if (!consultant) {
       toast.error("Please select a valid consultant");
       return;
@@ -1105,14 +1191,29 @@ const RankingControl = () => {
     try {
       setAddPenaltyLoading(true);
 
-      await applyPenalties({
-        userId: penaltyForm.userId,
-        manualDeductionScore: penaltyForm.value,
-        manualDeductionScoreReason: penaltyForm.reason,
-        manualDeductionScoreType: penaltyForm.type,
-      });
+      if (isPenaltyEditMode) {
+        // Update existing penalty
+        await updatePenalties({
+          userId: penaltyForm.userId,
+          manualDeductionScore: penaltyForm.value,
+          manualDeductionReason: penaltyForm.reason,
+          manualDeductionScoreType: penaltyForm.type,
+          deductionExpireDate: penaltyForm.expiry
+        });
 
-      toast.success("Penalty applied successfully");
+        toast.success("Penalty updated successfully");
+      } else {
+        // Add new penalty
+        await applyPenalties({
+          userId: penaltyForm.userId,
+          manualDeductionScore: penaltyForm.value,
+          manualDeductionScoreReason: penaltyForm.reason,
+          manualDeductionScoreType: penaltyForm.type,
+          expireDate: penaltyForm.expiry
+        });
+
+        toast.success("Penalty applied successfully");
+      }
 
       // Refresh penalties list
       await fetchConsultantPenalties();
@@ -1123,7 +1224,7 @@ const RankingControl = () => {
           id: `LOG-${String(prev.length + 1).padStart(3, "0")}`,
           adminId: "ADM-01",
           consultantId: consultant.consultationId,
-          actionType: "Penalty Applied",
+          actionType: isPenaltyEditMode ? "Penalty Updated" : "Penalty Applied",
           oldScore: "—",
           newScore: "—",
           reason: penaltyForm.reason,
@@ -1197,10 +1298,30 @@ const RankingControl = () => {
         ) : (
           <>
             <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <TopCard title="Active Overrides" value={stats.totalOverrides} icon={Sparkles} tone="sky" />
-              <TopCard title="Active Penalties" value={stats.totalPenalties} icon={ShieldAlert} tone="rose" />
-              <TopCard title="High Fraud Alerts" value={stats.highFrauds} icon={Radar} tone="amber" />
-              <TopCard title="Immutable Logs" value={stats.immutableLogs} icon={FileText} tone="emerald" />
+              <TopCard
+                title="Total Overrides"
+                value={stats.totalOverrides}
+                icon={Sparkles}
+                tone="sky"
+              />
+              <TopCard
+                title="Total Penalties"
+                value={stats.totalPenalties}
+                icon={ShieldAlert}
+                tone="rose"
+              />
+              <TopCard
+                title="Final Calculation Weights"
+                value={`${stats.finalCalculationWeights}%`}
+                icon={Scale}
+                tone="amber"
+              />
+              <TopCard
+                title="Preference Raw Score"
+                value={stats.preferenceRawScore}
+                icon={Activity}
+                tone="emerald"
+              />
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -1583,6 +1704,20 @@ const RankingControl = () => {
                       </button>
                     }
                   >
+                    {/* Search Bar */}
+                    <div className="mb-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                          type="text"
+                          value={overridesSearchQuery}
+                          onChange={(e) => setOverridesSearchQuery(e.target.value)}
+                          placeholder="Search by consultant name..."
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-sky-400"
+                        />
+                      </div>
+                    </div>
+
                     {overridesLoading ? (
                       <div className="py-12 text-center">
                         <div className="inline-flex items-center gap-3 text-sm font-semibold text-slate-800">
@@ -1590,9 +1725,11 @@ const RankingControl = () => {
                           Loading consultant overrides...
                         </div>
                       </div>
-                    ) : overrides.length === 0 ? (
+                    ) : filteredOverrides.length === 0 ? (
                       <div className="py-12 text-center">
-                        <div className="text-sm font-semibold text-slate-500">No consultant overrides found</div>
+                        <div className="text-sm font-semibold text-slate-500">
+                          {overridesSearchQuery ? "No consultants found matching your search" : "No consultant overrides found"}
+                        </div>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
@@ -1604,11 +1741,12 @@ const RankingControl = () => {
                               <th className="px-5 py-4">Override Type</th>
                               <th className="px-5 py-4">Reason</th>
                               <th className="px-5 py-4">Expiry</th>
+                              <th className="px-5 py-4">Actions</th>
                               {/* <th className="px-5 py-4">Status</th> */}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {overrides.map((row) => (
+                            {filteredOverrides.map((row) => (
                               <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                                 <td className="px-5 py-4">
                                   <div className="text-sm font-bold text-slate-900">{row.consultant}</div>
@@ -1631,7 +1769,16 @@ const RankingControl = () => {
                                   <div className="text-sm font-semibold text-slate-900">{row.type}</div>
                                 </td>
                                 <td className="px-5 py-4 text-sm text-slate-600">{row.reason}</td>
-                                <td className="px-5 py-4 text-sm text-slate-600">{row.expiry}</td>
+                                <td className="px-5 py-4 text-sm text-slate-600">{formatDate(row.expireDate)}</td>
+                                <td className="px-5 py-4">
+                                  <button
+                                    onClick={() => openEditOverrideModal(row)}
+                                    className="inline-flex cursor-pointer items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-sky-50 hover:text-sky-600 transition-colors"
+                                    title="Edit Override"
+                                  >
+                                    <Edit2 size={16} />
+                                  </button>
+                                </td>
                                 {/* <td className="px-5 py-4">
                                   <span
                                     className={cls(
@@ -1665,6 +1812,20 @@ const RankingControl = () => {
                       </button>
                     }
                   >
+                    {/* Search Bar */}
+                    <div className="mb-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                          type="text"
+                          value={penaltiesSearchQuery}
+                          onChange={(e) => setPenaltiesSearchQuery(e.target.value)}
+                          placeholder="Search by consultant name..."
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-rose-400"
+                        />
+                      </div>
+                    </div>
+
                     {penaltiesLoading ? (
                       <div className="py-12 text-center">
                         <div className="inline-flex items-center gap-3 text-sm font-semibold text-slate-800">
@@ -1672,9 +1833,11 @@ const RankingControl = () => {
                           Loading consultant penalties...
                         </div>
                       </div>
-                    ) : penalties.length === 0 ? (
+                    ) : filteredPenalties.length === 0 ? (
                       <div className="py-12 text-center">
-                        <div className="text-sm font-semibold text-slate-500">No consultant penalties found</div>
+                        <div className="text-sm font-semibold text-slate-500">
+                          {penaltiesSearchQuery ? "No consultants found matching your search" : "No consultant penalties found"}
+                        </div>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
@@ -1686,11 +1849,12 @@ const RankingControl = () => {
                               <th className="px-5 py-4">Value</th>
                               <th className="px-5 py-4">Reason</th>
                               <th className="px-5 py-4">Expiry</th>
+                              <th className="px-5 py-4">Actions</th>
                               {/* <th className="px-5 py-4">Status</th> */}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {penalties.map((row) => (
+                            {filteredPenalties.map((row) => (
                               <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                                 <td className="px-5 py-4">
                                   <div className="text-sm font-bold text-slate-900">{row.consultant}</div>
@@ -1714,7 +1878,16 @@ const RankingControl = () => {
                                   </span>
                                 </td>
                                 <td className="px-5 py-4 text-sm text-slate-600">{row.reason}</td>
-                                <td className="px-5 py-4 text-sm text-slate-600">{row.expiry}</td>
+                                <td className="px-5 py-4 text-sm text-slate-600">{formatDate(row.expireDate)}</td>
+                                <td className="px-5 py-4">
+                                  <button
+                                    onClick={() => openEditPenaltyModal(row)}
+                                    className="inline-flex cursor-pointer items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                                    title="Edit Penalty"
+                                  >
+                                    <Edit2 size={16} />
+                                  </button>
+                                </td>
                                 {/* <td className="px-5 py-4">
                                   <span
                                     className={cls(
@@ -2064,12 +2237,16 @@ const RankingControl = () => {
             <Modal
               open={overrideModal}
               onClose={closeOverrideModal}
-              title="Add Override"
+              title={isEditMode ? "Edit Override" : "Add Override"}
               subtitle="Apply manual ranking adjustment for campaigns, onboarding, homepage eligibility, or position lock."
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Field label="Consultant">
-                  {consultantsLoading ? (
+                  {isEditMode ? (
+                    <div className="h-11 flex items-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 font-medium">
+                      {consultantSearch}
+                    </div>
+                  ) : consultantsLoading ? (
                     <div className="flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
                       <Loader2 className="h-4 w-4 animate-spin text-sky-600" />
                       <span className="ml-2 text-sm text-slate-600">Loading...</span>
@@ -2175,7 +2352,7 @@ const RankingControl = () => {
                 <Field label="Value">
                   <input
                     type="number"
-                    min="0"
+                    min="0.01"
                     step="0.01"
                     value={overrideForm.value}
                     onChange={(e) => {
@@ -2196,14 +2373,14 @@ const RankingControl = () => {
                   />
                 </Field>
 
-                {/* <Field label="Expiry">
+                <Field label="Expiry">
                   <input
                     type="date"
                     value={overrideForm.expiry}
                     onChange={(e) => setOverrideForm((p) => ({ ...p, expiry: e.target.value }))}
                     className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-sky-400"
                   />
-                </Field> */}
+                </Field>
 
                 <div className="md:col-span-2">
                   <Field label="Reason">
@@ -2232,7 +2409,7 @@ const RankingControl = () => {
                   className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {addOverrideLoading && <Loader2 size={16} className="animate-spin" />}
-                  Apply Override
+                  {isEditMode ? "Update Override" : "Apply Override"}
                 </button>
               </div>
             </Modal>
@@ -2241,12 +2418,16 @@ const RankingControl = () => {
             <Modal
               open={penaltyModal}
               onClose={closePenaltyModal}
-              title="Apply Penalty"
+              title={isPenaltyEditMode ? "Edit Penalty" : "Apply Penalty"}
               subtitle="Apply score reduction, pushdown, homepage removal, or disable boost eligibility."
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Field label="Consultant">
-                  {consultantsLoading ? (
+                  {isPenaltyEditMode ? (
+                    <div className="h-11 flex items-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 font-medium">
+                      {penaltyConsultantSearch}
+                    </div>
+                  ) : consultantsLoading ? (
                     <div className="flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
                       <Loader2 className="h-4 w-4 animate-spin text-rose-600" />
                       <span className="ml-2 text-sm text-slate-600">Loading...</span>
@@ -2352,7 +2533,7 @@ const RankingControl = () => {
                 <Field label="Value">
                   <input
                     type="number"
-                    min="0"
+                    min="0.01"
                     step="0.01"
                     value={penaltyForm.value}
                     onChange={(e) => {
@@ -2371,14 +2552,14 @@ const RankingControl = () => {
                   />
                 </Field>
 
-                {/* <Field label="Expiry">
+                <Field label="Expiry">
                   <input
                     type="date"
                     value={penaltyForm.expiry}
                     onChange={(e) => setPenaltyForm((p) => ({ ...p, expiry: e.target.value }))}
                     className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-rose-400"
                   />
-                </Field> */}
+                </Field>
 
                 <div className="md:col-span-2">
                   <Field label="Reason">
@@ -2407,7 +2588,7 @@ const RankingControl = () => {
                   className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {addPenaltyLoading && <Loader2 size={16} className="animate-spin" />}
-                  Apply Penalty
+                  {isPenaltyEditMode ? "Update Penalty" : "Apply Penalty"}
                 </button>
               </div>
             </Modal>

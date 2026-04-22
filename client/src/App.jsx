@@ -15,6 +15,8 @@ import FlagForReviewModal from "./pages/admin/consultants/modals/FlagReviewModal
 import ForceAuditModal from "./pages/admin/consultants/modals/ForceAuditModal";
 import InternalNoteModal from "./pages/admin/consultants/modals/InternalNoteModal";
 import Pendingapprovals from "./pages/admin/consultants/Pendingapprovals";
+import ConsultUpdateDetail from "./pages/admin/consultants/ConsultUpdateDetail";
+import RequestChangesConsult from "./pages/admin/consultants/RequestChangeConsult";
 import TierManagement from "./pages/admin/consultants/TierManagement";
 import StorefrontApprovals from "./pages/admin/consultants/StorefrontApprovals";
 import StorefrontApprovalDetail from "./pages/admin/consultants/storefront-approvals/StorefrontApprovalDetail";
@@ -29,6 +31,7 @@ import SuspendedVehicles from "./pages/admin/vehicles/SuspendedVehicles";
 import FlaggedListings from "./pages/admin/vehicles/FlaggedListings";
 import FlaggedListingDetail from "./pages/admin/vehicles/flagged-listings/FlaggedListingDetail";
 import SponsoredListings from "./pages/admin/vehicles/SponsoredListings";
+import RequestChangeVehicle from "./pages/admin/vehicles/RequestChangeVehicle";
 import CategoriesAttributes from "./pages/admin/vehicles/CategoriesAttributes";
 
 import VehicleDetails from "./pages/admin/vehicles/marketplace/actions/VehicleDetails";
@@ -44,6 +47,9 @@ import AddInternalNote from "./pages/admin/vehicles/marketplace/actions/AddInter
 
 // Buyers
 import AllUsers from "./pages/admin/Buyers/AllUsers";
+import BuyerProfile from "./pages/admin/Buyers/BuyerProfile";
+import BuyerInquiries from "./pages/admin/Buyers/BuyerInquiries";
+import BuyerSavedVehicles from "./pages/admin/Buyers/BuyerSavedVehicles";
 import SuspendedUsers from "./pages/admin/Buyers/SuspendedUsers";
 import SavedLists from "./pages/admin/Buyers/SavedLists";
 import InquiryMonitoring from "./pages/admin/Buyers/InquiryMonitoring";
@@ -75,6 +81,7 @@ import VehicleImages from "./pages/admin/other/vehicleimages";
 
 // General
 import Users from "./pages/admin/Users";
+import UserDetails from "./pages/admin/users/UserDetails";
 import Reviews from "./pages/admin/Reviews";
 import Analytics from "./pages/admin/Analytics";
 import MarketplaceMetrics from "./pages/admin/analytics/MarketplaceMetrics";
@@ -95,6 +102,10 @@ import StoreTemplateList from "./pages/admin/store-template/StoreTemplateList";
 import StoreTemplateForm from "./pages/admin/store-template/StoreTemplateForm";
 import StoreTemplateView from "./pages/admin/store-template/StoreTemplateView";
 import StoreTemplateEdit from "./pages/admin/store-template/StoreTemplateEdit";
+
+// Storefront Manager
+import StorefrontManager from "./pages/admin/storefront-manager/StorefrontManager";
+import StoreFrontManagerDetailScreen from "./pages/admin/storefront-manager/modals/StoreFrontManagerDetailScreen";
 
 // Subscriptions
 import TierList from "./pages/admin/subscriptions/TierList";
@@ -123,9 +134,9 @@ const App = () => {
         <Route path="consultants/add-note/:id" element={<InternalNoteModal />} />
         {/* Pendingapprovals */}
         <Route path="consultants/pendingapprovals" element={<Pendingapprovals />} />
+        <Route path="consultants/update-detail/:updateId" element={<ConsultUpdateDetail />} />
+        <Route path="consultants/request-changes" element={<RequestChangesConsult />} />
         <Route path="consultants/tier-management" element={<TierManagement />} />
-        <Route path="consultants/storefront-approvals" element={<StorefrontApprovals />} />
-        <Route path="consultants/storefront-approvals/:id" element={<StorefrontApprovalDetail />} />
         <Route path="consultants/ranking-control" element={<RankingControl />} />
         <Route path="consultants/suspended" element={<SuspendedConsultants />} />
         <Route path="consultants/flagged-consultations" element={<FlaggedConsultations />} />
@@ -133,6 +144,7 @@ const App = () => {
         {/* Vehicles */}
         <Route path="vehicles/all" element={<Allvehicles />} />
         <Route path="vehicles/pending-approvals" element={<PendingApprovals />} />
+        <Route path="vehicles/request-changes" element={<RequestChangeVehicle />} />
         <Route path="vehicles/suspended" element={<SuspendedVehicles />} />
         <Route path="vehicles/flagged-listings" element={<FlaggedListings />} />
         <Route path="vehicles/flagged-listings/:id" element={<FlaggedListingDetail />} />
@@ -152,9 +164,18 @@ const App = () => {
 
         {/* Buyers */}
         <Route path="buyers/all" element={<AllUsers />} />
+        <Route path="buyers/profile" element={<BuyerProfile />} />
+        <Route path="buyers/inquiries" element={<BuyerInquiries />} />
+        <Route path="buyers/saved-vehicles" element={<BuyerSavedVehicles />} />
         <Route path="buyers/suspended-users" element={<SuspendedUsers />} />
         <Route path="buyers/saved-lists" element={<SavedLists />} />
         <Route path="buyers/inquiry-monitoring" element={<InquiryMonitoring />} />
+
+        {/* Storefront Manager */}
+        <Route path="storefront-manager/themes" element={<StorefrontManager />} />
+        <Route path="storefront-manager/themes/:id" element={<StoreFrontManagerDetailScreen />} />
+        <Route path="storefront-manager/approvals" element={<StorefrontApprovals />} />
+        <Route path="storefront-manager/approvals/:id" element={<StorefrontApprovalDetail />} />
 
         {/* Inspections */}
         <Route path="inspections/requests" element={<InspectionRequests />} />
@@ -190,6 +211,7 @@ const App = () => {
 
         {/* General */}
         <Route path="users" element={<Users />} />
+        <Route path="users/:id" element={<UserDetails />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="analytics" element={<Analytics />}>
           <Route index element={<Navigate to="marketplace" replace />} />

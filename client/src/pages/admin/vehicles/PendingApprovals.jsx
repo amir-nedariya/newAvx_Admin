@@ -21,6 +21,7 @@ import {
   Eye,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 
 import PendingApprovalsReviewPanel from "./pending-approvals/PendingApprovalsReviewPanel";
@@ -421,6 +422,8 @@ function SearchableCombobox({
 }
 
 export default function PendingApprovals() {
+  const navigate = useNavigate();
+
   const [rows, setRows] = useState([]);
   const [page, setPage] = useState(1);
   const [serverTotalPages, setServerTotalPages] = useState(1);
@@ -508,6 +511,7 @@ export default function PendingApprovals() {
         riskLevel: filters.risk || null,
         tierPlanId: filters.tierPlanId ? String(filters.tierPlanId) : null,
         inspectionStatus: filters.inspection || null,
+        verificationStatus: "REQUESTED",
         cityId: filters.cityId ? Number(filters.cityId) : null,
         submittedAfter: filters.submittedAfter || null,
         submittedBefore: filters.submittedBefore || null,
@@ -917,7 +921,13 @@ export default function PendingApprovals() {
                         <div className="flex min-w-[320px] items-center gap-4">
                           <VehicleThumb src={row.thumb} alt={row.title} />
                           <div className="min-w-0">
-                            <div className="truncate text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700">
+                            <div className="truncate text-[14px] cursor-pointer font-bold text-slate-900 transition-colors group-hover:text-sky-700"
+                               title="View Vehicles Details"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/admin/vehicles/${row.id}`);
+                                }}
+                            >
                               {row.title}
                             </div>
                           </div>
@@ -1012,7 +1022,7 @@ export default function PendingApprovals() {
 
                       <td className="border-b border-slate-100 px-6 py-4.5 text-right align-middle">
                         <button
-                          onClick={() => setReviewItem(row)}
+                          onClick={() => navigate(`/admin/vehicles/${row.id}`, { state: { fromPendingApprovals: true } })}
                           title="Review"
                           className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
                         >
@@ -1025,9 +1035,6 @@ export default function PendingApprovals() {
                   <tr>
                     <td colSpan={12} className="px-6 py-40 text-center">
                       <div className="flex flex-col items-center justify-center">
-                        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[32px] border-2 border-dashed border-slate-200 bg-slate-50 text-slate-300">
-                          <FileSearch size={40} />
-                        </div>
                         <div className="text-2xl font-black tracking-tight text-slate-900">
                           No pending submissions
                         </div>

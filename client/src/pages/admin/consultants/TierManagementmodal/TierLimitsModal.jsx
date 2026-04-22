@@ -175,8 +175,7 @@ const TierLimitsModal = ({
           </Button>
           <Button
             onClick={() => {
-              onClose(); // Close the Manage Tier Limits modal first
-              onAdd(); // Then open Add Limits modal
+              onAdd(); // Open Add Limits modal (don't close this modal first)
             }}
             disabled={lockClose}
             type="button"

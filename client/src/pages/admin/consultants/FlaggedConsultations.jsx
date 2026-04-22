@@ -406,7 +406,13 @@ export default function FlaggedConsultations() {
                                                 <div className="flex min-w-[280px] items-center gap-4">
                                                     <ConsultantLogo src={row.logoUrl} />
                                                     <div className="min-w-0">
-                                                        <div className="truncate text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700">
+                                                        <div className="truncate text-[14px] cursor-pointer font-bold text-slate-900 transition-colors group-hover:text-sky-700"
+                                                             title="View Consultant Details"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    navigate(`/admin/consultants/profile/${row?.consultationId}`);
+                                                                }}
+                                                        >
                                                             {row.consultationName || row.consultName || "-"}
                                                         </div>
                                                     </div>

@@ -15,6 +15,7 @@ export const filterVehicles = async ({
   inspectionStatus = null,
   isTierBoostActive = null,
   marketplaceStatus = null,
+  verificationStatus = null,
   listedAfter = null,
   listedBefore = null,
   pageNo = 1,
@@ -44,6 +45,7 @@ export const filterVehicles = async ({
         ? null
         : isTierBoostActive,
     marketplaceStatus: marketplaceStatus || null,
+    verificationStatus: verificationStatus || null,
     listedAfter: listedAfter || null,
     listedBefore: listedBefore || null,
     pageNo,

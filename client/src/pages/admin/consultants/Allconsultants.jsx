@@ -489,13 +489,13 @@ function SuspendConsultantModal({
                   Suspend Until
                 </label>
                 <input
-                  type="datetime-local"
+                  type="date"
                   value={suspendUntil}
                   onChange={(e) => setSuspendUntil(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={new Date().toISOString().slice(0, 10)}
                   className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
                 />
-                <p className="mt-2 text-xs text-zinc-500">Select a future date and time for suspension end</p>
+                <p className="mt-2 text-xs text-zinc-500">Select a future date for suspension end</p>
               </div>
             )}
           </div>
@@ -1474,6 +1474,7 @@ function TopCard({ title, value, icon: Icon = User, valueClass = "" }) {
    MAIN
 ========================================================= */
 const Allconsultants = () => {
+  const navigate = useNavigate();
   const didInit = useRef(false);
   const lastFetchKeyRef = useRef("");
   const searchDebounceRef = useRef(null);
@@ -2431,7 +2432,14 @@ const Allconsultants = () => {
                               </div>
 
                               <div className="min-w-0">
-                                <div className="truncate text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700">
+                                <div
+                                  className="truncate text-[14px] font-bold text-slate-900 transition-colors group-hover:text-sky-700 cursor-pointer"
+                                  title="View Consultant Details"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/admin/consultants/profile/${row.id}`);
+                                  }}
+                                >
                                   {row.name || "-"}
                                 </div>
                               </div>
@@ -2445,7 +2453,7 @@ const Allconsultants = () => {
                                 tierBadge(row.tierTitle)
                               )}
                             >
-                              {row.tierTitle || "Basic"}
+                              {row.tierTitle || "-"}
                             </span>
                           </td>
 
@@ -2504,7 +2512,7 @@ const Allconsultants = () => {
                                 statusBadge(row.status)
                               )}
                             >
-                              {String(row.status || "UNKNOWN").replaceAll("_", " ")}
+                              {String(row.status || "-").replaceAll("_", " ")}
                             </span>
                           </td>
 
@@ -2515,7 +2523,7 @@ const Allconsultants = () => {
                                 statusBadge(row.verificationStatus)
                               )}
                             >
-                              {String(row.verificationStatus || "N/A").replaceAll("_", " ")}
+                              {String(row.verificationStatus || "-").replaceAll("_", " ")}
                             </span>
                           </td>
 

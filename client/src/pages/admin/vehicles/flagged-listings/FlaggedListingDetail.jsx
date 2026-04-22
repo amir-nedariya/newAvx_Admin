@@ -722,10 +722,10 @@ export default function FlaggedListingDetail() {
                     Suspend Until
                   </label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={suspendData.date}
                     onChange={(e) => setSuspendData(prev => ({ ...prev, date: e.target.value }))}
-                    min={new Date().toISOString().slice(0, 16)}
+                    min={new Date().toISOString().slice(0, 10)}
                     className="h-12 w-full rounded-[18px] border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 shadow-sm outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 hover:border-slate-300"
                     disabled={suspendLoading}
                   />

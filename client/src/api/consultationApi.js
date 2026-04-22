@@ -43,6 +43,14 @@ export const getConsultationKpi = async () => {
 };
 
 /* =======================================================
+   ✅ CONSULTATION: GET UPDATE REQUESTS (GET)
+======================================================= */
+export const getConsultationUpdateRequests = async () => {
+  const res = await api.get("/consultation/update-requests");
+  return res.data;
+};
+
+/* =======================================================
    ✅ CONSULTATION: GET SINGLE
 ======================================================= */
 export const getConsultationById = async (consultId) => {
@@ -518,6 +526,7 @@ export const applyOverride = async ({
   manualBoostScore,
   manualBoostScoreReason,
   manualBoostScoreType,
+  expireDate,
 }) => {
   if (!userId) {
     throw new Error("userId is required");
@@ -540,6 +549,7 @@ export const applyOverride = async ({
     manualBoostScore: parseFloat(manualBoostScore),
     manualBoostScoreReason: String(manualBoostScoreReason).trim(),
     manualBoostScoreType,
+    expireDate,
   };
 
   const res = await api.post("/consultation/ranking/override", payload);
@@ -560,6 +570,7 @@ export const applyPenalties = async ({
   manualDeductionScore,
   manualDeductionScoreReason,
   manualDeductionScoreType,
+  expireDate,
 }) => {
   if (!userId) {
     throw new Error("userId is required");
@@ -585,8 +596,99 @@ export const applyPenalties = async ({
     manualDeductionScore: parseFloat(manualDeductionScore),
     manualDeductionScoreReason: String(manualDeductionScoreReason).trim(),
     manualDeductionScoreType,
+    expireDate,
   };
 
   const res = await api.post("/consultation/ranking/penalties", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ UPDATE OVERRIDE (PUT)
+   BODY: {
+     userId,
+     manualBoostScore,
+     manualBoostScoreReason,
+     manualBoostScoreType,
+     boostExpireDate
+   }
+======================================================= */
+export const updateOverride = async ({
+  userId,
+  manualBoostScore,
+  manualBoostScoreReason,
+  manualBoostScoreType,
+  boostExpireDate,
+}) => {
+  if (!userId) {
+    throw new Error("userId is required");
+  }
+
+  if (!manualBoostScore || parseFloat(manualBoostScore) <= 0) {
+    throw new Error("manualBoostScore must be greater than 0");
+  }
+
+  if (!manualBoostScoreReason || !String(manualBoostScoreReason).trim()) {
+    throw new Error("manualBoostScoreReason is required");
+  }
+
+  if (!manualBoostScoreType) {
+    throw new Error("manualBoostScoreType is required");
+  }
+
+  const payload = {
+    userId,
+    manualBoostScore: parseFloat(manualBoostScore),
+    manualBoostScoreReason: String(manualBoostScoreReason).trim(),
+    manualBoostScoreType,
+    boostExpireDate,
+  };
+
+  const res = await api.put("/consultation/ranking/override", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ UPDATE PENALTIES (PUT)
+   BODY: {
+     userId,
+     manualDeductionScore,
+     manualDeductionReason,
+     manualDeductionScoreType,
+     deductionExpireDate
+   }
+======================================================= */
+export const updatePenalties = async ({
+  userId,
+  manualDeductionScore,
+  manualDeductionReason,
+  manualDeductionScoreType,
+  deductionExpireDate,
+}) => {
+  if (!userId) {
+    throw new Error("userId is required");
+  }
+
+  if (!manualDeductionScore || parseFloat(manualDeductionScore) <= 0) {
+    throw new Error("manualDeductionScore must be greater than 0");
+  }
+
+  if (!manualDeductionReason || !String(manualDeductionReason).trim()) {
+    throw new Error("manualDeductionReason is required");
+  }
+
+  if (!manualDeductionScoreType) {
+    throw new Error("manualDeductionScoreType is required");
+  }
+
+  const payload = {
+    userId,
+    manualDeductionScore: parseFloat(manualDeductionScore),
+    manualDeductionReason: String(manualDeductionReason).trim(),
+    manualDeductionScoreType,
+    deductionExpireDate,
+  };
+
+  const res = await api.put("/consultation/ranking/penalties", payload);
   return res.data;
 };

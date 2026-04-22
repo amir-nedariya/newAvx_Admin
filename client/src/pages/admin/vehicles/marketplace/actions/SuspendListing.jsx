@@ -186,10 +186,10 @@ const SuspendListingModal = ({ isOpen, onClose, vehicleId, vehicleTitle, onSucce
 
               <div className="relative">
                 <input
-                  type="datetime-local"
+                  type="date"
                   value={suspendUntil}
                   onChange={(e) => setSuspendUntil(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={new Date().toISOString().slice(0, 10)}
                   className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-[14px] font-medium text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                 />
               </div>

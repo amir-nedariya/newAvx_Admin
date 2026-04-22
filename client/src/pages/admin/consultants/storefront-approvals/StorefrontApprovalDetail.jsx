@@ -10,7 +10,6 @@ import {
    MapPin,
    Mail,
    Phone,
-   BadgeCheck,
    User,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
@@ -99,7 +98,7 @@ const StorefrontApprovalDetail = () => {
          toast.success("Storefront approved successfully");
          setShowApproveModal(false);
          setTimeout(() => {
-            navigate("/admin/consultants/storefront-approvals");
+            navigate("/admin/storefront-manager/approvals");
          }, 1000);
       } catch (err) {
          console.error("Failed to approve storefront:", err);
@@ -125,7 +124,7 @@ const StorefrontApprovalDetail = () => {
          toast.success("Storefront rejected successfully");
          setShowRejectModal(false);
          setTimeout(() => {
-            navigate("/admin/consultants/storefront-approvals");
+            navigate("/admin/storefront-manager/approvals");
          }, 1000);
       } catch (err) {
          console.error("Failed to reject storefront:", err);
@@ -152,7 +151,7 @@ const StorefrontApprovalDetail = () => {
          toast.success("Changes requested successfully");
          setShowRequestChangesModal(false);
          setTimeout(() => {
-            navigate("/admin/consultants/storefront-approvals");
+            navigate("/admin/storefront-manager/approvals");
          }, 1000);
       } catch (err) {
          console.error("Failed to request changes:", err);
@@ -190,7 +189,7 @@ const StorefrontApprovalDetail = () => {
                {error || "The approval request you are looking for does not exist or has been processed."}
             </p>
             <button
-               onClick={() => navigate("/admin/consultants/storefront-approvals")}
+               onClick={() => navigate("/admin/storefront-manager/approvals")}
                className="mt-6 flex items-center gap-2 text-sky-600 font-bold hover:underline"
             >
                <ArrowLeft size={18} />
@@ -203,14 +202,52 @@ const StorefrontApprovalDetail = () => {
    // Extract consultant and storefront data
    const consultant = data.consultation || {};
    const storefrontDraft = data.storefrontDraft || {};
-   const themeType = storefrontDraft.theme?.type || "about_us_theme_basic_1";
+
+   // Map themeId to theme type for ThemeRegistry
+   // Backend sends themeId like: "about_pro_3", "ABOUT_BASIC_1", "whybuy_premium_2", etc.
+   const aboutThemeId = storefrontDraft.theme?.themeId || "about_basic_1";
+   const whyBuyThemeId = storefrontDraft.whyBuyTheme?.themeId || "whybuy_basic_1";
+
+   // Convert themeId format to theme type format
+   // e.g., "about_pro_3" -> "about_us_theme_pro_3"
+   // e.g., "ABOUT_PRO_3" -> "about_us_theme_pro_3"
+   // e.g., "whybuy_premium_2" -> "why_buy_theme_premium_2"
+   const normalizeThemeId = (themeId, category) => {
+      const normalized = themeId.toLowerCase().trim();
+
+      // Extract tier and number from themeId
+      // Patterns: "about_pro_3", "pro_3", "about_basic_1", etc.
+      const match = normalized.match(/(basic|pro|premium)_(\d+)/);
+
+      if (match) {
+         const [, tier, number] = match;
+         return category === "about"
+            ? `about_us_theme_${tier}_${number}`
+            : `why_buy_theme_${tier}_${number}`;
+      }
+
+      // Fallback to basic_1 if pattern doesn't match
+      return category === "about" ? "about_us_theme_basic_1" : "why_buy_theme_basic_1";
+   };
+
+   const aboutThemeType = normalizeThemeId(aboutThemeId, "about");
+   const whyBuyThemeType = normalizeThemeId(whyBuyThemeId, "whybuy");
+
+   console.log("Theme Debug:", {
+      aboutThemeId,
+      whyBuyThemeId,
+      aboutThemeType,
+      whyBuyThemeType,
+      themeData: storefrontDraft.theme,
+      whyBuyThemeData: storefrontDraft.whyBuyTheme
+   });
 
    // Map backend data to theme format
    const mappedData = mapStorefrontData(storefrontDraft);
 
    // Get theme components
-   const AboutThemeComponent = getThemeComponent(themeType);
-   const WhyBuyThemeComponent = getThemeComponent("why_buy_theme_basic_1");
+   const AboutThemeComponent = getThemeComponent(aboutThemeType);
+   const WhyBuyThemeComponent = getThemeComponent(whyBuyThemeType);
 
    return (
       <div className="h-screen flex flex-col overflow-hidden p-0">
@@ -235,7 +272,7 @@ const StorefrontApprovalDetail = () => {
                {/* Header with Back Button */}
                <div className="flex items-center gap-4">
                   <button
-                     onClick={() => navigate("/admin/consultants/storefront-approvals")}
+                     onClick={() => navigate("/admin/storefront-manager/approvals")}
                      className="h-12 w-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
                   >
                      <ArrowLeft size={20} />
