@@ -1,4 +1,5 @@
 import React from "react";
+import "../../themeStyles.css";
 import { CheckCircle2, Star, Search, MessageCircle, ShieldCheck, Handshake } from "lucide-react";
 
 const ICON_MAP = {

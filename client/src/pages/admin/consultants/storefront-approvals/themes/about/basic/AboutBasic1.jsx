@@ -1,5 +1,6 @@
 import React from "react";
 import { CheckCircle2 } from "lucide-react";
+import "../../themeStyles.css";
 
 const AboutBasic1 = ({ data }) => {
     if (!data) return null;

@@ -1,4 +1,5 @@
 import React from "react";
+import "../../themeStyles.css";
 
 const AboutPremium1 = ({ data }) => {
   if (!data) return null;

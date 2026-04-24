@@ -1,0 +1,21 @@
+/* Shared Theme Styles for About Us and Why Buy Themes */
+
+:root {
+  --color-primary: #fff;
+  --color-secondary: #121212;
+  --color-third: #bebebe;
+  --color-fourth: #007bff;
+  --primary-font: "Exo", sans-serif;
+  --secondary-font: "Poppins", sans-serif;
+}
+
+@theme {
+  --color-primary: #fffef7;
+  --color-secondary: #121212;
+  --color-third: #bebebe;
+  --breakpoint-3xl: 120rem;
+  --color-fourth: #007bff;
+  --primary: "Exo", sans-serif;
+  --secondary: "Poppins", sans-serif;
+  --animate-spin-slow: spin 3s linear infinite;
+}

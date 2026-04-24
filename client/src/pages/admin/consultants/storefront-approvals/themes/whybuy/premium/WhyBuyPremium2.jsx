@@ -1,4 +1,5 @@
 import React from "react";
+import "../../themeStyles.css";
 
 const WhyBuyPremium2 = ({ data }) => {
   if (!data) return null;
