@@ -513,6 +513,31 @@ export const getAllConsultantNames = async () => {
 };
 
 /* =======================================================
+   ✅ GET APPLICANTS/LEADS (GET)
+======================================================= */
+export const getApplicants = async () => {
+  const res = await api.get("/consultation/applicants");
+  return res.data;
+};
+
+/* =======================================================
+   ✅ FILTER APPLICANTS/LEADS (POST)
+   BODY:
+   {
+     pageNo,
+     pageSize,
+     searchText,
+     status,       // ACTIVE | INACTIVE | DELETED
+     fromDate,     // ISO datetime string
+     toDate        // ISO datetime string
+   }
+======================================================= */
+export const filterApplicants = async (payload = {}) => {
+  const res = await api.post("/consultation/applicants/filter", payload);
+  return res.data;
+};
+
+/* =======================================================
    ✅ APPLY OVERRIDE (POST)
    BODY: {
      userId,

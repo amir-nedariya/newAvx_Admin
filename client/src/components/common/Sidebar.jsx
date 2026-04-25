@@ -350,6 +350,17 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             setOpenMenu={setOpenMenu}
           />
 
+           <TreeItem
+            title="Leads"
+            icon={Users}
+            to="/admin/leads"
+            collapsed={collapsed}
+            onToggleCollapsed={onToggle}
+            onNavigate={mobile ? onClose : undefined}
+            openMenu={openMenu}
+            setOpenMenu={setOpenMenu}
+          />
+
           <TreeItem
             title="Users / Seller"
             icon={Users}
@@ -422,6 +433,8 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             setOpenMenu={setOpenMenu}
           >
             <SubItem to="/admin/storefront-manager/themes" label="Theme Manager" />
+            <SubItem to="/admin/storefront-manager/template" label="Template Manager" />
+            <SubItem to="/admin/storefront-manager/icon" label="Icon Manager" />
             <SubItem to="/admin/storefront-manager/approvals" label="Storefront Approvals" />
           </TreeItem>
 

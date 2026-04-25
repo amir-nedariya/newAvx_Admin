@@ -3,6 +3,8 @@ import AdminLayout from "./components/layouts/AdminLayout";
 
 // Dashboard
 import Overview from "./pages/admin/Overview";
+// Css for theme 
+import "./pages/admin/consultants/storefront-approvals/themes/themeStyles.css"
 
 // Consultants
 
@@ -105,13 +107,19 @@ import StoreTemplateEdit from "./pages/admin/store-template/StoreTemplateEdit";
 
 // Storefront Manager
 import StorefrontManager from "./pages/admin/storefront-manager/StorefrontManager";
+import StoreThemeTemplate from "./pages/admin/storefront-manager/StoreThemeTemplate";
+import StoreThemeTemplateDetails from "./pages/admin/storefront-manager/modals/StoreThemeTemplateDetails";
 import StoreFrontManagerDetailScreen from "./pages/admin/storefront-manager/modals/StoreFrontManagerDetailScreen";
+import StoreIconManager from "./pages/admin/storefront-manager/StoreIconManager";
 
 // Subscriptions
 import TierList from "./pages/admin/subscriptions/TierList";
 import TierCreate from "./pages/admin/subscriptions/TierCreate";
 import TierDetail from "./pages/admin/subscriptions/TierDetail";
 import Consultants from "./pages/admin/subscriptions/Consultants";
+
+// Leads
+import Leads from "./pages/admin/Leads";
 
 const App = () => {
   return (
@@ -123,6 +131,9 @@ const App = () => {
         <Route index element={<Overview />} />
         <Route path="overview" element={<Overview />} />
 
+        {/* Leads */}
+        <Route path="leads" element={<Leads />} />
+
         {/* Consultants */}
         <Route path="consultants/all" element={<Allconsultants />} />
         <Route path="consultants/profile/:id" element={<ConsultantProfile />} />
@@ -132,6 +143,7 @@ const App = () => {
         <Route path="consultants/flag-review/:id" element={<FlagForReviewModal />} />
         <Route path="consultants/force-audit/:id" element={<ForceAuditModal />} />
         <Route path="consultants/add-note/:id" element={<InternalNoteModal />} />
+
         {/* Pendingapprovals */}
         <Route path="consultants/pendingapprovals" element={<Pendingapprovals />} />
         <Route path="consultants/update-detail/:updateId" element={<ConsultUpdateDetail />} />
@@ -175,6 +187,9 @@ const App = () => {
         <Route path="storefront-manager/themes" element={<StorefrontManager />} />
         <Route path="storefront-manager/themes/:id" element={<StoreFrontManagerDetailScreen />} />
         <Route path="storefront-manager/approvals" element={<StorefrontApprovals />} />
+        <Route path="storefront-manager/template" element={<StoreThemeTemplate />} />
+        <Route path="storefront-manager/icon" element={<StoreIconManager />} />
+        <Route path="storefront-manager/template/:id" element={<StoreThemeTemplateDetails />} />
         <Route path="storefront-manager/approvals/:id" element={<StorefrontApprovalDetail />} />
 
         {/* Inspections */}
