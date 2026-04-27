@@ -30,6 +30,7 @@ import {
   ChevronDown,
   MoreHorizontal,
   Star,
+  Trash2,
 } from "lucide-react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
@@ -41,6 +42,9 @@ import {
   addPenalty,
   suspendConsultation,
   clearFlaggedConsultation,
+  deleteConsultReview,
+  deleteConsultReviewReply,
+  adminRemarkOnReview,
 } from "../../../../api/consultationApi";
 import { getTierPlans } from "../../../../api/tierPlan.api";
 
@@ -968,6 +972,78 @@ function ClearFlagModal({
   );
 }
 
+/* ================= DELETE CONFIRM MODAL ================= */
+function DeleteConfirmModal({
+  open,
+  title,
+  description,
+  loading,
+  onClose,
+  onConfirm,
+}) {
+  if (!open) return null;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm"
+        onClick={!loading ? onClose : undefined}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[121] w-[95%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-zinc-100 px-6 py-5">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50">
+              <Trash2 className="h-6 w-6 text-rose-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900">{title}</h3>
+              <p className="mt-1 text-sm text-zinc-500">This action cannot be undone</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <p className="text-sm text-zinc-600">{description}</p>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="rounded-xl border border-zinc-200 bg-white px-6 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Confirm Delete
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ================= MAIN ================= */
 const ConsultantProfile = () => {
   const navigate = useNavigate();
@@ -1040,6 +1116,22 @@ const ConsultantProfile = () => {
 
   // Clear flag modal states
   const [clearFlagReason, setClearFlagReason] = useState("");
+
+  // Delete review/reply modal states
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    type: "", // "review" | "reply"
+    reviewId: null,
+  });
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Admin remark modal states
+  const [remarkModal, setRemarkModal] = useState({
+    open: false,
+    reviewId: null,
+  });
+  const [adminRemarkText, setAdminRemarkText] = useState("");
+  const [remarkLoading, setRemarkLoading] = useState(false);
 
   // Tier plans
   const [tierPlans, setTierPlans] = useState([]);
@@ -1656,6 +1748,56 @@ const ConsultantProfile = () => {
       toast.error(getErrorMessage(e, "Failed to clear flag"));
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    try {
+      setDeleteLoading(true);
+      await deleteConsultReview(deleteModal.reviewId);
+      toast.success("Review deleted successfully");
+      setDeleteModal({ open: false, type: "", reviewId: null });
+      await fetchProfile({ silent: true });
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Failed to delete review"));
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteReviewReply = async () => {
+    try {
+      setDeleteLoading(true);
+      await deleteConsultReviewReply(deleteModal.reviewId);
+      toast.success("Reply deleted successfully");
+      setDeleteModal({ open: false, type: "", reviewId: null });
+      await fetchProfile({ silent: true });
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Failed to delete reply"));
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleAddAdminRemark = async () => {
+    try {
+      if (!adminRemarkText.trim()) {
+        toast.error("Remark is required");
+        return;
+      }
+      setRemarkLoading(true);
+      await adminRemarkOnReview({
+        reviewId: remarkModal.reviewId,
+        adminRemark: adminRemarkText.trim(),
+      });
+      toast.success("Admin remark added successfully");
+      setRemarkModal({ open: false, reviewId: null });
+      setAdminRemarkText("");
+      await fetchProfile({ silent: true });
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Failed to add remark"));
+    } finally {
+      setRemarkLoading(false);
     }
   };
 
@@ -2595,54 +2737,69 @@ const ConsultantProfile = () => {
                   {profile.reviews.map((review) => (
                     <div
                       key={review.reviewId}
-                      className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
+                      className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-lg shadow-sky-500/20">
-                              <User className="h-5 w-5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-base font-bold text-zinc-900">{review.userName || "Anonymous"}</h4>
-                                {review.isEdited && (
-                                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                                    Edited
-                                  </span>
-                                )}
+                      {/* Customer Review */}
+                      <div className="p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-lg shadow-sky-500/20">
+                                <User className="h-5 w-5" />
                               </div>
-                              <div className="mt-1 flex items-center gap-2">
-                                <div className="flex items-center gap-0.5">
-                                  {[1, 2, 3, 4, 5].map((star) => (
-                                    <Star
-                                      key={star}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="text-base font-bold text-zinc-900">{review.userName || "Anonymous"}</h4>
+                                  {review.isEdited && (
+                                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                      Edited
+                                    </span>
+                                  )}
+                                  {review.status && (
+                                    <span
                                       className={cls(
-                                        "h-4 w-4",
-                                        star <= review.rating
-                                          ? "fill-amber-400 text-amber-400"
-                                          : "fill-zinc-200 text-zinc-200"
+                                        "rounded-full px-2 py-0.5 text-xs font-semibold",
+                                        review.status === "ACTIVE"
+                                          ? "bg-emerald-50 text-emerald-700"
+                                          : review.status === "PENDING"
+                                            ? "bg-amber-50 text-amber-700"
+                                            : "bg-rose-50 text-rose-700"
                                       )}
-                                    />
-                                  ))}
+                                    >
+                                      {review.status}
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="text-sm font-semibold text-zinc-600">
-                                  {review.rating.toFixed(1)}
-                                </span>
+                                <div className="mt-1 flex items-center gap-2">
+                                  <div className="flex items-center gap-0.5">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={cls(
+                                          "h-4 w-4",
+                                          star <= review.rating
+                                            ? "fill-amber-400 text-amber-400"
+                                            : "fill-zinc-200 text-zinc-200"
+                                        )}
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="text-sm font-semibold text-zinc-600">
+                                    {review.rating.toFixed(1)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {review.reviewTitle && (
-                            <h5 className="mt-3 text-sm font-bold text-zinc-900">{review.reviewTitle}</h5>
-                          )}
+                            {review.reviewTitle && (
+                              <h5 className="mt-3 text-sm font-bold text-zinc-900">{review.reviewTitle}</h5>
+                            )}
 
-                          {review.reviewText && (
-                            <p className="mt-2 text-sm leading-relaxed text-zinc-600">{review.reviewText}</p>
-                          )}
+                            {review.reviewText && (
+                              <p className="mt-2 text-sm leading-relaxed text-zinc-600">{review.reviewText}</p>
+                            )}
 
-                          <div className="mt-4 flex items-center gap-4">
-                            <div className="flex items-center gap-1 text-xs font-semibold text-zinc-400">
+                            <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-zinc-400">
                               <Clock3 className="h-3.5 w-3.5" />
                               {new Date(review.createdAt).toLocaleString('en-IN', {
                                 day: 'numeric',
@@ -2652,23 +2809,97 @@ const ConsultantProfile = () => {
                                 minute: '2-digit'
                               })}
                             </div>
-                            {review.status && (
-                              <span
-                                className={cls(
-                                  "rounded-full px-2 py-0.5 text-xs font-semibold",
-                                  review.status === "APPROVED"
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : review.status === "PENDING"
-                                      ? "bg-amber-50 text-amber-700"
-                                      : "bg-rose-50 text-rose-700"
-                                )}
-                              >
-                                {review.status}
-                              </span>
-                            )}
                           </div>
+
+                          {/* Delete Review Button */}
+                          <button
+                            onClick={() => setDeleteModal({ open: true, type: "review", reviewId: review.reviewId })}
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition-all hover:bg-rose-100 hover:border-rose-300 active:scale-95"
+                            title="Delete review"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
+
+                      {/* Consultant Reply */}
+                      {review.consultReply && (
+                        <div className="border-t border-zinc-100 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 p-5">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20">
+                                  <User className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h5 className="text-sm font-bold text-zinc-900">{profile?.name || "Consultant"}</h5>
+                                    <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                                      Consultant Reply
+                                    </span>
+                                    {review.isConsultReplyEdited && (
+                                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                        Edited
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-2 text-sm leading-relaxed text-zinc-700">{review.consultReply}</p>
+
+                                  <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-zinc-400">
+                                    <Clock3 className="h-3.5 w-3.5" />
+                                    {new Date(review.updatedAt).toLocaleString('en-IN', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Reply Action Buttons */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {/* Add Admin Remark Button */}
+                              <button
+                                onClick={() => {
+                                  setAdminRemarkText(review.adminRemark || "");
+                                  setRemarkModal({ open: true, reviewId: review.reviewId });
+                                }}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-600 transition-all hover:bg-amber-100 hover:border-amber-300 active:scale-95"
+                                title={review.adminRemark ? "Edit admin remark" : "Add admin remark"}
+                              >
+                                <NotebookPen className="h-4 w-4" />
+                              </button>
+
+                              {/* Delete Reply Button */}
+                              <button
+                                onClick={() => setDeleteModal({ open: true, type: "reply", reviewId: review.reviewId })}
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition-all hover:bg-rose-100 hover:border-rose-300 active:scale-95"
+                                title="Delete consultant reply"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Admin Remark */}
+                          {review.adminRemark && (
+                            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                              <div className="flex items-start gap-2">
+                                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">
+                                    Admin Remark
+                                  </p>
+                                  <p className="text-sm text-amber-900 leading-relaxed">{review.adminRemark}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -2840,6 +3071,100 @@ const ConsultantProfile = () => {
           />
         )
       }
+
+      <DeleteConfirmModal
+        open={deleteModal.open}
+        title={deleteModal.type === "review" ? "Delete Review" : "Delete Consultant Reply"}
+        description={
+          deleteModal.type === "review"
+            ? "Are you sure you want to delete this review? This will permanently remove the review and any associated reply."
+            : "Are you sure you want to delete this consultant's reply? The original review will remain visible."
+        }
+        loading={deleteLoading}
+        onClose={() => !deleteLoading && setDeleteModal({ open: false, type: "", reviewId: null })}
+        onConfirm={deleteModal.type === "review" ? handleDeleteReview : handleDeleteReviewReply}
+      />
+
+      {/* Admin Remark Modal */}
+      {remarkModal.open && (
+        <>
+          <div
+            className="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => !remarkLoading && setRemarkModal({ open: false, reviewId: null })}
+          />
+          <div className="fixed left-1/2 top-1/2 z-[121] w-[95%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-zinc-100 px-6 py-5">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50">
+                  <NotebookPen className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-900">Admin Remark</h3>
+                  <p className="mt-1 text-sm text-zinc-500">Add a remark on the consultant's reply</p>
+                </div>
+              </div>
+              <button
+                onClick={() => !remarkLoading && setRemarkModal({ open: false, reviewId: null })}
+                disabled={remarkLoading}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-5 rounded-2xl bg-amber-50 border border-amber-100 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-800">
+                  This remark will be visible to the admin team and attached to the consultant's reply.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold text-zinc-700">
+                  Remark <span className="text-amber-500">*</span>
+                </label>
+                <textarea
+                  value={adminRemarkText}
+                  onChange={(e) => setAdminRemarkText(e.target.value)}
+                  rows={4}
+                  placeholder="Enter your remark on this reply..."
+                  className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                />
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setRemarkModal({ open: false, reviewId: null });
+                    setAdminRemarkText("");
+                  }}
+                  disabled={remarkLoading}
+                  className="rounded-xl border border-zinc-200 bg-white px-6 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddAdminRemark}
+                  disabled={remarkLoading || !adminRemarkText.trim()}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {remarkLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <NotebookPen className="h-4 w-4" />
+                      Save Remark
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div >
   );
 };

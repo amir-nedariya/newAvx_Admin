@@ -120,9 +120,9 @@ const StoreThemeTemplate = () => {
       const data = response?.data || response;
 
       setTemplates(data.data || []);
-      setPage(data.currentPage || pageNo);
-      setTotalPages(data.totalPages || 1);
-      setTotalElements(data.totalElements || 0);
+      setPage(data.pageResponse?.currentPage || pageNo);
+      setTotalPages(data.pageResponse?.totalPages || 1);
+      setTotalElements(data.pageResponse?.totalElements || 0);
 
       // Calculate stats from the data
       calculateStats(data.data || []);

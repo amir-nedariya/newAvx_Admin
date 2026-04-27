@@ -717,3 +717,43 @@ export const updatePenalties = async ({
   const res = await api.put("/consultation/ranking/penalties", payload);
   return res.data;
 };
+
+/* =======================================================
+   ✅ DELETE CONSULTANT REVIEW (DELETE)
+   PATH: /consultation/review/{reviewId}
+======================================================= */
+export const deleteConsultReview = async (reviewId) => {
+  if (!reviewId) {
+    throw new Error("reviewId is required");
+  }
+  const res = await api.delete(`/consultation/review/${reviewId}`);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ DELETE CONSULTANT REVIEW REPLY (DELETE)
+   PATH: /consultation/review-reply/{reviewId}
+======================================================= */
+export const deleteConsultReviewReply = async (reviewId) => {
+  if (!reviewId) {
+    throw new Error("reviewId is required");
+  }
+  const res = await api.delete(`/consultation/review-reply/${reviewId}`);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ ADMIN REMARK ON REVIEW REPLY (PATCH)
+   BODY: { reviewId, adminRemark }
+======================================================= */
+export const adminRemarkOnReview = async ({ reviewId, adminRemark }) => {
+  if (!reviewId) throw new Error("reviewId is required");
+  if (!adminRemark || !String(adminRemark).trim())
+    throw new Error("adminRemark is required");
+
+  const res = await api.patch("/consultation/review/remark", {
+    reviewId,
+    adminRemark: String(adminRemark).trim(),
+  });
+  return res.data;
+};
