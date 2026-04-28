@@ -1,6 +1,23 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Quote } from "lucide-react";
 
+// Helper function to extract image URL from images array
+const getImageUrl = (section, index = 0) => {
+  if (!section?.images || !Array.isArray(section.images) || section.images.length === 0) {
+    return null;
+  }
+  const image = section.images[index];
+  return image?.customUrl || image?.templateUrl || null;
+};
+
+// Helper function to get all image URLs from a section
+const getAllImageUrls = (section) => {
+  if (!section?.images || !Array.isArray(section.images)) {
+    return [];
+  }
+  return section.images.map(img => img?.customUrl || img?.templateUrl).filter(Boolean);
+};
+
 const WhyBuyPremium3Display = ({ data }) => {
   if (!data) return null;
 
@@ -18,8 +35,15 @@ const WhyBuyPremium3Display = ({ data }) => {
   const [commitmentIndex, setCommitmentIndex] = useState(0);
   const [testimonialIndex, setTestimonialIndex] = useState(0);
 
-  const inspectionPoints = data.inspectionPoints || [];
-  const reviews = data.featuredReviews || [];
+  const inspectionPoints = data.inspectionSection?.inspectionPoints || [];
+  const reviews = data.testimonialSection?.featuredReviews || [];
+
+  const heroImage = getImageUrl(data.whyBuyHeroSection, 0);
+  const storyImages = getAllImageUrls(data.storySection);
+  const vehicleImages = getAllImageUrls(data.vehicleSelectionSection);
+  const processImages = getAllImageUrls(data.processSection);
+  const inspectionImages = getAllImageUrls(data.inspectionSection);
+  const galleryImages = getAllImageUrls(data.gallerySection);
 
   /* AUTO SLIDE */
   useEffect(() => {
@@ -40,9 +64,9 @@ const WhyBuyPremium3Display = ({ data }) => {
   return (
     <>
       <section className="relative h-screen">
-        {(data.customWhyBuyHero1 || data.whyBuyHeroTemplate1?.imageUrl)?.includes(".mp4") ? (
+        {heroImage?.includes(".mp4") ? (
           <video
-            src={data.customWhyBuyHero1 || data.whyBuyHeroTemplate1?.imageUrl}
+            src={heroImage}
             autoPlay
             muted
             loop
@@ -50,7 +74,7 @@ const WhyBuyPremium3Display = ({ data }) => {
           />
         ) : (
           <img
-            src={data.customWhyBuyHero1 || data.whyBuyHeroTemplate1?.imageUrl}
+            src={heroImage}
             className="absolute inset-0 w-full h-full object-cover"
           />
         )}
@@ -59,12 +83,12 @@ const WhyBuyPremium3Display = ({ data }) => {
 
         <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
           <h1 className="text-5xl text-white mb-6">
-            {data.whyBuyHeroTitle}
+            {data.whyBuyHeroSection?.title}
           </h1>
           <div
             className="text-white/80 max-w-2xl"
             dangerouslySetInnerHTML={{
-              __html: data.whyBuyHeroDescription,
+              __html: data.whyBuyHeroSection?.description,
             }}
           />
         </div>
@@ -74,21 +98,25 @@ const WhyBuyPremium3Display = ({ data }) => {
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12">
           <div>
-            <h2 className="text-4xl mb-4">{data.storyTitle}</h2>
+            <h2 className="text-4xl mb-4">{data.storySection?.title}</h2>
             <div
-              dangerouslySetInnerHTML={{ __html: data.storyDescription }}
+              dangerouslySetInnerHTML={{ __html: data.storySection?.description }}
             />
           </div>
 
           <div className="relative h-[450px]">
-            <img
-              src={data.customStory1 || data.storyTemplate1?.imageUrl}
-              className="absolute w-3/4 h-full object-cover rounded-xl"
-            />
-            <img
-              src={data.customStory2 || data.storyTemplate2?.imageUrl}
-              className="absolute bottom-0 right-0 w-1/2 h-1/2 object-cover rounded-xl"
-            />
+            {storyImages[0] && (
+              <img
+                src={storyImages[0]}
+                className="absolute w-3/4 h-full object-cover rounded-xl"
+              />
+            )}
+            {storyImages[1] && (
+              <img
+                src={storyImages[1]}
+                className="absolute bottom-0 right-0 w-1/2 h-1/2 object-cover rounded-xl"
+              />
+            )}
           </div>
         </div>
       </section>
@@ -97,27 +125,22 @@ const WhyBuyPremium3Display = ({ data }) => {
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="relative h-[400px] rounded-xl overflow-hidden">
-            {[
-              data.customVehicleSelection1 || data.vehicleSelectionTemplate1?.imageUrl,
-              data.customVehicleSelection2 || data.vehicleSelectionTemplate2?.imageUrl,
-            ]
-              .filter(Boolean)
-              .map((img, i) => (
-                <img
-                  key={i}
-                  src={img}
-                  className={`absolute inset-0 w-full h-full object-cover transition ${activeIndex === i ? "opacity-100" : "opacity-0"
-                    }`}
-                />
-              ))}
+            {vehicleImages.map((img, i) => (
+              <img
+                key={i}
+                src={img}
+                className={`absolute inset-0 w-full h-full object-cover transition ${activeIndex === i ? "opacity-100" : "opacity-0"
+                  }`}
+              />
+            ))}
 
             <div className="absolute bottom-6 left-6 text-white">
               <h2 className="text-3xl mb-2">
-                {data.vehicleSelectionTitle}
+                {data.vehicleSelectionSection?.title}
               </h2>
               <div
                 dangerouslySetInnerHTML={{
-                  __html: data.vehicleSelectionDescription,
+                  __html: data.vehicleSelectionSection?.description,
                 }}
               />
             </div>
@@ -128,7 +151,7 @@ const WhyBuyPremium3Display = ({ data }) => {
       {/* ================= PROCESS ================= */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl mb-10">{data.processTitle}</h2>
+          <h2 className="text-4xl mb-10">{data.processSection?.title}</h2>
 
           <div className="relative h-[350px] overflow-hidden rounded-xl">
             {(data.processSteps || []).map((step, i) => (
@@ -138,10 +161,7 @@ const WhyBuyPremium3Display = ({ data }) => {
                   }`}
               >
                 <img
-                  src={
-                    data[`customWhyBuyProcess${i + 1}`] ||
-                    data[`processTemplate${i + 1}`]?.imageUrl
-                  }
+                  src={processImages[i % processImages.length]}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/50 p-6 text-white">
@@ -177,9 +197,9 @@ const WhyBuyPremium3Display = ({ data }) => {
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10">
           <div>
-            <h2 className="text-4xl mb-4">{data.inspectionTitle}</h2>
+            <h2 className="text-4xl mb-4">{data.inspectionSection?.title}</h2>
             <div
-              dangerouslySetInnerHTML={{ __html: data.inspectionText }}
+              dangerouslySetInnerHTML={{ __html: data.inspectionSection?.description }}
             />
 
             <div className="mt-6 space-y-3">
@@ -192,10 +212,7 @@ const WhyBuyPremium3Display = ({ data }) => {
           </div>
 
           <img
-            src={
-              data[`customInspection${inspectionIndex + 1}`] ||
-              data[`inspectionTemplate${inspectionIndex + 1}`]?.imageUrl
-            }
+            src={inspectionImages[inspectionIndex]}
             className="w-full h-80 object-cover rounded-xl"
           />
         </div>
@@ -205,11 +222,11 @@ const WhyBuyPremium3Display = ({ data }) => {
       <section className="py-20 px-4 bg-gray-50 text-center">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-4xl mb-4">
-            {data.customerCommitmentTitle}
+            {data.customerCommitmentSection?.title}
           </h2>
           <div
             dangerouslySetInnerHTML={{
-              __html: data.customerCommitmentDescription,
+              __html: data.customerCommitmentSection?.description,
             }}
           />
         </div>
@@ -218,13 +235,10 @@ const WhyBuyPremium3Display = ({ data }) => {
       {/* ================= GALLERY ================= */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
+          {galleryImages.map((img, i) => (
             <img
               key={i}
-              src={
-                data[`customGallery${i}`] ||
-                data[`galleryTemplate${i}`]?.imageUrl
-              }
+              src={img}
               className="w-full h-60 object-cover rounded-xl"
             />
           ))}
@@ -233,7 +247,7 @@ const WhyBuyPremium3Display = ({ data }) => {
 
       {/* ================= TESTIMONIAL ================= */}
       <section className="py-20 px-4 text-center">
-        <h2 className="text-4xl mb-6">{data.testimonialTitle}</h2>
+        <h2 className="text-4xl mb-6">{data.testimonialSection?.title}</h2>
 
         <div className="max-w-3xl mx-auto border p-8 rounded-xl">
           <Quote className="mx-auto mb-4" />
@@ -271,3 +285,4 @@ const WhyBuyPremium3Display = ({ data }) => {
 };
 
 export default WhyBuyPremium3Display;
+

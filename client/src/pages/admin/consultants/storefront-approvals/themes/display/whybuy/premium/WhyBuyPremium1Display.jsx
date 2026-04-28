@@ -1,6 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import "../../../themeStyles.css";
 
+// Helper function to extract image URL from images array
+const getImageUrl = (section, index = 0) => {
+  if (!section?.images || !Array.isArray(section.images) || section.images.length === 0) {
+    return null;
+  }
+  const image = section.images[index];
+  return image?.customUrl || image?.templateUrl || null;
+};
+
+// Helper function to get all image URLs from a section
+const getAllImageUrls = (section) => {
+  if (!section?.images || !Array.isArray(section.images)) {
+    return [];
+  }
+  return section.images.map(img => img?.customUrl || img?.templateUrl).filter(Boolean);
+};
+
 const WhyBuyPremium1Display = ({ data }) => {
   if (!data) return null;
 
@@ -31,13 +48,12 @@ const WhyBuyPremium1Display = ({ data }) => {
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const galleryImages = [
-    data.customGallery1 || data.galleryTemplate1?.imageUrl,
-    data.customGallery2 || data.galleryTemplate2?.imageUrl,
-    data.customGallery3 || data.galleryTemplate3?.imageUrl,
-    data.customGallery4 || data.galleryTemplate4?.imageUrl,
-    data.customGallery5 || data.galleryTemplate5?.imageUrl,
-  ].filter(Boolean);
+  const galleryImages = getAllImageUrls(data.gallerySection);
+  const heroImages = getAllImageUrls(data.whyBuyHeroSection);
+  const storyImages = getAllImageUrls(data.storySection);
+  const vehicleImages = getAllImageUrls(data.vehicleSelectionSection);
+  const processImages = getAllImageUrls(data.processSection);
+  const inspectionImages = getAllImageUrls(data.inspectionSection);
 
   return (
     <div className="space-y-24">
@@ -47,40 +63,36 @@ const WhyBuyPremium1Display = ({ data }) => {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
 
           <div>
-            <p className="text-sm uppercase text-[var(--color-third)] tracking-widest mb-3">
+            <p className="text-sm uppercase text-third tracking-widest mb-3 font-[Poppins]">
               Trusted Auto Consultants
             </p>
 
-            <h1 className="text-5xl font-bold text-[var(--color-primary)] mb-4">
-              {data.whyBuyHeroTitle}
+            <h1 className="text-5xl font-bold  font-[Montserrat] text-primary mb-4 font-[Montserrat]">
+              {data.whyBuyHeroSection?.title}
             </h1>
 
             <div
-              className="text-[var(--color-third)]"
-              dangerouslySetInnerHTML={{ __html: data.whyBuyHeroDescription }}
+              className="text-third font-[Poppins]"
+              dangerouslySetInnerHTML={{ __html: data.whyBuyHeroSection?.description }}
             />
           </div>
 
           <div className="space-y-4">
-            <video
-              autoPlay
-              muted
-              loop
-              className="w-full h-64 object-cover rounded-xl"
-              src={
-                data.customWhyBuyHero1 ||
-                data.whyBuyHeroTemplate1?.imageUrl
-              }
-            />
+            {heroImages[0] && (
+              <video
+                autoPlay
+                muted
+                loop
+                className="w-full h-64 object-cover rounded-xl"
+                src={heroImages[0]}
+              />
+            )}
 
             <div className="grid grid-cols-2 gap-4">
-              {[2, 3].map((i) => (
+              {heroImages.slice(1, 3).map((img, i) => (
                 <img
                   key={i}
-                  src={
-                    data[`customWhyBuyHero${i}`] ||
-                    data[`whyBuyHeroTemplate${i}`]?.imageUrl
-                  }
+                  src={img}
                   className="h-32 w-full object-cover rounded-xl"
                 />
               ))}
@@ -94,32 +106,29 @@ const WhyBuyPremium1Display = ({ data }) => {
       <section className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 px-4">
 
         <div>
-          <h2 className="text-4xl text-[var(--color-secondary)]">
-            {data.storyTitle}
+          <h2 className="text-4xl text-secondary">
+            {data.storySection?.title}
           </h2>
 
           <div
-            className="mt-4 text-[var(--color-third)]"
-            dangerouslySetInnerHTML={{ __html: data.storyDescription }}
+            className="mt-4 text-third font-[Poppins]"
+            dangerouslySetInnerHTML={{ __html: data.storySection?.description }}
           />
         </div>
 
         <div className="relative h-[400px] hidden md:block">
-          {[1, 2, 3].map((i) => (
+          {storyImages.slice(0, 3).map((img, i) => (
             <img
               key={i}
-              src={
-                data[`customWhyBuyStory${i}`] ||
-                data[`storyTemplate${i}`]?.imageUrl
-              }
+              src={img}
               onMouseEnter={() => setHovered(i)}
               className={`absolute rounded-xl object-cover transition-all ${hovered === i ? "scale-105 z-20" : "z-10"
                 }`}
               style={{
-                width: i === 1 ? "60%" : "45%",
+                width: i === 0 ? "60%" : "45%",
                 height: "50%",
-                top: i === 1 ? 0 : i === 2 ? "50%" : "25%",
-                left: i === 1 ? 0 : i === 2 ? "50%" : "25%",
+                top: i === 0 ? 0 : i === 1 ? "50%" : "25%",
+                left: i === 0 ? 0 : i === 1 ? "50%" : "25%",
               }}
             />
           ))}
@@ -134,27 +143,24 @@ const WhyBuyPremium1Display = ({ data }) => {
           ref={scrollRef}
           className="absolute inset-0 flex opacity-30 overflow-hidden"
         >
-          {[1, 2, 1, 2].map((i, idx) => (
+          {vehicleImages.concat(vehicleImages).map((img, idx) => (
             <img
               key={idx}
-              src={
-                data[`customWhyBuyVehicleSelection${i}`] ||
-                data[`vehicleSelectionTemplate${i}`]?.imageUrl
-              }
+              src={img}
               className="min-w-[300px] h-full object-cover"
             />
           ))}
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto">
-          <h2 className="text-4xl text-[var(--color-primary)]">
-            {data.vehicleSelectionTitle}
+          <h2 className="text-4xl text-primary">
+            {data.vehicleSelectionSection?.title}
           </h2>
 
           <div
-            className="mt-4 text-[var(--color-third)]"
+            className="mt-4 text-third font-[Poppins]"
             dangerouslySetInnerHTML={{
-              __html: data.vehicleSelectionDescription,
+              __html: data.vehicleSelectionSection?.description,
             }}
           />
         </div>
@@ -164,8 +170,8 @@ const WhyBuyPremium1Display = ({ data }) => {
       {/* ================= PROCESS ================= */}
       <section className="max-w-7xl mx-auto px-4">
 
-        <h2 className="text-4xl mb-6 text-[var(--color-primary)]">
-          {data.processTitle}
+        <h2 className="text-4xl mb-6 text-primary">
+          {data.processSection?.title}
         </h2>
 
         <div className="grid md:grid-cols-4 gap-4">
@@ -176,10 +182,7 @@ const WhyBuyPremium1Display = ({ data }) => {
               className="relative rounded-xl overflow-hidden cursor-pointer"
             >
               <img
-                src={
-                  data[`customWhyBuyProcess${i + 1}`] ||
-                  data[`processTemplate${i + 1}`]?.imageUrl
-                }
+                src={processImages[i % processImages.length]}
                 className="h-48 w-full object-cover"
               />
 
@@ -201,15 +204,15 @@ const WhyBuyPremium1Display = ({ data }) => {
       <section className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 px-4">
 
         <div className="space-y-4">
-          <h2 className="text-4xl text-[var(--color-primary)]">
-            {data.inspectionTitle}
+          <h2 className="text-4xl text-primary">
+            {data.inspectionSection?.title}
           </h2>
 
           <div
-            dangerouslySetInnerHTML={{ __html: data.inspectionText }}
+            dangerouslySetInnerHTML={{ __html: data.inspectionSection?.description }}
           />
 
-          {data.inspectionPoints?.map((pt, i) => (
+          {data.inspectionSection?.inspectionPoints?.map((pt, i) => (
             <div key={i} className="flex gap-2 items-center">
               ✔ {pt}
             </div>
@@ -217,19 +220,16 @@ const WhyBuyPremium1Display = ({ data }) => {
         </div>
 
         <div className="relative h-[400px]">
-          {[1, 2, 3].map((i) => (
+          {inspectionImages.slice(0, 3).map((img, i) => (
             <img
               key={i}
-              src={
-                data[`customWhyBuyInspection${i}`] ||
-                data[`inspectionTemplate${i}`]?.imageUrl
-              }
+              src={img}
               className="absolute object-cover rounded-xl"
               style={{
-                width: i === 1 ? "70%" : "40%",
+                width: i === 0 ? "70%" : "40%",
                 height: "60%",
-                top: i === 1 ? 0 : i === 2 ? "20%" : "60%",
-                left: i === 1 ? 0 : i === 2 ? "60%" : "20%",
+                top: i === 0 ? 0 : i === 1 ? "20%" : "60%",
+                left: i === 0 ? 0 : i === 1 ? "60%" : "20%",
               }}
             />
           ))}
@@ -241,22 +241,19 @@ const WhyBuyPremium1Display = ({ data }) => {
       <section className="relative py-24 px-4 text-center">
 
         <img
-          src={
-            data.customWhyBuyCustomerCommitment1 ||
-            data.customerCommitmentTemplate1?.imageUrl
-          }
+          src={getImageUrl(data.customerCommitmentSection, 0)}
           className="absolute inset-0 w-full h-full object-cover opacity-30"
         />
 
         <div className="relative z-10 max-w-3xl mx-auto">
-          <h2 className="text-4xl text-[var(--color-primary)]">
-            {data.customerCommitmentTitle}
+          <h2 className="text-4xl text-primary">
+            {data.customerCommitmentSection?.title}
           </h2>
 
           <div
-            className="mt-4 text-[var(--color-third)]"
+            className="mt-4 text-third font-[Poppins]"
             dangerouslySetInnerHTML={{
-              __html: data.customerCommitmentDescription,
+              __html: data.customerCommitmentSection?.description,
             }}
           />
         </div>
@@ -266,7 +263,7 @@ const WhyBuyPremium1Display = ({ data }) => {
       {/* ================= GALLERY ================= */}
       <section className="max-w-7xl mx-auto px-4">
 
-        <h2 className="text-4xl mb-6 text-[var(--color-primary)]">
+        <h2 className="text-4xl mb-6 text-primary">
           Gallery
         </h2>
 
@@ -287,3 +284,4 @@ const WhyBuyPremium1Display = ({ data }) => {
 };
 
 export default WhyBuyPremium1Display;
+

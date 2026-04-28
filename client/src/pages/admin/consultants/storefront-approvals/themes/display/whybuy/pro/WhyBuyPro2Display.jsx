@@ -1,6 +1,23 @@
 import React, { useState } from "react";
 import "../../../themeStyles.css";
 
+// Helper function to extract image URL from images array
+const getImageUrl = (section, index = 0) => {
+  if (!section?.images || !Array.isArray(section.images) || section.images.length === 0) {
+    return null;
+  }
+  const image = section.images[index];
+  return image?.customUrl || image?.templateUrl || null;
+};
+
+// Helper function to get all image URLs from a section
+const getAllImageUrls = (section) => {
+  if (!section?.images || !Array.isArray(section.images)) {
+    return [];
+  }
+  return section.images.map(img => img?.customUrl || img?.templateUrl).filter(Boolean);
+};
+
 const WhyBuyPro2Display = ({ data }) => {
   if (!data) return null;
 
@@ -14,54 +31,13 @@ const WhyBuyPro2Display = ({ data }) => {
 
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const heroImages = [
-    data.whyBuyHeroTemplate1?.imageUrl,
-    data.whyBuyHeroTemplate2?.imageUrl,
-    data.whyBuyHeroTemplate3?.imageUrl,
-    data.whyBuyHeroTemplate4?.imageUrl,
-    data.whyBuyHeroTemplate5?.imageUrl,
-  ].filter(Boolean);
-
-  const storyImages = [
-    data.storyTemplate1?.imageUrl,
-    data.storyTemplate2?.imageUrl,
-    data.storyTemplate3?.imageUrl,
-    data.storyTemplate4?.imageUrl,
-  ].filter(Boolean);
-
-  const selectionImages = [
-    data.vehicleSelectionTemplate1?.imageUrl,
-    data.vehicleSelectionTemplate2?.imageUrl,
-    data.vehicleSelectionTemplate3?.imageUrl,
-  ].filter(Boolean);
-
-  const processImages = [
-    data.processTemplate1?.imageUrl,
-    data.processTemplate2?.imageUrl,
-    data.processTemplate3?.imageUrl,
-    data.processTemplate4?.imageUrl,
-  ].filter(Boolean);
-
-  const inspectionImages = [
-    data.inspectionTemplate1?.imageUrl,
-    data.inspectionTemplate2?.imageUrl,
-    data.inspectionTemplate3?.imageUrl,
-    data.inspectionTemplate4?.imageUrl,
-  ].filter(Boolean);
-
-  const commitmentImages = [
-    data.customerCommitmentTemplate1?.imageUrl,
-    data.customerCommitmentTemplate2?.imageUrl,
-    data.customerCommitmentTemplate3?.imageUrl,
-  ].filter(Boolean);
-
-  const galleryImages = [
-    data.galleryTemplate1?.imageUrl,
-    data.galleryTemplate2?.imageUrl,
-    data.galleryTemplate3?.imageUrl,
-    data.galleryTemplate4?.imageUrl,
-    data.galleryTemplate5?.imageUrl,
-  ].filter(Boolean);
+  const heroImages = getAllImageUrls(data.whyBuyHeroSection);
+  const storyImages = getAllImageUrls(data.storySection);
+  const selectionImages = getAllImageUrls(data.vehicleSelectionSection);
+  const processImages = getAllImageUrls(data.processSection);
+  const inspectionImages = getAllImageUrls(data.inspectionSection);
+  const commitmentImages = getAllImageUrls(data.customerCommitmentSection);
+  const galleryImages = getAllImageUrls(data.gallerySection);
 
   return (
     <div className="space-y-20">
@@ -71,13 +47,13 @@ const WhyBuyPro2Display = ({ data }) => {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
 
           <div>
-            <h1 className="text-5xl font-bold text-[var(--color-secondary)] mb-4">
-              {data.whyBuyHeroTitle}
+            <h1 className="text-5xl font-bold  font-[Montserrat] text-secondary mb-4 font-[Montserrat]">
+              {data.whyBuyHeroSection?.title}
             </h1>
 
             <div
-              className="text-[var(--color-third)]"
-              dangerouslySetInnerHTML={{ __html: data.whyBuyHeroDescription }}
+              className="text-third font-[Poppins]"
+              dangerouslySetInnerHTML={{ __html: data.whyBuyHeroSection?.description }}
             />
           </div>
 
@@ -95,21 +71,21 @@ const WhyBuyPro2Display = ({ data }) => {
       </section>
 
       {/* STORY */}
-      <section className="py-16 bg-[var(--color-fourth)] px-6">
+      <section className="py-16 bg-fourth px-6">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12">
 
           <div>
-            <p className="uppercase text-sm text-[var(--color-secondary)]/70">
+            <p className="uppercase text-sm text-secondary/70">
               Our Story
             </p>
 
-            <h2 className="text-4xl text-[var(--color-secondary)] mt-2">
-              {data.storyTitle}
+            <h2 className="text-4xl text-secondary mt-2">
+              {data.storySection?.title}
             </h2>
 
             <div
-              className="text-[var(--color-secondary)]/80 mt-3"
-              dangerouslySetInnerHTML={{ __html: data.storyDescription }}
+              className="text-secondary/80 mt-3"
+              dangerouslySetInnerHTML={{ __html: data.storySection?.description }}
             />
           </div>
 
@@ -126,24 +102,24 @@ const WhyBuyPro2Display = ({ data }) => {
       <section className="py-16 px-6 max-w-7xl mx-auto grid lg:grid-cols-2 gap-12">
 
         <div>
-          <p className="uppercase text-sm text-[var(--color-third)]">
+          <p className="uppercase text-sm text-third font-[Poppins]">
             Selection
           </p>
 
-          <h2 className="text-4xl text-[var(--color-secondary)] mt-2">
+          <h2 className="text-4xl text-secondary mt-2">
             Our Approach to Vehicle Selection
           </h2>
 
           <div
-            className="text-[var(--color-third)] mt-4"
+            className="text-third mt-4 font-[Poppins]"
             dangerouslySetInnerHTML={{
-              __html: data.vehicleSelectionDescription,
+              __html: data.vehicleSelectionSection?.description,
             }}
           />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <img src={selectionImages[0]} className="col-span-2 h-48 object-cover rounded-xl" />
+          {selectionImages[0] && <img src={selectionImages[0]} className="col-span-2 h-48 object-cover rounded-xl" />}
           {selectionImages.slice(1, 3).map((img, i) => (
             <img key={i} src={img} className="h-24 object-cover rounded-xl" />
           ))}
@@ -155,17 +131,17 @@ const WhyBuyPro2Display = ({ data }) => {
       <section className="py-16 px-6 max-w-7xl mx-auto space-y-10">
 
         <div>
-          <p className="uppercase text-sm text-[var(--color-third)]">
+          <p className="uppercase text-sm text-third font-[Poppins]">
             Process
           </p>
 
-          <h2 className="text-4xl text-[var(--color-secondary)]">
-            {data.processTitle}
+          <h2 className="text-4xl text-secondary">
+            {data.processSection?.title}
           </h2>
 
           <div
-            className="text-[var(--color-third)] mt-2"
-            dangerouslySetInnerHTML={{ __html: data.processDescription }}
+            className="text-third mt-2 font-[Poppins]"
+            dangerouslySetInnerHTML={{ __html: data.processSection?.description }}
           />
         </div>
 
@@ -177,12 +153,12 @@ const WhyBuyPro2Display = ({ data }) => {
                 className="h-32 w-full object-cover rounded-xl mb-3"
               />
 
-              <h3 className="text-[var(--color-secondary)] font-semibold">
+              <h3 className="text-secondary font-semibold">
                 {step.title}
               </h3>
 
               <div
-                className="text-[var(--color-third)] text-sm"
+                className="text-third text-sm font-[Poppins]"
                 dangerouslySetInnerHTML={{ __html: step.description }}
               />
             </div>
@@ -195,27 +171,27 @@ const WhyBuyPro2Display = ({ data }) => {
       <section className="py-16 px-6 max-w-7xl mx-auto grid lg:grid-cols-2 gap-10">
 
         <div>
-          <p className="uppercase text-sm text-[var(--color-third)]">
+          <p className="uppercase text-sm text-third font-[Poppins]">
             Inspection
           </p>
 
-          <h2 className="text-4xl text-[var(--color-secondary)]">
+          <h2 className="text-4xl text-secondary">
             {data.inspectionTitle}
           </h2>
 
           <div
-            className="text-[var(--color-third)] mt-3"
-            dangerouslySetInnerHTML={{ __html: data.inspectionText }}
+            className="text-third mt-3 font-[Poppins]"
+            dangerouslySetInnerHTML={{ __html: data.inspectionSection?.description }}
           />
 
           <div className="mt-4 space-y-3">
-            {data.inspectionPoints?.map((pt, i) => (
+            {data.inspectionSection?.inspectionPoints?.map((pt, i) => (
               <div
                 key={i}
                 onClick={() => setActiveIndex(i)}
                 className={`cursor-pointer p-3 rounded ${i === activeIndex
-                    ? "bg-[var(--color-fourth)]/20"
-                    : ""
+                  ? "bg-fourth/20"
+                  : ""
                   }`}
               >
                 {pt}
@@ -232,16 +208,16 @@ const WhyBuyPro2Display = ({ data }) => {
       </section>
 
       {/* COMMITMENT */}
-      <section className="py-16 bg-[var(--color-fourth)] text-center px-6">
+      <section className="py-16 bg-fourth text-center px-6">
 
-        <h2 className="text-4xl text-[var(--color-secondary)]">
-          {data.customerCommitmentTitle}
+        <h2 className="text-4xl text-secondary">
+          {data.customerCommitmentSection?.title}
         </h2>
 
         <div
-          className="text-[var(--color-secondary)] mt-4"
+          className="text-secondary mt-4"
           dangerouslySetInnerHTML={{
-            __html: data.customerCommitmentDescription,
+            __html: data.customerCommitmentSection?.description,
           }}
         />
 
@@ -256,8 +232,8 @@ const WhyBuyPro2Display = ({ data }) => {
       {/* GALLERY */}
       <section className="py-16 px-6 max-w-7xl mx-auto">
 
-        <h2 className="text-4xl text-[var(--color-secondary)] mb-6">
-          {data.galleryTitle}
+        <h2 className="text-4xl text-secondary mb-6">
+          {data.gallerySection?.title}
         </h2>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -271,19 +247,19 @@ const WhyBuyPro2Display = ({ data }) => {
       {/* TESTIMONIALS */}
       <section className="py-16 px-6 max-w-7xl mx-auto">
 
-        <h2 className="text-4xl text-[var(--color-secondary)] mb-6">
-          {data.testimonialTitle}
+        <h2 className="text-4xl text-secondary mb-6">
+          {data.testimonialSection?.title}
         </h2>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {(data.testimonials || []).map((t, i) => (
-            <div key={i} className="border p-6 rounded-xl border-[var(--color-third)]/20">
+          {(data.testimonialSection?.featuredReviews || []).map((t, i) => (
+            <div key={i} className="border p-6 rounded-xl border-third/20">
               <div
-                className="text-[var(--color-third)] italic"
-                dangerouslySetInnerHTML={{ __html: t.review }}
+                className="text-third italic font-[Poppins]"
+                dangerouslySetInnerHTML={{ __html: t.reviewText || t.review }}
               />
-              <p className="mt-3 font-semibold text-[var(--color-secondary)]">
-                {t.name}
+              <p className="mt-3 font-semibold  font-[Montserrat] text-secondary">
+                {t.reviewerName || t.name}
               </p>
             </div>
           ))}
@@ -296,3 +272,4 @@ const WhyBuyPro2Display = ({ data }) => {
 };
 
 export default WhyBuyPro2Display;
+

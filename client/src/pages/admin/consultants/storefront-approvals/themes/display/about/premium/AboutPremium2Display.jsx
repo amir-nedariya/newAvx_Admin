@@ -1,10 +1,21 @@
 import React from "react";
 import "../../../themeStyles.css";
 
+// Helper function to extract image URL from images array
+const getImageUrl = (section, index = 0) => {
+  if (!section?.images || !Array.isArray(section.images) || section.images.length === 0) {
+    return null;
+  }
+  const image = section.images[index];
+  return image?.customUrl || image?.templateUrl || null;
+};
+
 const AboutPremium2Display = ({ data }) => {
   if (!data) return null;
 
   const isVideo = (url) => url?.includes(".mp4");
+  const heroImage = getImageUrl(data.heroSection, 0);
+  const heroImage2 = getImageUrl(data.heroSection, 1);
 
   return (
     <div className="space-y-24">
@@ -13,11 +24,11 @@ const AboutPremium2Display = ({ data }) => {
       <section className="relative h-screen overflow-hidden">
 
         {/* BACKGROUND */}
-        {(data.customHeroImage1 || data.heroTemplate1?.imageUrl) && (
+        {heroImage && (
           <div className="absolute inset-0">
-            {isVideo(data.customHeroImage1 || data.heroTemplate1?.imageUrl) ? (
+            {isVideo(heroImage) ? (
               <video
-                src={data.customHeroImage1 || data.heroTemplate1?.imageUrl}
+                src={heroImage}
                 autoPlay
                 muted
                 loop
@@ -25,7 +36,7 @@ const AboutPremium2Display = ({ data }) => {
               />
             ) : (
               <img
-                src={data.customHeroImage1 || data.heroTemplate1?.imageUrl}
+                src={heroImage}
                 className="w-full h-full object-cover"
                 alt=""
               />
@@ -39,25 +50,25 @@ const AboutPremium2Display = ({ data }) => {
 
             {/* TEXT */}
             <div className="space-y-6">
-              <p className="text-sm uppercase tracking-[0.4em] text-[var(--color-third)]">
+              <p className="text-sm uppercase tracking-[0.4em] text-third font-[Montserrat]">
                 About Us
               </p>
 
-              <h1 className="text-4xl sm:text-5xl font-bold text-[var(--color-primary)]">
-                {data.heroTitle}
+              <h1 className="text-4xl sm:text-5xl font-bold text-primary font-[Montserrat]">
+                {data.heroSection?.title}
               </h1>
 
               <div
-                className="text-[var(--color-third)]"
-                dangerouslySetInnerHTML={{ __html: data.heroDescription }}
+                className="text-third/70 font-[Poppins]"
+                dangerouslySetInnerHTML={{ __html: data.heroSection?.description }}
               />
             </div>
 
             {/* SIDE IMAGE */}
-            {(data.customHeroImage2 || data.heroTemplate2?.imageUrl) && (
+            {heroImage2 && (
               <div className="hidden lg:block">
                 <img
-                  src={data.customHeroImage2 || data.heroTemplate2?.imageUrl}
+                  src={heroImage2}
                   className="rounded-2xl w-full h-[400px] object-cover"
                   alt=""
                 />
@@ -73,11 +84,11 @@ const AboutPremium2Display = ({ data }) => {
         <div className="max-w-7xl mx-auto px-6 space-y-16">
 
           <div className="text-center">
-            <p className="text-sm uppercase tracking-[0.4em] text-[var(--color-third)]">
+            <p className="text-sm uppercase tracking-[0.4em] text-third font-[Montserrat]">
               Purpose
             </p>
 
-            <h2 className="text-4xl font-semibold text-[var(--color-secondary)]">
+            <h2 className="text-4xl font-semibold text-primary font-[Montserrat]">
               Mission & Vision
             </h2>
           </div>
@@ -87,36 +98,36 @@ const AboutPremium2Display = ({ data }) => {
             {/* Mission */}
             <div className="space-y-6">
               <img
-                src={data.customMissionImage1 || data.missionTemplate1?.imageUrl}
+                src={getImageUrl(data.missionSection, 0)}
                 className="rounded-2xl w-full h-72 object-cover"
                 alt=""
               />
 
-              <h3 className="text-2xl font-semibold text-[var(--color-secondary)]">
-                {data.missionTitle}
+              <h3 className="text-2xl font-semibold text-primary font-[Montserrat]">
+                {data.missionSection?.title}
               </h3>
 
               <div
-                className="text-[var(--color-third)]"
-                dangerouslySetInnerHTML={{ __html: data.missionDesc }}
+                className="text-third/70 font-[Poppins]"
+                dangerouslySetInnerHTML={{ __html: data.missionSection?.description }}
               />
             </div>
 
             {/* Vision */}
             <div className="space-y-6">
               <img
-                src={data.customVisionImage1 || data.visionTemplate1?.imageUrl}
+                src={getImageUrl(data.visionSection, 0)}
                 className="rounded-2xl w-full h-72 object-cover"
                 alt=""
               />
 
-              <h3 className="text-2xl font-semibold text-[var(--color-secondary)]">
-                {data.visionTitle}
+              <h3 className="text-2xl font-semibold text-primary font-[Montserrat]">
+                {data.visionSection?.title}
               </h3>
 
               <div
-                className="text-[var(--color-third)]"
-                dangerouslySetInnerHTML={{ __html: data.visionDesc }}
+                className="text-third/70 font-[Poppins]"
+                dangerouslySetInnerHTML={{ __html: data.visionSection?.description }}
               />
             </div>
 
@@ -125,29 +136,29 @@ const AboutPremium2Display = ({ data }) => {
       </section>
 
       {/* ================= STATS ================= */}
-      {data.stats && (
-        <section className="py-16 bg-[var(--color-fourth)] text-[var(--color-primary)]">
+      {data.statsSection?.stats && (
+        <section className="py-16 bg-fourth text-primary">
 
           <div className="max-w-7xl mx-auto px-6 space-y-12">
 
             <div className="text-center max-w-2xl mx-auto">
-              <h2 className="text-4xl font-bold">
+              <h2 className="text-4xl font-bold font-[Montserrat]">
                 Our Growth
               </h2>
 
               <div
-                className="text-[var(--color-primary)] opacity-80"
-                dangerouslySetInnerHTML={{ __html: data.aboutUsDescription }}
+                className="text-primary/80 font-[Poppins]"
+                dangerouslySetInnerHTML={{ __html: data.statsSection?.description }}
               />
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {data.stats.map((stat, i) => (
+              {data.statsSection.stats.map((stat, i) => (
                 <div key={i} className="text-center">
-                  <h3 className="text-3xl font-bold">
+                  <h3 className="text-3xl font-bold font-[Montserrat]">
                     {stat.number}
                   </h3>
-                  <p className="opacity-70">{stat.label}</p>
+                  <p className="opacity-70 font-[Poppins]">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -158,43 +169,43 @@ const AboutPremium2Display = ({ data }) => {
       )}
 
       {/* ================= SERVICES ================= */}
-      {data.services && (
+      {data.servicesSection?.services && (
         <section className="py-16">
           <div className="max-w-7xl mx-auto px-6 space-y-12">
 
             <div className="max-w-2xl">
-              <p className="text-sm uppercase text-[var(--color-third)]">
+              <p className="text-sm uppercase text-third font-[Montserrat]">
                 Services
               </p>
 
-              <h2 className="text-4xl font-semibold text-[var(--color-secondary)]">
-                {data.servicesTitle}
+              <h2 className="text-4xl font-semibold text-primary font-[Montserrat]">
+                {data.servicesSection?.title}
               </h2>
 
               <div
-                className="mt-4 text-[var(--color-third)] border-l-2 border-[var(--color-third)] pl-4"
-                dangerouslySetInnerHTML={{ __html: data.servicesDesc }}
+                className="mt-4 text-third/70 border-l-2 border-primary/30 pl-4 font-[Poppins]"
+                dangerouslySetInnerHTML={{ __html: data.servicesSection?.description }}
               />
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              {data.services.map((svc, i) => (
+              {data.servicesSection.services.map((svc, i) => (
                 <div
                   key={i}
-                  className="p-6 border border-[var(--color-third)] rounded-xl hover:shadow-lg transition"
+                  className="p-6 border border-third/10 rounded-xl hover:shadow-lg transition"
                 >
                   {svc.icon && (
                     <div
-                      className="mb-4 text-[var(--color-third)] [&>svg]:w-8 [&>svg]:h-8"
+                      className="mb-4 text-third [&>svg]:w-8 [&>svg]:h-8"
                       dangerouslySetInnerHTML={{ __html: svc.icon }}
                     />
                   )}
 
-                  <h3 className="text-xl font-semibold text-[var(--color-secondary)]">
+                  <h3 className="text-xl font-semibold text-primary font-[Montserrat]">
                     {svc.title}
                   </h3>
 
-                  <p className="text-[var(--color-third)] mt-2">
+                  <p className="text-third/70 mt-2 font-[Poppins]">
                     {svc.desc}
                   </p>
                 </div>

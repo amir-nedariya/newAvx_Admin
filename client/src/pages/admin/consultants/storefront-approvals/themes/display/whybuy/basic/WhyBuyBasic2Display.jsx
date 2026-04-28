@@ -19,36 +19,36 @@ const WhyBuyBasic2Display = ({ data }) => {
       {/* HERO */}
       <section className="flex items-center justify-center min-h-screen text-center px-6">
         <div className="max-w-3xl">
-          <p className="text-sm tracking-[0.4em] uppercase text-[var(--color-third)]">
+          <p className="text-sm tracking-[0.4em] uppercase text-third font-[Poppins]">
             Why Choose Us
           </p>
 
-          <h1 className="text-5xl font-bold text-[var(--color-secondary)] mt-4">
+          <h1 className="text-5xl font-bold  font-[Montserrat] text-secondary mt-4 font-[Montserrat]">
             {data.whyBuyHeroTitle}
           </h1>
 
           <div
-            className="text-[var(--color-third)] mt-6"
+            className="text-third mt-6 font-[Poppins]"
             dangerouslySetInnerHTML={{ __html: data.whyBuyHeroDescription }}
           />
         </div>
       </section>
 
       {/* STORY */}
-      <section className="py-16 bg-[var(--color-fourth)]">
+      <section className="py-16 bg-fourth">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 px-6">
           <div>
-            <p className="uppercase text-[var(--color-third)] text-sm">
+            <p className="uppercase text-third text-sm font-[Poppins]">
               Our Story
             </p>
 
-            <h2 className="text-4xl font-semibold text-[var(--color-secondary)]">
+            <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary font-[Montserrat]">
               {data.storyTitle}
             </h2>
           </div>
 
           <div
-            className="text-[var(--color-primary)]/90"
+            className="text-primary/90"
             dangerouslySetInnerHTML={{ __html: data.storyDescription }}
           />
         </div>
@@ -58,17 +58,17 @@ const WhyBuyBasic2Display = ({ data }) => {
       <section className="py-16">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 px-6">
           <div>
-            <p className="uppercase text-[var(--color-third)] text-sm">
+            <p className="uppercase text-third text-sm font-[Poppins]">
               Selection
             </p>
 
-            <h2 className="text-4xl font-semibold text-[var(--color-secondary)]">
+            <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary font-[Montserrat]">
               Vehicle Selection
             </h2>
           </div>
 
           <div
-            className="text-[var(--color-third)]"
+            className="text-third font-[Poppins]"
             dangerouslySetInnerHTML={{
               __html: data.vehicleSelectionDescription,
             }}
@@ -81,15 +81,15 @@ const WhyBuyBasic2Display = ({ data }) => {
         <div className="max-w-7xl mx-auto px-6 space-y-10">
 
           <div>
-            <p className="uppercase text-[var(--color-third)] text-sm">
+            <p className="uppercase text-third text-sm font-[Poppins]">
               Process
             </p>
 
-            <h2 className="text-4xl font-semibold text-[var(--color-secondary)]">
+            <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary font-[Montserrat]">
               {data.processTitle}
             </h2>
 
-            <p className="text-[var(--color-third)] mt-3">
+            <p className="text-third mt-3 font-[Poppins]">
               {data.processDescription}
             </p>
           </div>
@@ -98,18 +98,18 @@ const WhyBuyBasic2Display = ({ data }) => {
             {data.processSteps?.map((step, i) => (
               <div
                 key={i}
-                className="p-6 border border-[var(--color-third)]/20 rounded-xl"
+                className="p-6 border border-third/20 rounded-xl"
               >
                 <div
-                  className="mb-4 text-[var(--color-fourth)]"
+                  className="mb-4 text-fourth"
                   dangerouslySetInnerHTML={{ __html: step.icon }}
                 />
 
-                <h3 className="text-[var(--color-secondary)] font-semibold">
+                <h3 className="text-secondary font-semibold">
                   {step.title}
                 </h3>
 
-                <p className="text-[var(--color-third)] mt-2">
+                <p className="text-third mt-2 font-[Poppins]">
                   {step.description}
                 </p>
               </div>
@@ -124,15 +124,15 @@ const WhyBuyBasic2Display = ({ data }) => {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 px-6">
 
           <div>
-            <p className="uppercase text-[var(--color-third)] text-sm">
+            <p className="uppercase text-third text-sm font-[Poppins]">
               Inspection
             </p>
 
-            <h2 className="text-4xl font-semibold text-[var(--color-secondary)]">
+            <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary font-[Montserrat]">
               {data.inspectionTitle}
             </h2>
 
-            <p className="text-[var(--color-third)] mt-4">
+            <p className="text-third mt-4 font-[Poppins]">
               {data.inspectionText}
             </p>
           </div>
@@ -141,9 +141,9 @@ const WhyBuyBasic2Display = ({ data }) => {
             {data.inspectionPoints?.map((pt, i) => (
               <div
                 key={i}
-                className="p-4 border border-[var(--color-third)]/20 rounded-lg"
+                className="p-4 border border-third/20 rounded-lg"
               >
-                <p className="text-[var(--color-third)]">{pt}</p>
+                <p className="text-third font-[Poppins]">{pt}</p>
               </div>
             ))}
           </div>
@@ -152,21 +152,21 @@ const WhyBuyBasic2Display = ({ data }) => {
       </section>
 
       {/* COMMITMENT */}
-      <section className="py-16 bg-[var(--color-fourth)]">
+      <section className="py-16 bg-fourth">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 px-6">
 
           <div>
-            <p className="uppercase text-[var(--color-third)] text-sm">
+            <p className="uppercase text-third text-sm font-[Poppins]">
               Commitment
             </p>
 
-            <h2 className="text-4xl font-semibold text-[var(--color-secondary)]">
+            <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary font-[Montserrat]">
               {data.customerCommitmentTitle}
             </h2>
           </div>
 
           <div
-            className="text-[var(--color-primary)]/90"
+            className="text-primary/90"
             dangerouslySetInnerHTML={{
               __html: data.customerCommitmentDescription,
             }}
@@ -179,11 +179,11 @@ const WhyBuyBasic2Display = ({ data }) => {
         <div className="max-w-7xl mx-auto px-6 space-y-10">
 
           <div>
-            <p className="uppercase text-[var(--color-third)] text-sm">
+            <p className="uppercase text-third text-sm font-[Poppins]">
               Reviews
             </p>
 
-            <h2 className="text-4xl font-semibold text-[var(--color-secondary)]">
+            <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary font-[Montserrat]">
               {data.testimonialTitle}
             </h2>
           </div>
@@ -192,7 +192,7 @@ const WhyBuyBasic2Display = ({ data }) => {
             {(data.featuredReviews || []).map((r, i) => (
               <div
                 key={i}
-                className="p-6 border border-[var(--color-third)]/20 rounded-xl"
+                className="p-6 border border-third/20 rounded-xl"
               >
                 {r.rating ? (
                   <div className="flex gap-1 mb-3">
@@ -202,21 +202,21 @@ const WhyBuyBasic2Display = ({ data }) => {
                         size={14}
                         className={
                           idx < r.rating
-                            ? "text-[var(--color-fourth)] fill-[var(--color-fourth)]"
-                            : "text-[var(--color-third)]"
+                            ? "text-fourth fill-fourth"
+                            : "text-third"
                         }
                       />
                     ))}
                   </div>
                 ) : (
-                  <Quote className="text-[var(--color-fourth)] mb-3" />
+                  <Quote className="text-fourth mb-3" />
                 )}
 
-                <p className="text-[var(--color-third)] italic">
+                <p className="text-third italic font-[Poppins]">
                   {r.reviewText}
                 </p>
 
-                <p className="mt-4 text-[var(--color-secondary)] text-sm">
+                <p className="mt-4 text-secondary text-sm">
                   — {r.reviewerName}
                 </p>
               </div>
@@ -231,3 +231,4 @@ const WhyBuyBasic2Display = ({ data }) => {
 };
 
 export default WhyBuyBasic2Display;
+

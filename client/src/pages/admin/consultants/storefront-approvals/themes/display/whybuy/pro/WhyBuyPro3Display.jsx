@@ -3,6 +3,23 @@ import "../../../themeStyles.css";
 
 const INTERVAL = 5000;
 
+// Helper function to extract image URL from images array
+const getImageUrl = (section, index = 0) => {
+  if (!section?.images || !Array.isArray(section.images) || section.images.length === 0) {
+    return null;
+  }
+  const image = section.images[index];
+  return image?.customUrl || image?.templateUrl || null;
+};
+
+// Helper function to get all image URLs from a section
+const getAllImageUrls = (section) => {
+  if (!section?.images || !Array.isArray(section.images)) {
+    return [];
+  }
+  return section.images.map(img => img?.customUrl || img?.templateUrl).filter(Boolean);
+};
+
 const WhyBuyPro3Display = ({ data }) => {
   if (!data) return null;
 
@@ -18,47 +35,12 @@ const WhyBuyPro3Display = ({ data }) => {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [inspectionHover, setInspectionHover] = useState(0);
 
-  const heroImages = [
-    data.whyBuyHeroTemplate1?.imageUrl,
-    data.whyBuyHeroTemplate2?.imageUrl,
-    data.whyBuyHeroTemplate3?.imageUrl,
-    data.whyBuyHeroTemplate4?.imageUrl,
-    data.whyBuyHeroTemplate5?.imageUrl,
-  ].filter(Boolean);
-
-  const storyImages = [
-    data.whyBuyStoryTemplate1?.imageUrl,
-    data.whyBuyStoryTemplate2?.imageUrl,
-    data.whyBuyStoryTemplate3?.imageUrl,
-  ].filter(Boolean);
-
-  const vehicleImages = [
-    data.whyBuyVehicleSelectionTemplate1?.imageUrl,
-    data.whyBuyVehicleSelectionTemplate2?.imageUrl,
-    data.whyBuyVehicleSelectionTemplate3?.imageUrl,
-    data.whyBuyVehicleSelectionTemplate4?.imageUrl,
-  ].filter(Boolean);
-
-  const processImages = [
-    data.whyBuyProcessTemplate1?.imageUrl,
-    data.whyBuyProcessTemplate2?.imageUrl,
-    data.whyBuyProcessTemplate3?.imageUrl,
-    data.whyBuyProcessTemplate4?.imageUrl,
-  ].filter(Boolean);
-
-  const inspectionImages = [
-    data.whyBuyInspectionTemplate1?.imageUrl,
-    data.whyBuyInspectionTemplate2?.imageUrl,
-    data.whyBuyInspectionTemplate3?.imageUrl,
-    data.whyBuyInspectionTemplate4?.imageUrl,
-  ].filter(Boolean);
-
-  const galleryImages = [
-    data.whyBuyGalleryTemplate1?.imageUrl,
-    data.whyBuyGalleryTemplate2?.imageUrl,
-    data.whyBuyGalleryTemplate3?.imageUrl,
-    data.whyBuyGalleryTemplate4?.imageUrl,
-  ].filter(Boolean);
+  const heroImages = getAllImageUrls(data.whyBuyHeroSection);
+  const storyImages = getAllImageUrls(data.storySection);
+  const vehicleImages = getAllImageUrls(data.vehicleSelectionSection);
+  const processImages = getAllImageUrls(data.processSection);
+  const inspectionImages = getAllImageUrls(data.inspectionSection);
+  const galleryImages = getAllImageUrls(data.gallerySection);
 
   // Hero auto slider
   useEffect(() => {
@@ -69,7 +51,7 @@ const WhyBuyPro3Display = ({ data }) => {
     return () => clearInterval(id);
   }, [heroImages.length]);
 
-  const testimonial = data.featuredReviews?.[activeTestimonial] || {};
+  const testimonial = data.testimonialSection?.featuredReviews?.[activeTestimonial] || {};
 
   return (
     <div className="space-y-20">
@@ -85,13 +67,13 @@ const WhyBuyPro3Display = ({ data }) => {
         <div className="absolute inset-0 bg-black/60" />
 
         <div className="relative z-10 max-w-3xl">
-          <h1 className="text-5xl text-white font-bold mb-4">
-            {data.whyBuyHeroTitle}
+          <h1 className="text-5xl text-white font-bold mb-4 font-[Montserrat]">
+            {data.whyBuyHeroSection?.title}
           </h1>
 
           <div
             className="text-white/80"
-            dangerouslySetInnerHTML={{ __html: data.whyBuyHeroDescription }}
+            dangerouslySetInnerHTML={{ __html: data.whyBuyHeroSection?.description }}
           />
         </div>
 
@@ -101,14 +83,14 @@ const WhyBuyPro3Display = ({ data }) => {
       <section className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 px-6">
 
         <div>
-          <h2 className="text-4xl text-[var(--color-secondary)]">
-            {data.whyBuyStoryTitle}
+          <h2 className="text-4xl text-secondary">
+            {data.storySection?.title}
           </h2>
 
           <div
-            className="mt-4 text-[var(--color-third)]"
+            className="mt-4 text-third font-[Poppins]"
             dangerouslySetInnerHTML={{
-              __html: data.whyBuyStoryDescription,
+              __html: data.storySection?.description,
             }}
           />
         </div>
@@ -124,14 +106,14 @@ const WhyBuyPro3Display = ({ data }) => {
       {/* VEHICLE */}
       <section className="max-w-7xl mx-auto px-6">
 
-        <h2 className="text-4xl text-[var(--color-secondary)] mb-4">
-          {data.whyBuyVehicleSelectionTitle}
+        <h2 className="text-4xl text-secondary mb-4">
+          {data.vehicleSelectionSection?.title}
         </h2>
 
         <div
-          className="text-[var(--color-third)] mb-6"
+          className="text-third mb-6 font-[Poppins]"
           dangerouslySetInnerHTML={{
-            __html: data.whyBuyVehicleSelectionDescription,
+            __html: data.vehicleSelectionSection?.description,
           }}
         />
 
@@ -146,8 +128,8 @@ const WhyBuyPro3Display = ({ data }) => {
       {/* PROCESS */}
       <section className="max-w-7xl mx-auto px-6">
 
-        <h2 className="text-4xl text-[var(--color-secondary)] mb-6">
-          {data.whyBuyProcessTitle}
+        <h2 className="text-4xl text-secondary mb-6">
+          {data.processSection?.title}
         </h2>
 
         <div className="grid md:grid-cols-4 gap-6">
@@ -160,12 +142,12 @@ const WhyBuyPro3Display = ({ data }) => {
                 className="h-32 w-full object-cover rounded-xl mb-3"
               />
 
-              <h3 className="font-semibold text-[var(--color-secondary)]">
+              <h3 className="font-semibold  font-[Montserrat] text-secondary">
                 {step.title}
               </h3>
 
               <div
-                className="text-sm text-[var(--color-third)]"
+                className="text-sm text-third font-[Poppins]"
                 dangerouslySetInnerHTML={{ __html: step.description }}
               />
 
@@ -180,25 +162,25 @@ const WhyBuyPro3Display = ({ data }) => {
       <section className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-10">
 
         <div>
-          <h2 className="text-4xl text-[var(--color-secondary)]">
-            {data.whyBuyInspectionTitle}
+          <h2 className="text-4xl text-secondary">
+            {data.inspectionSection?.title}
           </h2>
 
           <div
-            className="mt-4 text-[var(--color-third)]"
+            className="mt-4 text-third font-[Poppins]"
             dangerouslySetInnerHTML={{
-              __html: data.whyBuyInspectionDescription,
+              __html: data.inspectionSection?.description,
             }}
           />
 
           <div className="mt-6 space-y-3">
-            {data.inspectionPoints?.map((pt, i) => (
+            {data.inspectionSection?.inspectionPoints?.map((pt, i) => (
               <div
                 key={i}
                 onMouseEnter={() => setInspectionHover(i)}
                 className={`p-3 rounded cursor-pointer ${i === inspectionHover
-                    ? "bg-[var(--color-fourth)]/20"
-                    : ""
+                  ? "bg-fourth/20"
+                  : ""
                   }`}
               >
                 {pt}
@@ -217,14 +199,14 @@ const WhyBuyPro3Display = ({ data }) => {
       {/* COMMITMENT */}
       <section className="text-center px-6 max-w-4xl mx-auto">
 
-        <h2 className="text-4xl text-[var(--color-secondary)]">
-          {data.whyBuyCustomerCommitmentTitle}
+        <h2 className="text-4xl text-secondary">
+          {data.customerCommitmentSection?.title}
         </h2>
 
         <div
-          className="mt-4 text-[var(--color-third)]"
+          className="mt-4 text-third font-[Poppins]"
           dangerouslySetInnerHTML={{
-            __html: data.whyBuyCustomerCommitmentDescription,
+            __html: data.customerCommitmentSection?.description,
           }}
         />
 
@@ -233,8 +215,8 @@ const WhyBuyPro3Display = ({ data }) => {
       {/* GALLERY */}
       <section className="max-w-7xl mx-auto px-6">
 
-        <h2 className="text-4xl text-[var(--color-secondary)] mb-6">
-          {data.whyBuyGalleryTitle}
+        <h2 className="text-4xl text-secondary mb-6">
+          {data.gallerySection?.title}
         </h2>
 
         <div className="grid md:grid-cols-3 gap-4">
@@ -248,33 +230,33 @@ const WhyBuyPro3Display = ({ data }) => {
       {/* TESTIMONIAL */}
       <section className="text-center max-w-4xl mx-auto px-6">
 
-        <h2 className="text-4xl text-[var(--color-secondary)] mb-6">
-          {data.whyBuyTestimonialTitle}
+        <h2 className="text-4xl text-secondary mb-6">
+          {data.testimonialSection?.title}
         </h2>
 
         <div className="border p-8 rounded-xl">
 
           <div
-            className="italic text-lg text-[var(--color-third)]"
+            className="italic text-lg text-third font-[Poppins]"
             dangerouslySetInnerHTML={{
               __html: testimonial.reviewText || testimonial.review,
             }}
           />
 
-          <p className="mt-4 font-semibold text-[var(--color-secondary)]">
+          <p className="mt-4 font-semibold  font-[Montserrat] text-secondary">
             {testimonial.reviewerName || testimonial.name}
           </p>
 
         </div>
 
         <div className="flex justify-center gap-3 mt-4">
-          {data.featuredReviews?.map((_, i) => (
+          {data.testimonialSection?.featuredReviews?.map((_, i) => (
             <button
               key={i}
               onClick={() => setActiveTestimonial(i)}
               className={`w-3 h-3 rounded-full ${i === activeTestimonial
-                  ? "bg-[var(--color-primary)]"
-                  : "bg-gray-300"
+                ? "bg-primary"
+                : "bg-gray-300"
                 }`}
             />
           ))}
@@ -287,3 +269,4 @@ const WhyBuyPro3Display = ({ data }) => {
 };
 
 export default WhyBuyPro3Display;
+

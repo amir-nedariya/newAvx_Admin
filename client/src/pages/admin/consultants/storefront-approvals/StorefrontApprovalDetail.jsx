@@ -206,7 +206,17 @@ const StorefrontApprovalDetail = () => {
    // Map themeId to theme type for ThemeRegistry
    // Backend sends themeId like: "about_pro_3", "ABOUT_BASIC_1", "whybuy_premium_2", etc.
    const aboutThemeId = storefrontDraft.theme?.themeId || "about_basic_1";
-   const whyBuyThemeId = storefrontDraft.whyBuyTheme?.themeId || "whybuy_basic_1";
+
+   // If whyBuyTheme exists, use it; otherwise derive from aboutThemeId
+   // e.g., "about_premium_1" -> "whybuy_premium_1"
+   let whyBuyThemeId = storefrontDraft.whyBuyTheme?.themeId;
+   if (!whyBuyThemeId && aboutThemeId) {
+      // Derive Why Buy theme from About theme
+      whyBuyThemeId = aboutThemeId.replace(/^about_/, "whybuy_");
+   }
+   if (!whyBuyThemeId) {
+      whyBuyThemeId = "whybuy_basic_1";
+   }
 
    // Convert themeId format to theme type format
    // e.g., "about_pro_3" -> "about_us_theme_pro_3"
@@ -239,11 +249,19 @@ const StorefrontApprovalDetail = () => {
       aboutThemeType,
       whyBuyThemeType,
       themeData: storefrontDraft.theme,
-      whyBuyThemeData: storefrontDraft.whyBuyTheme
+      whyBuyThemeData: storefrontDraft.whyBuyTheme,
+      derivedFromAbout: !storefrontDraft.whyBuyTheme
    });
 
    // Map backend data to theme format
    const mappedData = mapStorefrontData(storefrontDraft);
+
+   console.log("Mapped Data Debug:", {
+      aboutUs: mappedData.aboutUs,
+      whyBuy: mappedData.whyBuy,
+      hasWhyBuyHeroSection: !!mappedData.whyBuy?.whyBuyHeroSection,
+      hasStorySection: !!mappedData.whyBuy?.storySection,
+   });
 
    // Get theme components
    const AboutThemeComponent = getThemeComponent(aboutThemeType);

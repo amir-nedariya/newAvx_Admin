@@ -14,104 +14,44 @@ export const mapStorefrontData = (storefrontDraft) => {
 
 /**
  * Maps "About Us" section data from nested structure
+ * Returns sections as-is to match theme component expectations
  */
 const mapAboutUsData = (draft) => {
   return {
-    // Hero Section
-    heroTitle: draft.heroSection?.title || null,
-    heroDescription: draft.heroSection?.description || null,
-    heroImages: extractImagesFromSection(draft.heroSection?.images),
-
-    // Mission
-    missionTitle: draft.missionSection?.title || null,
-    missionDescription: draft.missionSection?.description || null,
-    missionImages: extractImagesFromSection(draft.missionSection?.images),
-
-    // Vision
-    visionTitle: draft.visionSection?.title || null,
-    visionDescription: draft.visionSection?.description || null,
-    visionImages: extractImagesFromSection(draft.visionSection?.images),
-
-    // Stats
-    aboutUsDescription: draft.aboutUsSection?.description || null,
-    stats: draft.aboutUsSection?.stats || [],
-
-    // Services
-    serviceTitle: draft.servicesSection?.title || null,
-    serviceDescription: draft.servicesSection?.description || null,
-    services: draft.servicesSection?.services || [],
-
-    // Gallery
-    galleryTitle: draft.gallerySection?.title || null,
-    galleryDescription: draft.gallerySection?.description || null,
-    galleryImages: extractImagesFromSection(draft.gallerySection?.images),
-
-    // Testimonials
-    testimonialTitle: draft.testimonialSection?.title || null,
-    testimonialDescription: draft.testimonialSection?.description || null,
-    testimonials: mapTestimonials(draft.featuredReviews),
+    // Pass through sections with their nested structure
+    heroSection: draft.heroSection || null,
+    missionSection: draft.missionSection || null,
+    visionSection: draft.visionSection || null,
+    aboutUsSection: draft.aboutUsSection || null,
+    statsSection: draft.aboutUsSection || null, // Stats are in aboutUsSection
+    servicesSection: draft.servicesSection || null,
+    gallerySection: draft.gallerySection || null,
+    testimonialSection: {
+      ...draft.testimonialSection,
+      featuredReviews: mapTestimonials(draft.featuredReviews),
+    },
   };
 };
 
 /**
  * Maps "Why Buy Here" section data from nested structure
+ * Returns sections as-is to match theme component expectations
  */
 const mapWhyBuyData = (draft) => {
   return {
-    // Hero
-    whyBuyHeroTitle: draft.whyBuyHeroSection?.title || null,
-    whyBuyHeroDescription: draft.whyBuyHeroSection?.description || null,
-    whyBuyHeroImages: extractImagesFromSection(draft.whyBuyHeroSection?.images),
-
-    // Story
-    storyTitle: draft.storySection?.title || null,
-    storyDescription: draft.storySection?.description || null,
-    storyImages: extractImagesFromSection(draft.storySection?.images),
-
-    // Vehicle Selection
-    vehicleSelectionTitle: draft.vehicleSelectionSection?.title || null,
-    vehicleSelectionDescription:
-      draft.vehicleSelectionSection?.description || null,
-    vehicleSelectionImages: extractImagesFromSection(
-      draft.vehicleSelectionSection?.images,
-    ),
-
-    // Process
-    processTitle: draft.processSection?.title || null,
-    processDescription: draft.processSection?.description || null,
-    processes: draft.processSection?.processes || [],
-
-    // Inspection
-    inspectionTitle: draft.inspectionSection?.title || null,
-    inspectionDescription: draft.inspectionSection?.description || null,
-    inspectionPoints: draft.inspectionSection?.inspectionPoints || [],
-    inspectionImages: extractImagesFromSection(draft.inspectionSection?.images),
-
-    // Customer Commitment
-    customerCommitmentTitle: draft.customerCommitmentSection?.title || null,
-    customerCommitmentDescription:
-      draft.customerCommitmentSection?.description || null,
-    customerCommitmentImages: extractImagesFromSection(
-      draft.customerCommitmentSection?.images,
-    ),
-
-    // Testimonials
-    testimonialTitle: draft.testimonialSection?.title || null,
-    testimonialDescription: draft.testimonialSection?.description || null,
-    testimonials: mapTestimonials(draft.featuredReviews),
+    // Pass through sections with their nested structure
+    whyBuyHeroSection: draft.whyBuyHeroSection || null,
+    storySection: draft.storySection || null,
+    vehicleSelectionSection: draft.vehicleSelectionSection || null,
+    processSection: draft.processSection || null,
+    inspectionSection: draft.inspectionSection || null,
+    customerCommitmentSection: draft.customerCommitmentSection || null,
+    gallerySection: draft.gallerySection || null,
+    testimonialSection: {
+      ...draft.testimonialSection,
+      featuredReviews: mapTestimonials(draft.featuredReviews),
+    },
   };
-};
-
-/**
- * Extract image URLs from section images array
- * Backend format: [{ templateId, templateUrl, customUrl }]
- */
-const extractImagesFromSection = (images) => {
-  if (!Array.isArray(images)) return [];
-
-  return images
-    .map((img) => img?.customUrl || img?.templateUrl)
-    .filter((url) => url && url.trim() !== "");
 };
 
 /**
