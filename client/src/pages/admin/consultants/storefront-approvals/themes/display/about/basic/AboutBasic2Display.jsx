@@ -41,13 +41,6 @@ function AboutBasic2Display({ data }) {
                                 Mission & <span className="text-primary">Vision</span>
                             </h2>
                         </div>
-
-                        <div>
-                            <Divider />
-                            <p className="text-third/70 text-[15px] leading-[1.9] font-[Poppins]">
-                                The principles behind everything we build and every decision we make.
-                            </p>
-                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

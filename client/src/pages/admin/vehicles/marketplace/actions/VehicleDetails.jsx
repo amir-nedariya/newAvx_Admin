@@ -28,6 +28,7 @@ import {
   Eye,
   XCircle,
   MoreHorizontal,
+  Pill,
 } from "lucide-react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -124,6 +125,16 @@ const riskBadge = (risk) => {
   if (risk === "High") return "bg-red-50 text-red-700 ring-red-100";
   if (risk === "Moderate") return "bg-yellow-50 text-yellow-800 ring-yellow-100";
   return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+};
+
+const verificationBadge = (status) => {
+  const map = {
+    VERIFIED: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    REJECTED: "bg-rose-50 text-rose-700 ring-rose-100",
+    REQUEST_CHANGES: "bg-amber-50 text-amber-700 ring-amber-100",
+    REQUESTED: "bg-sky-50 text-sky-700 ring-sky-100",
+  };
+  return map[status] || "bg-slate-50 text-slate-700 ring-slate-100";
 };
 
 const mapVehicleDetails = (data) => {
@@ -529,6 +540,11 @@ const VehicleDetails = () => {
                       >
                         <Sparkles className="h-3 w-3" />
                         {vehicle.boost ? "Boost Active" : "No Boost"}
+                      </span>
+
+                      <span className={cls("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1", verificationBadge(vehicle.verificationStatus))}>
+                        <CheckCircle2 className="h-3 w-3" />
+                        Verification: {vehicle.verificationStatus === "VERIFIED" ? "Verified" : formatEnumLabel(vehicle.verificationStatus)}
                       </span>
 
                       <span className={cls("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1", inspectionBadge(vehicle.inspectionStatus))}>

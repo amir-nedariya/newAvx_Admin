@@ -1157,6 +1157,8 @@ const ConsultantProfile = () => {
 
     const name = d?.consultationName || d?.consultName || d?.ownerName || "Consultant";
     const username = d?.username || "—";
+    const firstName = d?.firstName || "—";
+    const lastName = d?.lastName || "—";
     const adminRemark = d?.adminRemark || "-";
 
     const city = addressInfo?.cityName || "—";
@@ -1213,6 +1215,8 @@ const ConsultantProfile = () => {
       userId: d?.userId || null,
       name,
       username,
+      firstName,
+      lastName,
       ownerName: d?.ownerName || "—",
       adminRemark,
 
@@ -2266,6 +2270,8 @@ const ConsultantProfile = () => {
                   <InfoItem label="Business Name" value={profile.name} />
                   <InfoItem label="Owner Name" value={profile.ownerName} />
                   <InfoItem label="Username" value={profile.username} />
+                  <InfoItem label="FirstName" value={profile.firstName} />
+                  <InfoItem label="LastName" value={profile.lastName} />
                   <InfoItem label="Establishment Year" value={profile.establishmentYear} />
                   <InfoItem label="Contact Number" value={profile.phone} />
                   <InfoItem label="Email" value={profile.email} />

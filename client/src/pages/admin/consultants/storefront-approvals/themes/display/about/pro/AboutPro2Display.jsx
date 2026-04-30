@@ -90,12 +90,6 @@ function AboutPro2Display({ data }) {
                                 Mission & <span className="text-fourth/80">Vision</span>
                             </h2>
                         </div>
-                        <div>
-                            <Divider />
-                            <p className="text-third/70 text-[15px] leading-[1.9] font-[Poppins]">
-                                The principles behind everything we build and every decision we make.
-                            </p>
-                        </div>
                     </div>
 
                     <div className="flex flex-col gap-5">
@@ -129,8 +123,7 @@ function AboutPro2Display({ data }) {
 
                                     <div className="flex flex-col justify-center gap-5 p-8 lg:p-10">
                                         <h3 className="text-2xl sm:text-3xl font-semibold font-[Montserrat] leading-[1.1]">
-                                            <span className="text-primary">{item.prefix} </span>
-                                            <span className="text-fourth">{item.keyword}</span>
+                                            <span className="text-primary">{item.title} </span>
                                         </h3>
                                         <div className="w-8 h-0.5 bg-fourth/50" />
                                         <p className="text-third/65 text-[14px] leading-[1.95] font-[Poppins]">
