@@ -302,7 +302,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
 
             <div className={cls("flex-col transition-all duration-300", collapsed ? "opacity-0 w-0 hidden" : "opacity-100 w-auto flex")}>
               <span className="text-base font-bold text-slate-900 leading-none tracking-tight whitespace-nowrap">
-                AVX Admin
+                Reecomm Admin
               </span>
               <span className="text-xs text-sky-600 font-semibold mt-1 tracking-wide whitespace-nowrap">Control Panel</span>
             </div>
@@ -447,6 +447,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             openMenu={openMenu}
             setOpenMenu={setOpenMenu}
           >
+            <SubItem to="/admin/inspections/inspector" label="Inspector" />
             <SubItem to="/admin/inspections/requests" label="Inspection Requests" />
             <SubItem to="/admin/inspections/assign" label="Assign Inspector" />
             <SubItem to="/admin/inspections/reports-review" label="Reports Review" />

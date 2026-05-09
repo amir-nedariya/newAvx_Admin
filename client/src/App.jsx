@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, BrowserRouter } from "react-router-dom";
 import AdminLayout from "./components/layouts/AdminLayout";
 
 // Dashboard
@@ -120,6 +120,7 @@ import Consultants from "./pages/admin/subscriptions/Consultants";
 
 // Leads
 import Leads from "./pages/admin/Leads";
+import Inspector from "./pages/admin/inspections/Inspector";
 
 const App = () => {
   return (
@@ -197,6 +198,7 @@ const App = () => {
         <Route path="inspections/assign" element={<AssignInspector />} />
         <Route path="inspections/reports-review" element={<ReportsReview />} />
         <Route path="inspections/disputes" element={<Disputes />} />
+        <Route path="inspections/inspector" element={<Inspector />} />
 
 
         {/* Operations */}
