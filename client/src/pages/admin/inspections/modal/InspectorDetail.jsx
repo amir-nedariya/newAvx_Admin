@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     ArrowLeft,
     User,
@@ -14,7 +14,12 @@ import {
     XCircle,
     Pencil,
     Trash2,
+    Loader2,
+    Mail,
+    Phone,
+    MapPin,
 } from "lucide-react";
+import { getInspectorById } from "../../../../api/inspector.api";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -42,6 +47,12 @@ const statusBadge = (status) => {
     return map[s] || "bg-slate-50 text-slate-700 border-slate-200";
 };
 
+const formatInspectorType = (type) => {
+    if (!type) return "—";
+    const map = { TWO_WHEELER: "2 Wheeler", FOUR_WHEELER: "4 Wheeler", BOTH: "Both" };
+    return map[type] || type;
+};
+
 /* ── Image Preview Modal ─────────────────────────────────── */
 function ImagePreviewModal({ imageUrl, title, onClose }) {
     if (!imageUrl) return null;
@@ -51,19 +62,12 @@ function ImagePreviewModal({ imageUrl, title, onClose }) {
             <div className="fixed left-1/2 top-1/2 z-[121] w-[95%] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                 <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                     <h3 className="text-base font-bold text-slate-900">{title}</h3>
-                    <button
-                        onClick={onClose}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                    >
+                    <button onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors">
                         <X size={16} />
                     </button>
                 </div>
                 <div className="flex min-h-[280px] max-h-[75vh] items-center justify-center bg-slate-100 p-4">
-                    <img
-                        src={imageUrl}
-                        alt={title}
-                        className="max-h-[70vh] w-auto max-w-full rounded-xl border border-slate-200 bg-white object-contain shadow-sm"
-                    />
+                    <img src={imageUrl} alt={title} className="max-h-[70vh] w-auto max-w-full rounded-xl border border-slate-200 bg-white object-contain shadow-sm" />
                 </div>
             </div>
         </>
@@ -90,7 +94,7 @@ function InfoRow({ label, value, mono = false }) {
     return (
         <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-100 last:border-0">
             <span className="text-[12px] font-semibold uppercase tracking-wide text-slate-400 shrink-0 pt-0.5">{label}</span>
-            <span className={cls("text-[13px] font-semibold text-slate-900 text-right", mono && "font-mono")}>{safe(value)}</span>
+            <span className={cls("text-[13px] font-semibold text-slate-900 text-right break-all", mono && "font-mono")}>{safe(value)}</span>
         </div>
     );
 }
@@ -101,10 +105,7 @@ function DocPhotoCard({ label, imageUrl, onPreview }) {
         <div className="flex flex-col gap-2">
             <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
             {imageUrl ? (
-                <div
-                    className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 cursor-pointer"
-                    onClick={() => onPreview(imageUrl, label)}
-                >
+                <div className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 cursor-pointer" onClick={() => onPreview(imageUrl, label)}>
                     <img src={imageUrl} alt={label} className="h-28 w-full object-cover" />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <div className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-800 shadow">
@@ -149,7 +150,10 @@ function EmptyTabState({ icon, title, subtitle, color = "slate" }) {
 }
 
 /* ── MAIN COMPONENT ──────────────────────────────────────── */
-const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
+const InspectorDetail = ({ inspector: inspectorProp, onBack, onEdit, onDelete }) => {
+    const [inspector, setInspector] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     const [preview, setPreview] = useState({ open: false, url: "", title: "" });
     const [activeTab, setActiveTab] = useState("overview");
 
@@ -169,10 +173,56 @@ const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
         rejected: { active: "bg-rose-100 text-rose-800 border-rose-300", inactive: "bg-white text-slate-600 border-slate-200 hover:border-rose-200 hover:bg-rose-50" },
     };
 
-    if (!inspector) return null;
+    // Fetch full inspector details by ID
+    useEffect(() => {
+        if (!inspectorProp?.id) return;
+        setLoading(true);
+        setError("");
+        getInspectorById(inspectorProp.id)
+            .then((res) => {
+                setInspector(res?.data || res);
+            })
+            .catch((err) => {
+                console.error("Failed to fetch inspector details:", err);
+                setError(err?.response?.data?.message || "Failed to load inspector details");
+                // Fallback to prop data
+                setInspector(inspectorProp);
+            })
+            .finally(() => setLoading(false));
+    }, [inspectorProp?.id]);
 
     const openPreview = (url, title) => setPreview({ open: true, url, title });
     const closePreview = () => setPreview({ open: false, url: "", title: "" });
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+                <div className="flex-shrink-0 border-b border-slate-200 bg-white px-6 py-4">
+                    <div className="flex items-center gap-4">
+                        <button onClick={onBack} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm">
+                            <ArrowLeft size={18} />
+                        </button>
+                        <div>
+                            <h1 className="text-xl font-bold tracking-tight text-slate-900">Inspector Details</h1>
+                            <p className="text-[13px] text-slate-500">View complete inspector profile</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="h-12 w-12 text-sky-600 animate-spin" />
+                        <p className="text-[14px] font-semibold text-slate-600">Loading inspector details...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!inspector) return null;
+
+    // Derived display values from InspectorResponse
+    const fullName = [inspector.firstname, inspector.lastname].filter(Boolean).join(" ") || "—";
 
     return (
         <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
@@ -181,10 +231,7 @@ const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
             <div className="flex-shrink-0 border-b border-slate-200 bg-white px-6 py-4">
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={onBack}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
-                        >
+                        <button onClick={onBack} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm">
                             <ArrowLeft size={18} />
                         </button>
                         <div>
@@ -192,20 +239,12 @@ const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
                             <p className="text-[13px] text-slate-500">View complete inspector profile</p>
                         </div>
                     </div>
-
-                    {/* Action Buttons */}
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => onEdit?.(inspector)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
-                        >
+                        <button onClick={() => onEdit?.(inspector)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-all active:scale-95 shadow-sm">
                             <Pencil className="h-3.5 w-3.5" />
                             Edit
                         </button>
-                        <button
-                            onClick={() => onDelete?.(inspector)}
-                            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-rose-700 transition-all active:scale-95 shadow-sm shadow-rose-600/20"
-                        >
+                        <button onClick={() => onDelete?.(inspector)} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-rose-700 transition-all active:scale-95 shadow-sm shadow-rose-600/20">
                             <Trash2 className="h-3.5 w-3.5" />
                             Delete
                         </button>
@@ -223,16 +262,14 @@ const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
                             {/* Avatar */}
                             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-sky-100 to-blue-200 border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
                                 <span className="text-3xl font-extrabold text-sky-700">
-                                    {inspector.inspectorUsername?.charAt(0)?.toUpperCase() || "?"}
+                                    {inspector.firstname?.charAt(0)?.toUpperCase() || inspector.inspectorUsername?.charAt(0)?.toUpperCase() || "?"}
                                 </span>
                             </div>
 
                             {/* Info */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-3 mb-1">
-                                    <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                                        {safe(inspector.fullName || inspector.inspectorUsername)}
-                                    </h2>
+                                    <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{fullName}</h2>
                                     <span className={cls("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold", statusBadge(inspector.status))}>
                                         <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
                                         {inspector.status || "—"}
@@ -240,7 +277,7 @@ const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
                                 </div>
                                 <p className="text-[13px] text-slate-500 font-medium mb-4">@{safe(inspector.inspectorUsername)}</p>
 
-                                {/* Quick stats row */}
+                                {/* Quick stats */}
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
                                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Role</p>
@@ -248,11 +285,11 @@ const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
                                     </div>
                                     <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
                                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vehicle Type</p>
-                                        <p className="mt-1 text-[13px] font-bold text-slate-900">{safe(inspector.vehicleType)}</p>
+                                        <p className="mt-1 text-[13px] font-bold text-slate-900">{formatInspectorType(inspector.inspectorType)}</p>
                                     </div>
                                     <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
                                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">City</p>
-                                        <p className="mt-1 text-[13px] font-bold text-slate-900">{safe(inspector.city)}</p>
+                                        <p className="mt-1 text-[13px] font-bold text-slate-900">{safe(inspector.cityName)}</p>
                                     </div>
                                     <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
                                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Age</p>
@@ -271,9 +308,7 @@ const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
                                 onClick={() => setActiveTab(tab.key)}
                                 className={cls(
                                     "inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-semibold transition-all active:scale-95 shadow-sm",
-                                    activeTab === tab.key
-                                        ? TAB_COLORS[tab.key].active
-                                        : TAB_COLORS[tab.key].inactive
+                                    activeTab === tab.key ? TAB_COLORS[tab.key].active : TAB_COLORS[tab.key].inactive
                                 )}
                             >
                                 {tab.icon}
@@ -285,17 +320,17 @@ const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
                     {/* ── OVERVIEW TAB ── */}
                     {activeTab === "overview" && (
                         <>
-                            {/* ── TWO COLUMN GRID ── */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                                 {/* Personal Information */}
                                 <SectionCard icon={<User size={15} />} title="Personal Information">
-                                    <InfoRow label="Full Name" value={inspector.fullName} />
+                                    <InfoRow label="Full Name" value={fullName} />
                                     <InfoRow label="Username" value={inspector.inspectorUsername} />
-                                    <InfoRow label="Phone" value={inspector.phone} />
-                                    <InfoRow label="City" value={inspector.city} />
+                                    <InfoRow label="Email" value={inspector.email} />
+                                    <InfoRow label="Contact" value={inspector.contactNumber} />
                                     <InfoRow label="Age" value={inspector.age} />
-                                    <InfoRow label="Vehicle Type" value={inspector.vehicleType} />
+                                    <InfoRow label="UPI ID" value={inspector.upiId} />
+                                    <InfoRow label="Vehicle Type" value={formatInspectorType(inspector.inspectorType)} />
                                 </SectionCard>
 
                                 {/* Account Information */}
@@ -308,97 +343,56 @@ const InspectorDetail = ({ inspector, onBack, onEdit, onDelete }) => {
                                 </SectionCard>
                             </div>
 
-                            {/* ── AADHAR CARD ── */}
+                            {/* Address */}
+                            <SectionCard icon={<MapPin size={15} />} title="Address">
+                                <InfoRow label="Address" value={inspector.address} />
+                                <InfoRow label="City" value={inspector.cityName} />
+                                <InfoRow label="State" value={inspector.stateName} />
+                                <InfoRow label="Country" value={inspector.countryName} />
+                            </SectionCard>
+
+                            {/* Aadhar Card */}
                             <SectionCard icon={<CreditCard size={15} />} title="Aadhar Card">
                                 <div className="mb-4">
-                                    <InfoRow label="Aadhar Number" value={inspector.aadharNumber} mono />
+                                    <InfoRow label="Aadhar Number" value={inspector.aadharCardNumber} mono />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <DocPhotoCard
-                                        label="Front Photo"
-                                        imageUrl={inspector.aadharFront}
-                                        onPreview={openPreview}
-                                    />
-                                    <DocPhotoCard
-                                        label="Back Photo"
-                                        imageUrl={inspector.aadharBack}
-                                        onPreview={openPreview}
-                                    />
+                                    <DocPhotoCard label="Front Photo" imageUrl={inspector.aadharCardFrontUrl} onPreview={openPreview} />
+                                    <DocPhotoCard label="Back Photo" imageUrl={inspector.aadharCardBackUrl} onPreview={openPreview} />
                                 </div>
                             </SectionCard>
 
-                            {/* ── DRIVING LICENSE ── */}
+                            {/* Driving License */}
                             <SectionCard icon={<Car size={15} />} title="Driving License">
                                 <div className="mb-4">
-                                    <InfoRow label="DL Number" value={inspector.dlNumber} mono />
+                                    <InfoRow label="DL Number" value={inspector.drivingLicenseNumber} mono />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <DocPhotoCard
-                                        label="Front Photo"
-                                        imageUrl={inspector.dlFront}
-                                        onPreview={openPreview}
-                                    />
-                                    <DocPhotoCard
-                                        label="Back Photo"
-                                        imageUrl={inspector.dlBack}
-                                        onPreview={openPreview}
-                                    />
+                                    <DocPhotoCard label="Front Photo" imageUrl={inspector.drivingLicenseFrontUrl} onPreview={openPreview} />
+                                    <DocPhotoCard label="Back Photo" imageUrl={inspector.drivingLicenseBackUrl} onPreview={openPreview} />
                                 </div>
                             </SectionCard>
-
-                        </> /* end overview */
+                        </>
                     )}
 
-                    {/* ── PENDING TAB ── */}
                     {activeTab === "pending" && (
-                        <EmptyTabState
-                            icon={<Clock3 className="h-8 w-8" />}
-                            title="No Pending Inspections"
-                            subtitle="There are no pending inspections assigned to this inspector."
-                            color="amber"
-                        />
+                        <EmptyTabState icon={<Clock3 className="h-8 w-8" />} title="No Pending Inspections" subtitle="There are no pending inspections assigned to this inspector." color="amber" />
                     )}
-
-                    {/* ── IN PROGRESS TAB ── */}
                     {activeTab === "in_progress" && (
-                        <EmptyTabState
-                            icon={<RefreshCw className="h-8 w-8" />}
-                            title="No In-Progress Inspections"
-                            subtitle="This inspector has no inspections currently in progress."
-                            color="sky"
-                        />
+                        <EmptyTabState icon={<RefreshCw className="h-8 w-8" />} title="No In-Progress Inspections" subtitle="This inspector has no inspections currently in progress." color="sky" />
                     )}
-
-                    {/* ── COMPLETED TAB ── */}
                     {activeTab === "completed" && (
-                        <EmptyTabState
-                            icon={<CheckCircle2 className="h-8 w-8" />}
-                            title="No Completed Inspections"
-                            subtitle="This inspector hasn't completed any inspections yet."
-                            color="emerald"
-                        />
+                        <EmptyTabState icon={<CheckCircle2 className="h-8 w-8" />} title="No Completed Inspections" subtitle="This inspector hasn't completed any inspections yet." color="emerald" />
                     )}
-
-                    {/* ── REJECTED TAB ── */}
                     {activeTab === "rejected" && (
-                        <EmptyTabState
-                            icon={<XCircle className="h-8 w-8" />}
-                            title="No Rejected Inspections"
-                            subtitle="This inspector has no rejected inspections on record."
-                            color="rose"
-                        />
+                        <EmptyTabState icon={<XCircle className="h-8 w-8" />} title="No Rejected Inspections" subtitle="This inspector has no rejected inspections on record." color="rose" />
                     )}
 
                 </div>
             </div>
 
-            {/* ── IMAGE PREVIEW MODAL ── */}
             {preview.open && (
-                <ImagePreviewModal
-                    imageUrl={preview.url}
-                    title={preview.title}
-                    onClose={closePreview}
-                />
+                <ImagePreviewModal imageUrl={preview.url} title={preview.title} onClose={closePreview} />
             )}
         </div>
     );

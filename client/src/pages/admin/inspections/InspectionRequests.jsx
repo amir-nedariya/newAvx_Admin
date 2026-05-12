@@ -11,207 +11,19 @@ import {
   BadgeDollarSign,
   AlertTriangle,
   NotebookPen,
-  ShieldAlert,
-  Car,
-  User,
   Clock3,
   CheckCircle2,
-  CalendarDays,
   FileText,
+  Loader2,
 } from "lucide-react";
+import toast from "react-hot-toast";
+import { getAllVehicleInspections } from "../../../api/vehicleInspection.api";
+
 const cls = (...a) => a.filter(Boolean).join(" ");
 
 /* =========================================================
-   DUMMY DATA
+   CONSTANTS
 ========================================================= */
-const DUMMY_REQUESTS = [
-  {
-    id: "INSP-1001",
-    vehicleId: "VH-7812",
-    vehicle: "Hyundai Creta SX 2021",
-    requestedBy: "Buyer",
-    buyer: "Arjun Mehta",
-    buyerId: "USR-10231",
-    consultant: "Metro Auto Hub",
-    consultantTier: "Premium",
-    city: "Ahmedabad",
-    inspectionType: "Premium",
-    paymentStatus: "Paid",
-    amount: "₹2,499",
-    paidBy: "Buyer",
-    paymentMode: "UPI",
-    transactionId: "TXN-AX91K2",
-    refundStatus: "Not Initiated",
-    assigned: true,
-    inspectorAssigned: "Rahul Inspector",
-    inspectorCity: "Ahmedabad",
-    inspectorAvailability: "Available Today",
-    inspectorResponse: "Accepted",
-    status: "Assigned",
-    scheduledDate: "12 Mar 2026",
-    preferredDate: "12 Mar 2026",
-    preferredSlots: ["10:00 AM - 12:00 PM", "2:00 PM - 4:00 PM"],
-    requestedOn: "10 Mar 2026",
-    location: "Ahmedabad",
-    sla: "Within SLA",
-    slaBreached: false,
-  },
-  {
-    id: "INSP-1002",
-    vehicleId: "VH-9002",
-    vehicle: "Tata Nexon XZ+ 2022",
-    requestedBy: "Consultant",
-    buyer: "Priya Shah",
-    buyerId: "USR-10232",
-    consultant: "City Drive",
-    consultantTier: "Pro",
-    city: "Surat",
-    inspectionType: "Basic",
-    paymentStatus: "Pending",
-    amount: "₹999",
-    paidBy: "Consultant",
-    paymentMode: "Card",
-    transactionId: "TXN-QW22N1",
-    refundStatus: "Not Applicable",
-    assigned: false,
-    inspectorAssigned: "",
-    inspectorCity: "",
-    inspectorAvailability: "",
-    inspectorResponse: "",
-    status: "Awaiting Assignment",
-    scheduledDate: "—",
-    preferredDate: "13 Mar 2026",
-    preferredSlots: ["11:00 AM - 1:00 PM"],
-    requestedOn: "10 Mar 2026",
-    location: "Surat",
-    sla: "Assignment due in 1h",
-    slaBreached: false,
-  },
-  {
-    id: "INSP-1003",
-    vehicleId: "VH-5510",
-    vehicle: "Honda City ZX 2022",
-    requestedBy: "Buyer",
-    buyer: "Faizan Khan",
-    buyerId: "USR-10235",
-    consultant: "Elite Motors",
-    consultantTier: "Premium",
-    city: "Ahmedabad",
-    inspectionType: "Video",
-    paymentStatus: "Paid",
-    amount: "₹1,499",
-    paidBy: "Buyer",
-    paymentMode: "UPI",
-    transactionId: "TXN-ZX77K9",
-    refundStatus: "Not Initiated",
-    assigned: true,
-    inspectorAssigned: "Nisha Patel",
-    inspectorCity: "Ahmedabad",
-    inspectorAvailability: "Today 4 PM",
-    inspectorResponse: "Accepted",
-    status: "In Progress",
-    scheduledDate: "10 Mar 2026",
-    preferredDate: "10 Mar 2026",
-    preferredSlots: ["4:00 PM - 5:00 PM"],
-    requestedOn: "09 Mar 2026",
-    location: "Ahmedabad",
-    sla: "Inspection in progress",
-    slaBreached: false,
-  },
-  {
-    id: "INSP-1004",
-    vehicleId: "VH-3022",
-    vehicle: "Mahindra Scorpio N Z8 2023",
-    requestedBy: "Buyer",
-    buyer: "Rohan Desai",
-    buyerId: "USR-10240",
-    consultant: "Torque Wheels",
-    consultantTier: "Pro",
-    city: "Vadodara",
-    inspectionType: "Premium",
-    paymentStatus: "Paid",
-    amount: "₹2,499",
-    paidBy: "Buyer",
-    paymentMode: "Net Banking",
-    transactionId: "TXN-LM01T9",
-    refundStatus: "Pending",
-    assigned: true,
-    inspectorAssigned: "Vikram Joshi",
-    inspectorCity: "Vadodara",
-    inspectorAvailability: "Tomorrow 11 AM",
-    inspectorResponse: "Accepted",
-    status: "Refund Pending",
-    scheduledDate: "11 Mar 2026",
-    preferredDate: "11 Mar 2026",
-    preferredSlots: ["11:00 AM - 1:00 PM"],
-    requestedOn: "08 Mar 2026",
-    location: "Vadodara",
-    sla: "Refund review",
-    slaBreached: false,
-  },
-  {
-    id: "INSP-1005",
-    vehicleId: "VH-4431",
-    vehicle: "Toyota Innova Crysta 2021",
-    requestedBy: "Consultant",
-    buyer: "Sneha Verma",
-    buyerId: "USR-10234",
-    consultant: "Royal Cars",
-    consultantTier: "Premium",
-    city: "Rajkot",
-    inspectionType: "Basic",
-    paymentStatus: "Refunded",
-    amount: "₹999",
-    paidBy: "Consultant",
-    paymentMode: "UPI",
-    transactionId: "TXN-HJ66P2",
-    refundStatus: "Completed",
-    assigned: false,
-    inspectorAssigned: "",
-    inspectorCity: "",
-    inspectorAvailability: "",
-    inspectorResponse: "",
-    status: "Cancelled",
-    scheduledDate: "—",
-    preferredDate: "09 Mar 2026",
-    preferredSlots: ["9:00 AM - 11:00 AM"],
-    requestedOn: "07 Mar 2026",
-    location: "Rajkot",
-    sla: "Closed",
-    slaBreached: false,
-  },
-  {
-    id: "INSP-1006",
-    vehicleId: "VH-6201",
-    vehicle: "Kia Seltos GTX 2020",
-    requestedBy: "Buyer",
-    buyer: "Nirali Shah",
-    buyerId: "USR-10510",
-    consultant: "Prime Wheels",
-    consultantTier: "Premium",
-    city: "Surat",
-    inspectionType: "Premium",
-    paymentStatus: "Paid",
-    amount: "₹2,499",
-    paidBy: "Buyer",
-    paymentMode: "UPI",
-    transactionId: "TXN-SL77A1",
-    refundStatus: "Not Initiated",
-    assigned: true,
-    inspectorAssigned: "Mehul Trivedi",
-    inspectorCity: "Surat",
-    inspectorAvailability: "Busy",
-    inspectorResponse: "Accepted",
-    status: "SLA Breached",
-    scheduledDate: "09 Mar 2026",
-    preferredDate: "09 Mar 2026",
-    preferredSlots: ["3:00 PM - 5:00 PM"],
-    requestedOn: "07 Mar 2026",
-    location: "Surat",
-    sla: "Report overdue by 6h",
-    slaBreached: true,
-  },
-];
 
 const STATUS_OPTIONS = [
   "New",
@@ -234,6 +46,19 @@ const INSPECTION_TYPE_OPTIONS = ["Basic", "Premium", "Video"];
 ========================================================= */
 const statusBadge = (status) => {
   const map = {
+    // Enum values from API
+    PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+    AWAITING_ASSIGNMENT: "bg-amber-50 text-amber-700 border-amber-200",
+    ASSIGNED: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    SCHEDULED: "bg-violet-50 text-violet-700 border-violet-200",
+    IN_PROGRESS: "bg-blue-50 text-blue-700 border-blue-200",
+    COMPLETED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    REPORT_SUBMITTED: "bg-teal-50 text-teal-700 border-teal-200",
+    CANCELLED: "bg-slate-100 text-slate-700 border-slate-200",
+    REFUND_PENDING: "bg-orange-50 text-orange-700 border-orange-200",
+    SLA_BREACHED: "bg-rose-50 text-rose-700 border-rose-200",
+    ESCALATED: "bg-rose-50 text-rose-700 border-rose-200",
+    // Legacy display values
     New: "bg-sky-50 text-sky-700 border-sky-200",
     "Awaiting Assignment": "bg-amber-50 text-amber-700 border-amber-200",
     Assigned: "bg-indigo-50 text-indigo-700 border-indigo-200",
@@ -269,49 +94,30 @@ const slaBadge = (breached, text) =>
   breached
     ? "bg-rose-50 text-rose-700 border-rose-200"
     : text?.toLowerCase().includes("due")
-    ? "bg-amber-50 text-amber-700 border-amber-200"
-    : "bg-emerald-50 text-emerald-700 border-emerald-200";
+      ? "bg-amber-50 text-amber-700 border-amber-200"
+      : "bg-emerald-50 text-emerald-700 border-emerald-200";
 
 /* =========================================================
    SMALL COMPONENTS
 ========================================================= */
-function TopCard({ title, value, icon: Icon, active, onClick }) {
+function TopCard({ title, value, icon: Icon }) {
   return (
-    <button
-      onClick={onClick}
-      className={cls(
-        "relative rounded-2xl border p-6 overflow-hidden transition text-left shadow-sm",
-        active
-          ? "border-sky-600 bg-sky-600 text-white"
-          : "border-slate-200 bg-white hover:bg-slate-50"
-      )}
-    >
+    <div className="relative rounded-2xl border border-slate-200 bg-white p-6 overflow-hidden shadow-sm">
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       <div className="relative z-10 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <div
-            className={cls(
-              "text-[12px] font-bold uppercase tracking-[0.15em] mb-2",
-              active ? "text-sky-100" : "text-slate-400"
-            )}
-          >
+          <div className="text-[12px] font-bold uppercase tracking-[0.15em] mb-2 text-slate-400">
             {title}
           </div>
-          <div className="text-3xl font-extrabold tracking-tight break-words leading-tight">
+          <div className="text-3xl font-extrabold tracking-tight text-slate-900 break-words leading-tight">
             {value}
           </div>
         </div>
-        <div
-          className={cls(
-            "w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 transition-colors",
-            active
-              ? "bg-white/10 border-white/20 text-white"
-              : "bg-sky-50 border-sky-100 text-sky-600"
-          )}
-        >
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 bg-sky-50 border-sky-100 text-sky-600">
           <Icon size={18} />
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -425,7 +231,7 @@ function InspectionRowActions({
             Initiate Refund
           </button>
 
-          <button
+          {/* <button
             onClick={() => {
               onEscalate(item);
               setOpen(false);
@@ -434,11 +240,11 @@ function InspectionRowActions({
           >
             <AlertTriangle className="h-4 w-4" />
             Escalate
-          </button>
+          </button> */}
 
-          <div className="my-1 border-t border-slate-100" />
+          {/* <div className="my-1 border-t border-slate-100" /> */}
 
-          <button
+          {/* <button
             onClick={() => {
               onNote(item);
               setOpen(false);
@@ -447,7 +253,7 @@ function InspectionRowActions({
           >
             <NotebookPen className="h-4 w-4 text-slate-500" />
             Add Internal Note
-          </button>
+          </button> */}
         </div>
       )}
     </div>
@@ -933,96 +739,78 @@ function RefundModal({ modal, onClose, onConfirm }) {
    MAIN PAGE
 ========================================================= */
 const InspectionRequests = () => {
-  const [rows, setRows] = useState(DUMMY_REQUESTS);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [quickFilter, setQuickFilter] = useState("all");
   const [filters, setFilters] = useState({
     status: "",
     requestType: "",
     inspectionType: "",
     inspectorAssigned: "",
-    paymentStatus: "",
-    city: "",
-    slaBreached: "",
   });
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalElements: 0 });
 
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [modal, setModal] = useState(null);
 
-  const uniqueCities = useMemo(() => [...new Set(rows.map((r) => r.city))], [rows]);
+  // Static summary from current page data
+  const summary = useMemo(() => ({
+    total: pagination.totalElements,
+    pending: rows.filter((r) => !r.inspectorId).length,
+    assigned: rows.filter((r) => !!r.inspectorId).length,
+    inProgress: rows.filter((r) => r.inspectionRequestStatus === "IN_PROGRESS").length,
+    completed: rows.filter((r) => r.inspectionRequestStatus === "COMPLETED").length,
+    cancelled: rows.filter((r) => r.inspectionRequestStatus === "CANCELLED").length,
+  }), [rows, pagination.totalElements]);
 
-  const summary = useMemo(() => {
-    return {
-      newRequests: rows.filter((r) => r.status === "New" || r.status === "Awaiting Assignment").length,
-      assigned: rows.filter((r) => r.status === "Assigned" || r.status === "Scheduled").length,
-      inProgress: rows.filter((r) => r.status === "In Progress").length,
-      completed: rows.filter((r) => r.status === "Completed" || r.status === "Report Submitted").length,
-      cancelled: rows.filter((r) => r.status === "Cancelled").length,
-      refundPending: rows.filter((r) => r.status === "Refund Pending").length,
-    };
-  }, [rows]);
-
+  // Client-side filter on top of API results
   const filteredRows = useMemo(() => {
     let data = [...rows];
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      data = data.filter(
-        (r) =>
-          r.id.toLowerCase().includes(q) ||
-          r.vehicleId.toLowerCase().includes(q) ||
-          r.buyerId.toLowerCase().includes(q) ||
-          r.consultant.toLowerCase().includes(q) ||
-          r.city.toLowerCase().includes(q) ||
-          r.vehicle.toLowerCase().includes(q)
-      );
-    }
-
-    if (filters.status) data = data.filter((r) => r.status === filters.status);
-    if (filters.requestType) data = data.filter((r) => r.requestedBy === filters.requestType);
+    if (filters.status) data = data.filter((r) => r.inspectionRequestStatus === filters.status);
+    if (filters.requestType) data = data.filter((r) => r.requesterType === filters.requestType);
     if (filters.inspectionType) data = data.filter((r) => r.inspectionType === filters.inspectionType);
-    if (filters.inspectorAssigned) {
-      data = data.filter((r) =>
-        filters.inspectorAssigned === "Yes" ? r.assigned : !r.assigned
-      );
-    }
-    if (filters.paymentStatus) data = data.filter((r) => r.paymentStatus === filters.paymentStatus);
-    if (filters.city) data = data.filter((r) => r.city === filters.city);
-    if (filters.slaBreached) {
-      data = data.filter((r) =>
-        filters.slaBreached === "Yes" ? r.slaBreached : !r.slaBreached
-      );
-    }
-
-    if (quickFilter === "new")
-      data = data.filter((r) => r.status === "New" || r.status === "Awaiting Assignment");
-    if (quickFilter === "assigned")
-      data = data.filter((r) => r.status === "Assigned" || r.status === "Scheduled");
-    if (quickFilter === "progress") data = data.filter((r) => r.status === "In Progress");
-    if (quickFilter === "completed")
-      data = data.filter((r) => r.status === "Completed" || r.status === "Report Submitted");
-    if (quickFilter === "cancelled") data = data.filter((r) => r.status === "Cancelled");
-    if (quickFilter === "refund") data = data.filter((r) => r.status === "Refund Pending");
-
+    if (filters.inspectorAssigned) data = data.filter((r) => filters.inspectorAssigned === "Yes" ? !!r.inspectorId : !r.inspectorId);
     return data;
-  }, [rows, search, filters, quickFilter]);
+  }, [rows, filters]);
 
-  const handleRefresh = () => setRows([...DUMMY_REQUESTS]);
+  // ── Fetch ─────────────────────────────────────────────────────
+  const fetchInspections = async (pageNo = 1) => {
+    setLoading(true);
+    try {
+      const res = await getAllVehicleInspections({ searchText: search.trim() || null, pageNo });
+      const data = res?.data || [];
+      setRows(Array.isArray(data) ? data : []);
+      if (res?.pageResponse) {
+        setPagination({
+          currentPage: res.pageResponse.currentPage ?? pageNo,
+          totalPages: res.pageResponse.totalPages ?? 1,
+          totalElements: res.pageResponse.totalElements ?? data.length,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch inspections:", err);
+      toast.error(err?.response?.data?.message || "Failed to load inspection requests");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchInspections(1); }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => fetchInspections(1), 500);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const handleRefresh = () => fetchInspections(pagination.currentPage);
+  const handlePageChange = (newPage) => fetchInspections(newPage);
 
   const handleClear = () => {
     setSearch("");
-    setQuickFilter("all");
-    setFilters({
-      status: "",
-      requestType: "",
-      inspectionType: "",
-      inspectorAssigned: "",
-      paymentStatus: "",
-      city: "",
-      slaBreached: "",
-    });
+    setFilters({ status: "", requestType: "", inspectionType: "", inspectorAssigned: "" });
     setFiltersOpen(false);
+    fetchInspections(1);
   };
 
   const handleAssignConfirm = (item) => {
@@ -1031,13 +819,13 @@ const InspectionRequests = () => {
       prev.map((r) =>
         r.id === item.id
           ? {
-              ...r,
-              assigned: true,
-              inspectorAssigned: item.assignInspector,
-              scheduledDate: nextDate,
-              inspectorResponse: "Accepted",
-              status: "Assigned",
-            }
+            ...r,
+            assigned: true,
+            inspectorAssigned: item.assignInspector,
+            scheduledDate: nextDate,
+            inspectorResponse: "Accepted",
+            status: "Assigned",
+          }
           : r
       )
     );
@@ -1070,12 +858,12 @@ const InspectionRequests = () => {
       prev.map((r) =>
         r.id === item.id
           ? {
-              ...r,
-              status: nextStatus,
-              refundStatus:
-                item.refundChoice === "Yes" ? "Pending" : r.refundStatus,
-              paymentStatus: nextPayment,
-            }
+            ...r,
+            status: nextStatus,
+            refundStatus:
+              item.refundChoice === "Yes" ? "Pending" : r.refundStatus,
+            paymentStatus: nextPayment,
+          }
           : r
       )
     );
@@ -1157,205 +945,92 @@ const InspectionRequests = () => {
     alert(`Add internal note for ${item.id}`);
   };
 
+  const formatStatus = (s) => s
+    ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : "—";
+  const formatDate = (dt) => {
+    if (!dt) return "—";
+    const d = new Date(dt);
+    return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
   return (
-    <div className="min-h-screen p-0">
+    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
       <style>{`
-        .table-scroll::-webkit-scrollbar { height: 6px; }
+        .table-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
         .table-scroll::-webkit-scrollbar-track { background: transparent; }
         .table-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 6px; }
         .table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.45); }
       `}</style>
 
-      <div className="mx-auto space-y-6">
-        <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">
-              Inspection Requests
-            </h1>
-            <p className="max-w-3xl text-sm leading-relaxed text-slate-500">
-              Manage inspection bookings, assignment, payments, scheduling, SLA,
-              cancellations and refund governance.
-            </p>
-          </div>
-        </section>
+      {/* HEADER */}
+      <div className="flex-shrink-0 p-6 pb-4">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">Inspection Requests</h1>
+        <p className="max-w-3xl text-sm leading-relaxed text-slate-500">
+          Manage inspection bookings, assignment, payments, scheduling, SLA, cancellations and refund governance.
+        </p>
+      </div>
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <TopCard
-            title="New Requests"
-            value={summary.newRequests}
-            icon={FileText}
-            active={quickFilter === "new"}
-            onClick={() => setQuickFilter("new")}
-          />
-          <TopCard
-            title="Assigned"
-            value={summary.assigned}
-            icon={UserPlus}
-            active={quickFilter === "assigned"}
-            onClick={() => setQuickFilter("assigned")}
-          />
-          <TopCard
-            title="In Progress"
-            value={summary.inProgress}
-            icon={Clock3}
-            active={quickFilter === "progress"}
-            onClick={() => setQuickFilter("progress")}
-          />
-          <TopCard
-            title="Completed"
-            value={summary.completed}
-            icon={CheckCircle2}
-            active={quickFilter === "completed"}
-            onClick={() => setQuickFilter("completed")}
-          />
-          <TopCard
-            title="Cancelled"
-            value={summary.cancelled}
-            icon={X}
-            active={quickFilter === "cancelled"}
-            onClick={() => setQuickFilter("cancelled")}
-          />
-          <TopCard
-            title="Refund Pending"
-            value={summary.refundPending}
-            icon={BadgeDollarSign}
-            active={quickFilter === "refund"}
-            onClick={() => setQuickFilter("refund")}
-          />
-        </section>
+      {/* KPI CARDS */}
+      <div className="flex-shrink-0 px-6 pb-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+          <TopCard title="Total Requests" value={summary.total} icon={FileText} />
+          <TopCard title="Pending" value={summary.pending} icon={Clock3} />
+          <TopCard title="Assigned" value={summary.assigned} icon={UserPlus} />
+          <TopCard title="In Progress" value={summary.inProgress} icon={RefreshCw} />
+          <TopCard title="Completed" value={summary.completed} icon={CheckCircle2} />
+          <TopCard title="Cancelled" value={summary.cancelled} icon={X} />
+        </div>
+      </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden relative">
+      {/* TABLE CARD */}
+      <div className="flex-1 px-6 pb-6 overflow-hidden">
+        <div className="h-full rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden relative flex flex-col">
           <div className="absolute top-0 right-0 w-96 h-96 bg-sky-100 blur-[100px] pointer-events-none" />
 
-          <div className="p-5 md:p-6 relative z-10 border-b border-slate-200">
+          {/* SEARCH + FILTER BAR */}
+          <div className="p-5 md:p-6 relative z-10 border-b border-slate-200 flex-shrink-0">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="relative flex-1 max-w-2xl">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by Request ID, Vehicle ID, Buyer ID, Consultant, City..."
+                  placeholder="Search by Request ID, Vehicle, Buyer, Inspector..."
                   className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-[14px] text-slate-900 outline-none transition-all focus:border-sky-400 placeholder:text-slate-400"
                 />
               </div>
-
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => setFiltersOpen((p) => !p)}
-                  className={cls(
-                    "inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-[13px] font-semibold transition-colors",
-                    filtersOpen
-                      ? "bg-sky-600 text-white border-sky-600"
-                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                  )}
-                >
+                <button onClick={() => setFiltersOpen((p) => !p)} className={cls("inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-[13px] font-semibold transition-colors", filtersOpen ? "bg-sky-600 text-white border-sky-600" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50")}>
                   <SlidersHorizontal className="h-4 w-4" />
                   Filters
                 </button>
-
-                <button
-                  onClick={handleRefresh}
-                  className="inline-flex h-11 items-center justify-center w-11 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
-                  title="Refresh List"
-                >
+                <button onClick={handleRefresh} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors">
                   <RefreshCw className="h-4 w-4" />
-                </button>
-
-                <button
-                  onClick={handleClear}
-                  className="inline-flex h-11 items-center justify-center w-11 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
-                  title="Clear"
-                >
-                  <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
 
             {filtersOpen && (
-              <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-200 pt-5 md:grid-cols-2 xl:grid-cols-7">
+              <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-200 pt-5 md:grid-cols-2 xl:grid-cols-4">
                 <div className="flex items-center justify-between col-span-full mb-2">
-                  <h4 className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
-                    Advanced Filters
-                  </h4>
-                  <button
-                    onClick={handleClear}
-                    className="text-[12px] text-sky-700 hover:text-sky-800 transition-colors"
-                  >
-                    Clear All Filters
-                  </button>
+                  <h4 className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">Advanced Filters</h4>
+                  <button onClick={handleClear} className="text-[12px] text-sky-700 hover:text-sky-800 transition-colors">Clear All</button>
                 </div>
-
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
-                >
-                  <option value="">Status</option>
-                  {STATUS_OPTIONS.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
+                <select value={filters.status} onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
+                  <option value="">All Status</option>
+                  {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
                 </select>
-
-                <select
-                  value={filters.requestType}
-                  onChange={(e) => setFilters((p) => ({ ...p, requestType: e.target.value }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
-                >
+                <select value={filters.requestType} onChange={(e) => setFilters((p) => ({ ...p, requestType: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
                   <option value="">Request Type</option>
-                  {REQUEST_TYPE_OPTIONS.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
+                  {REQUEST_TYPE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
                 </select>
-
-                <select
-                  value={filters.inspectionType}
-                  onChange={(e) => setFilters((p) => ({ ...p, inspectionType: e.target.value }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
-                >
+                <select value={filters.inspectionType} onChange={(e) => setFilters((p) => ({ ...p, inspectionType: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
                   <option value="">Inspection Type</option>
-                  {INSPECTION_TYPE_OPTIONS.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
+                  {INSPECTION_TYPE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
                 </select>
-
-                <select
-                  value={filters.inspectorAssigned}
-                  onChange={(e) => setFilters((p) => ({ ...p, inspectorAssigned: e.target.value }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
-                >
+                <select value={filters.inspectorAssigned} onChange={(e) => setFilters((p) => ({ ...p, inspectorAssigned: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
                   <option value="">Inspector Assigned</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-
-                <select
-                  value={filters.paymentStatus}
-                  onChange={(e) => setFilters((p) => ({ ...p, paymentStatus: e.target.value }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
-                >
-                  <option value="">Payment Status</option>
-                  <option>Paid</option>
-                  <option>Pending</option>
-                  <option>Refunded</option>
-                </select>
-
-                <select
-                  value={filters.city}
-                  onChange={(e) => setFilters((p) => ({ ...p, city: e.target.value }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
-                >
-                  <option value="">City</option>
-                  {uniqueCities.map((city) => (
-                    <option key={city}>{city}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filters.slaBreached}
-                  onChange={(e) => setFilters((p) => ({ ...p, slaBreached: e.target.value }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
-                >
-                  <option value="">SLA Breached</option>
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
                 </select>
@@ -1363,122 +1038,115 @@ const InspectionRequests = () => {
             )}
           </div>
 
-          <div className="w-full overflow-x-auto table-scroll relative z-10 pb-4">
-            <table className="min-w-[1600px] w-full border-collapse">
+          {/* TABLE */}
+          <div className="flex-1 w-full overflow-auto table-scroll relative z-10">
+            <table className="min-w-[1200px] w-full border-collapse">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr className="text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                  <th className="px-6 py-4 font-semibold whitespace-nowrap">Request ID</th>
+                  {/* <th className="px-6 py-4 font-semibold whitespace-nowrap">Request ID</th> */}
                   <th className="px-5 py-4 font-semibold whitespace-nowrap">Vehicle</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Requested By</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Requester Name</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Requester Type</th>
                   <th className="px-5 py-4 font-semibold whitespace-nowrap">Type</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">City</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Payment</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Assigned</th>
                   <th className="px-5 py-4 font-semibold whitespace-nowrap">Status</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Scheduled Date</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">SLA</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Scheduled</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Created At</th>
                   <th className="px-6 py-4 text-right font-semibold whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-slate-100">
-                {filteredRows.length ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-28 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <Loader2 className="h-12 w-12 text-sky-600 animate-spin mb-4" />
+                        <div className="text-lg font-bold text-slate-900">Loading inspection requests...</div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredRows.length ? (
                   filteredRows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className={cls(
-                        "transition-colors duration-200 hover:bg-slate-50 group",
-                        selectedRequest?.id === row.id && "bg-sky-50"
-                      )}
-                    >
-                      <td className="px-6 py-4">
+                    <tr key={row.id} className={cls("transition-colors duration-200 hover:bg-slate-50 group", selectedRequest?.id === row.id && "bg-sky-50/50")}>
+
+                      {/* REQUEST ID */}
+                      {/* <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-100 to-blue-100 border border-slate-200 flex items-center justify-center shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-100 to-blue-100 border border-slate-200 flex items-center justify-center shrink-0">
                             <FileText className="h-4 w-4 text-sky-700" />
                           </div>
                           <div>
-                            <div className="text-[14px] font-bold text-slate-900 group-hover:text-sky-700 transition-colors">
-                              {row.id}
-                            </div>
-                            <div className="mt-0.5 text-[12px] text-slate-500">{row.vehicleId}</div>
+                            <div className="text-[13px] font-bold text-slate-900 group-hover:text-sky-700 transition-colors font-mono">{row.id?.slice(0, 8)}...</div>
+                            <div className="mt-0.5 text-[11px] text-slate-400 font-mono">{row.vehicleId?.slice(0, 8)}...</div>
                           </div>
                         </div>
-                      </td>
+                      </td> */}
 
+                      {/* VEHICLE */}
                       <td className="px-5 py-4">
-                        <div className="min-w-[220px]">
-                          <div className="text-[13px] font-medium text-slate-700">{row.vehicle}</div>
-                          <div className="mt-1 text-[12px] text-slate-500">{row.consultant}</div>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <div className="min-w-[160px]">
-                          <div className="text-[13px] font-medium text-slate-700">
-                            {row.requestedBy === "Buyer" ? row.buyer : row.consultant}
-                          </div>
-                          <div className="mt-1 text-[12px] text-slate-500">
-                            {row.requestedBy === "Buyer" ? row.buyerId : row.consultant}
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span
-                          className={cls(
-                            "inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap",
-                            typeBadge(row.requestedBy)
+                        <div className="flex items-center gap-2">
+                          {row.vehicleThumbnailUrl ? (
+                            <img src={row.vehicleThumbnailUrl} alt="" className="w-10 h-8 rounded-lg object-cover border border-slate-200 shrink-0" />
+                          ) : (
+                            <div className="w-10 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400 text-[10px]">IMG</div>
                           )}
-                        >
-                          {row.inspectionType}
+                          <div className="text-[13px] font-semibold text-slate-800 max-w-[160px]">{row.vehicleName || "—"}</div>
+                        </div>
+                      </td>
+
+                      {/* REQUESTED BY */}
+                      <td className="px-5 py-4">
+                        <div>
+                          <div className="text-[13px] font-semibold text-slate-800">{row.requestedByName || "—"}</div>
+                        </div>
+                      </td>
+
+                      {/* REQUESTER TYPE */}
+                      <td className="px-5 py-4">
+                        <div>
+                          {row.requesterType && (
+                            <span className={cls("mt-1 inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold border", typeBadge(row.requesterType))}>
+                              {row.requesterType}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* TYPE */}
+                      <td className="px-5 py-4">
+                        <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap",
+                          row.inspectionType?.includes("VIDEO") ? "bg-violet-50 text-violet-700 border-violet-200"
+                            : row.inspectionType?.includes("PHYSICAL") ? "bg-sky-50 text-sky-700 border-sky-200"
+                              : "bg-slate-50 text-slate-600 border-slate-200"
+                        )}>
+                          {row.inspectionType
+                            ? row.inspectionType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+                            : "—"}
                         </span>
                       </td>
 
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500">
-                        {row.city}
-                      </td>
-
+                      {/* STATUS */}
                       <td className="px-5 py-4">
-                        <span
-                          className={cls(
-                            "inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap",
-                            paymentBadge(row.paymentStatus)
-                          )}
-                        >
-                          {row.paymentStatus}
+                        <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap", statusBadge(row.inspectionRequestStatus))}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+                          {formatStatus(row.inspectionRequestStatus)}
                         </span>
                       </td>
 
+                      {/* SCHEDULED */}
                       <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">
-                        {row.assigned ? row.inspectorAssigned : "No"}
+                        {formatDate(row.videoCallScheduledAt)}
                       </td>
 
+                      {/* CREATED AT */}
                       <td className="px-5 py-4">
-                        <span
-                          className={cls(
-                            "inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap",
-                            statusBadge(row.status)
-                          )}
-                        >
-                          {row.status}
-                        </span>
+                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-slate-500 whitespace-nowrap">
+                          <Clock3 size={12} className="text-slate-400" />
+                          {formatDate(row.createdAt)}
+                        </div>
                       </td>
 
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">
-                        {row.scheduledDate}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span
-                          className={cls(
-                            "inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap",
-                            slaBadge(row.slaBreached, row.sla)
-                          )}
-                        >
-                          {row.sla}
-                        </span>
-                      </td>
-
+                      {/* ACTIONS */}
                       <td className="px-6 py-4 text-right">
                         <InspectionRowActions
                           item={row}
@@ -1487,30 +1155,23 @@ const InspectionRequests = () => {
                           onReschedule={handleReschedule}
                           onCancel={(item) => setModal({ type: "cancel", item })}
                           onRefund={(item) => setModal({ type: "refund", item })}
-                          onEscalate={(item) => setModal({ type: "escalate", item })}
-                          onNote={handleNote}
+                        // onEscalate={(item) => setModal({ type: "escalate", item })}
+                        // onNote={handleNote}
                         />
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={11} className="px-6 py-28 text-center">
+                    <td colSpan={9} className="px-6 py-28 text-center">
                       <div className="flex flex-col items-center justify-center">
                         <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-4">
                           <Search size={28} />
                         </div>
-                        <div className="text-lg font-bold text-slate-900 tracking-tight">
-                          No inspection requests found
-                        </div>
-                        <div className="mt-1 text-[14px] text-slate-500 max-w-sm mx-auto">
-                          Try adjusting your search criteria or clear active filters to see more results.
-                        </div>
-                        {(search || Object.values(filters).some(Boolean) || quickFilter !== "all") && (
-                          <button
-                            onClick={handleClear}
-                            className="mt-6 px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 transition-colors"
-                          >
+                        <div className="text-lg font-bold text-slate-900 tracking-tight">No inspection requests found</div>
+                        <div className="mt-1 text-[14px] text-slate-500 max-w-sm mx-auto">Try adjusting your search or clear active filters.</div>
+                        {(search || Object.values(filters).some(Boolean)) && (
+                          <button onClick={handleClear} className="mt-6 px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 transition-colors">
                             Clear search & filters
                           </button>
                         )}
@@ -1521,7 +1182,24 @@ const InspectionRequests = () => {
               </tbody>
             </table>
           </div>
-        </section>
+
+          {/* PAGINATION */}
+          {!loading && filteredRows.length > 0 && (
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
+              <div className="text-[13px] text-slate-600">
+                Page {pagination.currentPage} of {pagination.totalPages} • {pagination.totalElements} total records
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => handlePageChange(pagination.currentPage - 1)} disabled={pagination.currentPage === 1} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  Prev
+                </button>
+                <button onClick={() => handlePageChange(pagination.currentPage + 1)} disabled={pagination.currentPage >= pagination.totalPages} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <InspectionDetailDrawer
@@ -1532,30 +1210,10 @@ const InspectionRequests = () => {
         onEscalate={(item) => setModal({ type: "escalate", item })}
         onComplete={handleComplete}
       />
-
-      <AssignInspectorModal
-        modal={modal}
-        onClose={() => setModal(null)}
-        onConfirm={handleAssignConfirm}
-      />
-
-      <CancelInspectionModal
-        modal={modal}
-        onClose={() => setModal(null)}
-        onConfirm={handleCancelConfirm}
-      />
-
-      <EscalateModal
-        modal={modal}
-        onClose={() => setModal(null)}
-        onConfirm={handleEscalateConfirm}
-      />
-
-      <RefundModal
-        modal={modal}
-        onClose={() => setModal(null)}
-        onConfirm={handleRefundConfirm}
-      />
+      <AssignInspectorModal modal={modal} onClose={() => setModal(null)} onConfirm={handleAssignConfirm} />
+      <CancelInspectionModal modal={modal} onClose={() => setModal(null)} onConfirm={handleCancelConfirm} />
+      <EscalateModal modal={modal} onClose={() => setModal(null)} onConfirm={handleEscalateConfirm} />
+      <RefundModal modal={modal} onClose={() => setModal(null)} onConfirm={handleRefundConfirm} />
     </div>
   );
 };
