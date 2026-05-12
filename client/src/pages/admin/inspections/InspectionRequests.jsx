@@ -17,7 +17,10 @@ import {
   Loader2,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getAllVehicleInspections } from "../../../api/vehicleInspection.api";
+import { getAllVehicleInspections, assignInspector } from "../../../api/vehicleInspection.api";
+import { getAllInspectors } from "../../../api/inspector.api";
+import InspectionRequestDetail from "./modal/InspectionRequestDetail";
+import { ChevronDown } from "lucide-react";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -435,17 +438,92 @@ function InspectionDetailDrawer({
    MODALS
 ========================================================= */
 function AssignInspectorModal({ modal, onClose, onConfirm }) {
-  const [inspector, setInspector] = useState("Rahul Inspector");
+  const [selectedInspector, setSelectedInspector] = useState(null);
   const [date, setDate] = useState("");
   const [slot, setSlot] = useState("");
+  const [inspectors, setInspectors] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     if (modal?.type === "assign") {
-      setInspector("Rahul Inspector");
+      fetchInspectors();
+      setSelectedInspector(null);
       setDate("");
       setSlot("");
+      setSearchQuery("");
+      setDropdownOpen(false);
+      setActiveIndex(-1);
     }
   }, [modal]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const fetchInspectors = async () => {
+    try {
+      setLoading(true);
+      const res = await getAllInspectors(1);
+      // Assuming res.data contains the list based on common patterns in this repo
+      // or if it's direct array. User said getAllInspectors returns response.data
+      // Let's handle both common cases
+      setInspectors(res.inspectors || res.docs || res.data || (Array.isArray(res) ? res : []));
+    } catch (error) {
+      console.error("Error fetching inspectors:", error);
+      toast.error("Failed to load inspectors");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredInspectors = useMemo(() => {
+    let data = inspectors;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      data = inspectors.filter(
+        (ins) =>
+          `${ins.firstname} ${ins.lastname}`.toLowerCase().includes(q) ||
+          ins.inspectorUsername?.toLowerCase().includes(q)
+      );
+    }
+    return data;
+  }, [inspectors, searchQuery]);
+
+  useEffect(() => {
+    setActiveIndex(filteredInspectors.length > 0 ? 0 : -1);
+  }, [filteredInspectors]);
+
+  const handleKeyDown = (e) => {
+    if (!dropdownOpen) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev < filteredInspectors.length - 1 ? prev + 1 : prev));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < filteredInspectors.length) {
+        const ins = filteredInspectors[activeIndex];
+        setSelectedInspector(ins);
+        setDropdownOpen(false);
+        setSearchQuery("");
+      }
+    } else if (e.key === "Escape") {
+      setDropdownOpen(false);
+    }
+  };
 
   if (!modal || modal.type !== "assign") return null;
 
@@ -467,43 +545,84 @@ function AssignInspectorModal({ modal, onClose, onConfirm }) {
         </div>
 
         <div className="mt-6 space-y-4">
-          <div>
+          <div className="relative" ref={dropdownRef}>
             <label className="mb-2 block text-[13px] font-medium text-slate-700">Inspector</label>
-            <select
-              value={inspector}
-              onChange={(e) => setInspector(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px]"
+            <div
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex w-full items-center justify-between cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus-within:border-sky-400 text-slate-900 text-[13px]"
             >
-              <option>Rahul Inspector</option>
-              <option>Nisha Patel</option>
-              <option>Vikram Joshi</option>
-              <option>Mehul Trivedi</option>
-            </select>
+              <span className={!selectedInspector ? "text-slate-400" : ""}>
+                {selectedInspector
+                  ? `${selectedInspector.firstname} ${selectedInspector.lastname}`
+                  : "Select Inspector"}
+              </span>
+              <ChevronDown className={cls("h-4 w-4 text-slate-400 transition-transform", dropdownOpen && "rotate-180")} />
+            </div>
+
+            {dropdownOpen && (
+              <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col max-h-[300px]">
+                <div className="p-2 border-b border-slate-100">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search inspector..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      className="w-full rounded-lg border border-slate-100 bg-slate-50 py-2 pl-9 pr-4 text-[13px] outline-none focus:border-sky-300"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-y-auto flex-1">
+                  {loading ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-sky-600" />
+                    </div>
+                  ) : filteredInspectors.length > 0 ? (
+                    filteredInspectors.map((ins, index) => (
+                      <div
+                        key={ins._id || ins.id}
+                        onClick={() => {
+                          setSelectedInspector(ins);
+                          setDropdownOpen(false);
+                          setSearchQuery("");
+                        }}
+                        onMouseEnter={() => setActiveIndex(index)}
+                        className={cls(
+                          "px-4 py-2.5 cursor-pointer transition-colors border-b border-slate-50 last:border-0",
+                          activeIndex === index ? "bg-sky-50" : "bg-white"
+                        )}
+                      >
+                        <div className="text-[13px] font-bold text-slate-900">
+                          {ins.firstname} {ins.lastname}
+                        </div>
+                        <div className="text-[11px] text-slate-500">{ins.inspectorUsername}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-[13px] text-slate-500">No inspectors found</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
             <label className="mb-2 block text-[13px] font-medium text-slate-700">Schedule Date</label>
             <input
-              type="date"
+              type="datetime-local"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px]"
             />
           </div>
-
-          <div>
-            <label className="mb-2 block text-[13px] font-medium text-slate-700">Time Slot</label>
-            <input
-              type="text"
-              value={slot}
-              onChange={(e) => setSlot(e.target.value)}
-              placeholder="e.g. 10:00 AM - 12:00 PM"
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px]"
-            />
-          </div>
         </div>
 
-        <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="mt-6 flex justify-end gap-3 pt-4">
           <button
             onClick={onClose}
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
@@ -514,12 +633,13 @@ function AssignInspectorModal({ modal, onClose, onConfirm }) {
             onClick={() =>
               onConfirm({
                 ...modal.item,
-                assignInspector: inspector,
+                assignInspector: selectedInspector?.id || selectedInspector?._id,
                 assignDate: date,
                 assignSlot: slot,
               })
             }
-            className="rounded-xl bg-sky-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-sky-700 transition-colors"
+            disabled={!selectedInspector}
+            className="rounded-xl bg-sky-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Confirm Assign
           </button>
@@ -813,35 +933,32 @@ const InspectionRequests = () => {
     fetchInspections(1);
   };
 
-  const handleAssignConfirm = (item) => {
-    const nextDate = item.assignDate || item.scheduledDate;
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === item.id
-          ? {
-            ...r,
-            assigned: true,
-            inspectorAssigned: item.assignInspector,
-            scheduledDate: nextDate,
-            inspectorResponse: "Accepted",
-            status: "Assigned",
-          }
-          : r
-      )
-    );
+  const handleAssignConfirm = async (item) => {
+    try {
+      const payload = {
+        inspectionRequestId: item.id,
+        inspectorId: item.assignInspector,
+        scheduleDate: item.assignDate, // item.assignDate comes from datetime-local input
+      };
 
-    if (selectedRequest?.id === item.id) {
-      setSelectedRequest((prev) => ({
-        ...prev,
-        assigned: true,
-        inspectorAssigned: item.assignInspector,
-        scheduledDate: nextDate,
-        inspectorResponse: "Accepted",
-        status: "Assigned",
-      }));
+      if (!payload.scheduleDate) {
+        toast.error("Please select a schedule date and time");
+        return;
+      }
+
+      const res = await assignInspector(payload);
+      
+      if (!res.error) {
+        toast.success(res.message || "Inspector assigned successfully");
+        fetchInspections(pagination.currentPage);
+        setModal(null);
+      } else {
+        toast.error(res.message || "Failed to assign inspector");
+      }
+    } catch (err) {
+      console.error("Failed to assign inspector:", err);
+      toast.error(err?.response?.data?.message || "Failed to assign inspector");
     }
-
-    setModal(null);
   };
 
   const handleCancelConfirm = (item) => {
@@ -955,122 +1072,131 @@ const InspectionRequests = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
-      <style>{`
+    <>
+      {selectedRequest ? (
+        <InspectionRequestDetail
+          request={selectedRequest}
+          onBack={() => setSelectedRequest(null)}
+          onAssign={(item) => setModal({ type: "assign", item })}
+          onCancel={(item) => setModal({ type: "cancel", item })}
+        />
+      ) : (
+        <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+          <style>{`
         .table-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
         .table-scroll::-webkit-scrollbar-track { background: transparent; }
         .table-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 6px; }
         .table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.45); }
       `}</style>
 
-      {/* HEADER */}
-      <div className="flex-shrink-0 p-6 pb-4">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">Inspection Requests</h1>
-        <p className="max-w-3xl text-sm leading-relaxed text-slate-500">
-          Manage inspection bookings, assignment, payments, scheduling, SLA, cancellations and refund governance.
-        </p>
-      </div>
-
-      {/* KPI CARDS */}
-      <div className="flex-shrink-0 px-6 pb-4">
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-          <TopCard title="Total Requests" value={summary.total} icon={FileText} />
-          <TopCard title="Pending" value={summary.pending} icon={Clock3} />
-          <TopCard title="Assigned" value={summary.assigned} icon={UserPlus} />
-          <TopCard title="In Progress" value={summary.inProgress} icon={RefreshCw} />
-          <TopCard title="Completed" value={summary.completed} icon={CheckCircle2} />
-          <TopCard title="Cancelled" value={summary.cancelled} icon={X} />
-        </div>
-      </div>
-
-      {/* TABLE CARD */}
-      <div className="flex-1 px-6 pb-6 overflow-hidden">
-        <div className="h-full rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden relative flex flex-col">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-sky-100 blur-[100px] pointer-events-none" />
-
-          {/* SEARCH + FILTER BAR */}
-          <div className="p-5 md:p-6 relative z-10 border-b border-slate-200 flex-shrink-0">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="relative flex-1 max-w-2xl">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by Request ID, Vehicle, Buyer, Inspector..."
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-[14px] text-slate-900 outline-none transition-all focus:border-sky-400 placeholder:text-slate-400"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <button onClick={() => setFiltersOpen((p) => !p)} className={cls("inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-[13px] font-semibold transition-colors", filtersOpen ? "bg-sky-600 text-white border-sky-600" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50")}>
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filters
-                </button>
-                <button onClick={handleRefresh} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors">
-                  <RefreshCw className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {filtersOpen && (
-              <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-200 pt-5 md:grid-cols-2 xl:grid-cols-4">
-                <div className="flex items-center justify-between col-span-full mb-2">
-                  <h4 className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">Advanced Filters</h4>
-                  <button onClick={handleClear} className="text-[12px] text-sky-700 hover:text-sky-800 transition-colors">Clear All</button>
-                </div>
-                <select value={filters.status} onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
-                  <option value="">All Status</option>
-                  {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-                </select>
-                <select value={filters.requestType} onChange={(e) => setFilters((p) => ({ ...p, requestType: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
-                  <option value="">Request Type</option>
-                  {REQUEST_TYPE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
-                </select>
-                <select value={filters.inspectionType} onChange={(e) => setFilters((p) => ({ ...p, inspectionType: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
-                  <option value="">Inspection Type</option>
-                  {INSPECTION_TYPE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
-                </select>
-                <select value={filters.inspectorAssigned} onChange={(e) => setFilters((p) => ({ ...p, inspectorAssigned: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
-                  <option value="">Inspector Assigned</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-            )}
+          {/* HEADER */}
+          <div className="flex-shrink-0 p-6 pb-4">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">Inspection Requests</h1>
+            <p className="max-w-3xl text-sm leading-relaxed text-slate-500">
+              Manage inspection bookings, assignment, payments, scheduling, SLA, cancellations and refund governance.
+            </p>
           </div>
 
-          {/* TABLE */}
-          <div className="flex-1 w-full overflow-auto table-scroll relative z-10">
-            <table className="min-w-[1200px] w-full border-collapse">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                  {/* <th className="px-6 py-4 font-semibold whitespace-nowrap">Request ID</th> */}
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Vehicle</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Requester Name</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Requester Type</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Type</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Status</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Scheduled</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Created At</th>
-                  <th className="px-6 py-4 text-right font-semibold whitespace-nowrap">Actions</th>
-                </tr>
-              </thead>
+          {/* KPI CARDS */}
+          <div className="flex-shrink-0 px-6 pb-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+              <TopCard title="Total Requests" value={summary.total} icon={FileText} />
+              <TopCard title="Pending" value={summary.pending} icon={Clock3} />
+              <TopCard title="Assigned" value={summary.assigned} icon={UserPlus} />
+              <TopCard title="In Progress" value={summary.inProgress} icon={RefreshCw} />
+              <TopCard title="Completed" value={summary.completed} icon={CheckCircle2} />
+              <TopCard title="Cancelled" value={summary.cancelled} icon={X} />
+            </div>
+          </div>
 
-              <tbody className="divide-y divide-slate-100">
-                {loading ? (
-                  <tr>
-                    <td colSpan={9} className="px-6 py-28 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <Loader2 className="h-12 w-12 text-sky-600 animate-spin mb-4" />
-                        <div className="text-lg font-bold text-slate-900">Loading inspection requests...</div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredRows.length ? (
-                  filteredRows.map((row) => (
-                    <tr key={row.id} className={cls("transition-colors duration-200 hover:bg-slate-50 group", selectedRequest?.id === row.id && "bg-sky-50/50")}>
+          {/* TABLE CARD */}
+          <div className="flex-1 px-6 pb-6 overflow-hidden">
+            <div className="h-full rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden relative flex flex-col">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-sky-100 blur-[100px] pointer-events-none" />
 
-                      {/* REQUEST ID */}
-                      {/* <td className="px-6 py-4">
+              {/* SEARCH + FILTER BAR */}
+              <div className="p-5 md:p-6 relative z-10 border-b border-slate-200 flex-shrink-0">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="relative flex-1 max-w-2xl">
+                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search by Request ID, Vehicle, Buyer, Inspector..."
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-[14px] text-slate-900 outline-none transition-all focus:border-sky-400 placeholder:text-slate-400"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button onClick={() => setFiltersOpen((p) => !p)} className={cls("inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-[13px] font-semibold transition-colors", filtersOpen ? "bg-sky-600 text-white border-sky-600" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50")}>
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Filters
+                    </button>
+                    <button onClick={handleRefresh} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors">
+                      <RefreshCw className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {filtersOpen && (
+                  <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-200 pt-5 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="flex items-center justify-between col-span-full mb-2">
+                      <h4 className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">Advanced Filters</h4>
+                      <button onClick={handleClear} className="text-[12px] text-sky-700 hover:text-sky-800 transition-colors">Clear All</button>
+                    </div>
+                    <select value={filters.status} onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
+                      <option value="">All Status</option>
+                      {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+                    </select>
+                    <select value={filters.requestType} onChange={(e) => setFilters((p) => ({ ...p, requestType: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
+                      <option value="">Request Type</option>
+                      {REQUEST_TYPE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                    <select value={filters.inspectionType} onChange={(e) => setFilters((p) => ({ ...p, inspectionType: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
+                      <option value="">Inspection Type</option>
+                      {INSPECTION_TYPE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                    <select value={filters.inspectorAssigned} onChange={(e) => setFilters((p) => ({ ...p, inspectorAssigned: e.target.value }))} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none">
+                      <option value="">Inspector Assigned</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* TABLE */}
+              <div className="flex-1 w-full overflow-auto table-scroll relative z-10">
+                <table className="min-w-[1200px] w-full border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr className="text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                      {/* <th className="px-6 py-4 font-semibold whitespace-nowrap">Request ID</th> */}
+                      <th className="px-5 py-4 font-semibold whitespace-nowrap">Vehicle</th>
+                      <th className="px-5 py-4 font-semibold whitespace-nowrap">Requester Name</th>
+                      <th className="px-5 py-4 font-semibold whitespace-nowrap">Requester Type</th>
+                      <th className="px-5 py-4 font-semibold whitespace-nowrap">Type</th>
+                      <th className="px-5 py-4 font-semibold whitespace-nowrap">Status</th>
+                      <th className="px-5 py-4 font-semibold whitespace-nowrap">Scheduled</th>
+                      <th className="px-5 py-4 font-semibold whitespace-nowrap">Created At</th>
+                      <th className="px-6 py-4 text-right font-semibold whitespace-nowrap">Actions</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={9} className="px-6 py-28 text-center">
+                          <div className="flex flex-col items-center justify-center">
+                            <Loader2 className="h-12 w-12 text-sky-600 animate-spin mb-4" />
+                            <div className="text-lg font-bold text-slate-900">Loading inspection requests...</div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredRows.length ? (
+                      filteredRows.map((row) => (
+                        <tr key={row.id} className={cls("transition-colors duration-200 hover:bg-slate-50 group", selectedRequest?.id === row.id && "bg-sky-50/50")}>
+
+                          {/* REQUEST ID */}
+                          {/* <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-100 to-blue-100 border border-slate-200 flex items-center justify-center shrink-0">
                             <FileText className="h-4 w-4 text-sky-700" />
@@ -1082,140 +1208,135 @@ const InspectionRequests = () => {
                         </div>
                       </td> */}
 
-                      {/* VEHICLE */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          {row.vehicleThumbnailUrl ? (
-                            <img src={row.vehicleThumbnailUrl} alt="" className="w-10 h-8 rounded-lg object-cover border border-slate-200 shrink-0" />
-                          ) : (
-                            <div className="w-10 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400 text-[10px]">IMG</div>
-                          )}
-                          <div className="text-[13px] font-semibold text-slate-800 max-w-[160px]">{row.vehicleName || "—"}</div>
-                        </div>
-                      </td>
+                          {/* VEHICLE */}
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2">
+                              {row.vehicleThumbnailUrl ? (
+                                <img src={row.vehicleThumbnailUrl} alt="" className="w-10 h-8 rounded-lg object-cover border border-slate-200 shrink-0" />
+                              ) : (
+                                <div className="w-10 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400 text-[10px]">IMG</div>
+                              )}
+                              <div className="text-[13px] font-semibold text-slate-800 max-w-[160px]">{row.vehicleName || "—"}</div>
+                            </div>
+                          </td>
 
-                      {/* REQUESTED BY */}
-                      <td className="px-5 py-4">
-                        <div>
-                          <div className="text-[13px] font-semibold text-slate-800">{row.requestedByName || "—"}</div>
-                        </div>
-                      </td>
+                          {/* REQUESTED BY */}
+                          <td className="px-5 py-4">
+                            <div>
+                              <div className="text-[13px] font-semibold text-slate-800">{row.requestedByName || "—"}</div>
+                            </div>
+                          </td>
 
-                      {/* REQUESTER TYPE */}
-                      <td className="px-5 py-4">
-                        <div>
-                          {row.requesterType && (
-                            <span className={cls("mt-1 inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold border", typeBadge(row.requesterType))}>
-                              {row.requesterType}
+                          {/* REQUESTER TYPE */}
+                          <td className="px-5 py-4">
+                            <div>
+                              {row.requesterType && (
+                                <span className={cls("mt-1 inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold border", typeBadge(row.requesterType))}>
+                                  {row.requesterType}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* TYPE */}
+                          <td className="px-5 py-4">
+                            <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap",
+                              row.inspectionType?.includes("VIDEO") ? "bg-violet-50 text-violet-700 border-violet-200"
+                                : row.inspectionType?.includes("PHYSICAL") ? "bg-sky-50 text-sky-700 border-sky-200"
+                                  : "bg-slate-50 text-slate-600 border-slate-200"
+                            )}>
+                              {row.inspectionType
+                                ? row.inspectionType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+                                : "—"}
                             </span>
-                          )}
-                        </div>
-                      </td>
+                          </td>
 
-                      {/* TYPE */}
-                      <td className="px-5 py-4">
-                        <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap",
-                          row.inspectionType?.includes("VIDEO") ? "bg-violet-50 text-violet-700 border-violet-200"
-                            : row.inspectionType?.includes("PHYSICAL") ? "bg-sky-50 text-sky-700 border-sky-200"
-                              : "bg-slate-50 text-slate-600 border-slate-200"
-                        )}>
-                          {row.inspectionType
-                            ? row.inspectionType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-                            : "—"}
-                        </span>
-                      </td>
+                          {/* STATUS */}
+                          <td className="px-5 py-4">
+                            <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap", statusBadge(row.inspectionRequestStatus))}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+                              {formatStatus(row.inspectionRequestStatus)}
+                            </span>
+                          </td>
 
-                      {/* STATUS */}
-                      <td className="px-5 py-4">
-                        <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap", statusBadge(row.inspectionRequestStatus))}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
-                          {formatStatus(row.inspectionRequestStatus)}
-                        </span>
-                      </td>
+                          {/* SCHEDULED */}
+                          <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">
+                            {formatDate(row.videoCallScheduledAt)}
+                          </td>
 
-                      {/* SCHEDULED */}
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">
-                        {formatDate(row.videoCallScheduledAt)}
-                      </td>
+                          {/* CREATED AT */}
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-1.5 text-[13px] font-medium text-slate-500 whitespace-nowrap">
+                              <Clock3 size={12} className="text-slate-400" />
+                              {formatDate(row.createdAt)}
+                            </div>
+                          </td>
 
-                      {/* CREATED AT */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-slate-500 whitespace-nowrap">
-                          <Clock3 size={12} className="text-slate-400" />
-                          {formatDate(row.createdAt)}
-                        </div>
-                      </td>
-
-                      {/* ACTIONS */}
-                      <td className="px-6 py-4 text-right">
-                        <InspectionRowActions
-                          item={row}
-                          onView={setSelectedRequest}
-                          onAssign={(item) => setModal({ type: "assign", item })}
-                          onReschedule={handleReschedule}
-                          onCancel={(item) => setModal({ type: "cancel", item })}
-                          onRefund={(item) => setModal({ type: "refund", item })}
-                        // onEscalate={(item) => setModal({ type: "escalate", item })}
-                        // onNote={handleNote}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={9} className="px-6 py-28 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-4">
-                          <Search size={28} />
-                        </div>
-                        <div className="text-lg font-bold text-slate-900 tracking-tight">No inspection requests found</div>
-                        <div className="mt-1 text-[14px] text-slate-500 max-w-sm mx-auto">Try adjusting your search or clear active filters.</div>
-                        {(search || Object.values(filters).some(Boolean)) && (
-                          <button onClick={handleClear} className="mt-6 px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 transition-colors">
-                            Clear search & filters
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* PAGINATION */}
-          {!loading && filteredRows.length > 0 && (
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
-              <div className="text-[13px] text-slate-600">
-                Page {pagination.currentPage} of {pagination.totalPages} • {pagination.totalElements} total records
+                          {/* ACTIONS */}
+                          <td className="px-6 py-4 text-right">
+                            <InspectionRowActions
+                              item={row}
+                              onView={setSelectedRequest}
+                              onAssign={(item) => setModal({ type: "assign", item })}
+                              onReschedule={handleReschedule}
+                              onCancel={(item) => setModal({ type: "cancel", item })}
+                              onRefund={(item) => setModal({ type: "refund", item })}
+                            // onEscalate={(item) => setModal({ type: "escalate", item })}
+                            // onNote={handleNote}
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={9} className="px-6 py-28 text-center">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-4">
+                              <Search size={28} />
+                            </div>
+                            <div className="text-lg font-bold text-slate-900 tracking-tight">No inspection requests found</div>
+                            <div className="mt-1 text-[14px] text-slate-500 max-w-sm mx-auto">Try adjusting your search or clear active filters.</div>
+                            {(search || Object.values(filters).some(Boolean)) && (
+                              <button onClick={handleClear} className="mt-6 px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 transition-colors">
+                                Clear search & filters
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => handlePageChange(pagination.currentPage - 1)} disabled={pagination.currentPage === 1} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  Prev
-                </button>
-                <button onClick={() => handlePageChange(pagination.currentPage + 1)} disabled={pagination.currentPage >= pagination.totalPages} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  Next
-                </button>
-              </div>
+
+              {/* PAGINATION */}
+              {!loading && filteredRows.length > 0 && (
+                <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
+                  <div className="text-[13px] text-slate-600">
+                    Page {pagination.currentPage} of {pagination.totalPages} • {pagination.totalElements} total records
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handlePageChange(pagination.currentPage - 1)} disabled={pagination.currentPage === 1} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      Prev
+                    </button>
+                    <button onClick={() => handlePageChange(pagination.currentPage + 1)} disabled={pagination.currentPage >= pagination.totalPages} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
-      <InspectionDetailDrawer
-        item={selectedRequest}
-        onClose={() => setSelectedRequest(null)}
-        onAssign={(item) => setModal({ type: "assign", item })}
-        onCancel={(item) => setModal({ type: "cancel", item })}
-        onEscalate={(item) => setModal({ type: "escalate", item })}
-        onComplete={handleComplete}
-      />
       <AssignInspectorModal modal={modal} onClose={() => setModal(null)} onConfirm={handleAssignConfirm} />
       <CancelInspectionModal modal={modal} onClose={() => setModal(null)} onConfirm={handleCancelConfirm} />
       <EscalateModal modal={modal} onClose={() => setModal(null)} onConfirm={handleEscalateConfirm} />
       <RefundModal modal={modal} onClose={() => setModal(null)} onConfirm={handleRefundConfirm} />
-    </div>
+    </>
   );
+
 };
 
 export default InspectionRequests;

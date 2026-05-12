@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Ban,
   Briefcase,
+  History,
 } from "lucide-react";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
@@ -36,66 +37,78 @@ const DUMMY_QUEUE = [
   {
     id: "INSP-2101",
     vehicle: "Hyundai Creta SX 2021",
+    vehicleThumbnailUrl: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80",
     city: "Ahmedabad",
-    type: "Premium",
-    requestedBy: "Buyer",
-    preferredDate: "18 Mar 2026",
+    inspectionType: "VIDEO CALL WITH REPORT",
+    requestedByName: "Rahul Malhotra",
+    requesterType: "VIDEO CALL WITH REPORT",
+    scheduledAt: "15 May 2026",
+    createdAt: "12 May 2026",
+    status: "ASSIGNED",
     slaTimer: "45m",
     slaLevel: "critical",
     risk: "High",
     boosted: true,
-    vehicleType: "Car",
-    videoRequired: false,
-    consultant: "Metro Auto Hub",
-    status: "Unassigned",
-  },
-  {
-    id: "INSP-2102",
-    vehicle: "Tata Nexon XZ+ 2022",
-    city: "Surat",
-    type: "Basic",
-    requestedBy: "Consultant",
-    preferredDate: "18 Mar 2026",
-    slaTimer: "2h 10m",
-    slaLevel: "warning",
-    risk: "Moderate",
-    boosted: false,
-    vehicleType: "Car",
-    videoRequired: false,
-    consultant: "City Drive",
-    status: "Unassigned",
-  },
-  {
-    id: "INSP-2103",
-    vehicle: "Honda City ZX 2022",
-    city: "Ahmedabad",
-    type: "Video",
-    requestedBy: "Buyer",
-    preferredDate: "19 Mar 2026",
-    slaTimer: "5h 20m",
-    slaLevel: "safe",
-    risk: "Low",
-    boosted: false,
-    vehicleType: "Car",
     videoRequired: true,
-    consultant: "Elite Motors",
-    status: "Unassigned",
+    consultant: "Metro Auto Hub",
+    inspectorName: "Harsh Patel",
   },
   {
     id: "INSP-2104",
     vehicle: "Mahindra Scorpio N Z8",
+    vehicleThumbnailUrl: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80",
     city: "Vadodara",
-    type: "Premium",
-    requestedBy: "Buyer",
-    preferredDate: "18 Mar 2026",
+    inspectionType: "REPORT",
+    requestedByName: "Torque Wheels",
+    requesterType: "BUYER",
+    scheduledAt: "18 May 2026",
+    createdAt: "14 May 2026",
+    status: "ASSIGNED",
     slaTimer: "1h 05m",
     slaLevel: "warning",
     risk: "High",
     boosted: true,
-    vehicleType: "SUV",
     videoRequired: false,
     consultant: "Torque Wheels",
-    status: "Unassigned",
+    inspectorName: "Rahul Shah",
+  },
+  {
+    id: "INSP-2102",
+    vehicle: "Tata Nexon XZ+ 2022",
+    vehicleThumbnailUrl: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80",
+    city: "Surat",
+    inspectionType: "REPORT",
+    requestedByName: "Hello hello1234",
+    requesterType: "BUYER",
+    scheduledAt: "15 Jun 2026",
+    createdAt: "30 Apr 2026",
+    status: "ASSIGNED",
+    slaTimer: "2h 10m",
+    slaLevel: "warning",
+    risk: "Moderate",
+    boosted: false,
+    videoRequired: false,
+    consultant: "City Drive",
+    inspectorName: "Fardin Bhu_d",
+  },
+  {
+    id: "INSP-2103",
+    vehicle: "Honda City ZX 2022",
+    vehicleThumbnailUrl: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80",
+    city: "Ahmedabad",
+    inspectionType: "VIDEO CALL WITH REPORT",
+    requestedByName: "Elite Motors",
+    requesterType: "BUYER",
+    scheduledAt: "19 May 2026",
+    createdAt: "10 May 2026",
+    status: "ASSIGNED",
+    slaTimer: "5h 20m",
+    slaLevel: "safe",
+    risk: "Low",
+    boosted: false,
+    videoRequired: true,
+    consultant: "Elite Motors",
+    inspectorName: "Usman Lala",
   },
 ];
 
@@ -296,12 +309,24 @@ const riskBadge = (risk) => {
 };
 
 const typeBadge = (type) => {
+  const upperType = type?.toUpperCase();
+  if (upperType?.includes("VIDEO")) return "bg-indigo-50 text-indigo-700 border-indigo-200";
+  if (upperType?.includes("PREMIUM")) return "bg-violet-50 text-violet-700 border-violet-200";
+  return "bg-sky-50 text-sky-700 border-sky-200";
+};
+
+const requesterTypeBadge = (type) => {
+  return "bg-slate-100 text-slate-600 border-slate-200";
+};
+
+const requestStatusBadge = (status) => {
   const map = {
-    Basic: "bg-sky-50 text-sky-700 border-sky-200",
-    Premium: "bg-violet-50 text-violet-700 border-violet-200",
-    Video: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    REQUESTED: "bg-sky-50 text-sky-700 border-sky-200",
+    ASSIGNED: "bg-violet-50 text-violet-700 border-violet-200",
+    COMPLETED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    CANCELLED: "bg-rose-50 text-rose-700 border-rose-200",
   };
-  return map[type] || "bg-slate-100 text-slate-700 border-slate-200";
+  return map[status] || "bg-slate-100 text-slate-600 border-slate-200";
 };
 
 const statusBadge = (status) => {
@@ -318,44 +343,26 @@ const statusBadge = (status) => {
    SMALL UI
 ========================================================= */
 
-function TopCard({ title, value, icon: Icon, active, onClick }) {
+function TopCard({ title, value, icon: Icon }) {
   return (
-    <button
-      onClick={onClick}
-      className={cls(
-        "relative rounded-2xl border p-6 overflow-hidden transition text-left shadow-sm",
-        active
-          ? "border-sky-600 bg-sky-600 text-white"
-          : "border-slate-200 bg-white hover:bg-slate-50"
-      )}
+    <div
+      className="relative rounded-2xl border border-slate-200 bg-white p-6 overflow-hidden shadow-sm"
     >
       <div className="relative z-10 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <div
-            className={cls(
-              "text-[12px] font-bold uppercase tracking-[0.15em] mb-2",
-              active ? "text-sky-100" : "text-slate-400"
-            )}
-          >
+          <div className="text-[12px] font-bold uppercase tracking-[0.15em] mb-2 text-slate-400">
             {title}
           </div>
-          <div className="text-3xl font-extrabold tracking-tight break-words leading-tight">
+          <div className="text-3xl font-extrabold tracking-tight break-words leading-tight text-slate-900">
             {value}
           </div>
         </div>
 
-        <div
-          className={cls(
-            "w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 transition-colors",
-            active
-              ? "bg-white/10 border-white/20 text-white"
-              : "bg-sky-50 border-sky-100 text-sky-600"
-          )}
-        >
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-sky-100 bg-sky-50 text-sky-600 shrink-0 transition-colors">
           <Icon size={18} />
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -444,14 +451,6 @@ function QueueRowActions({
   return (
     <div className="relative inline-flex justify-end gap-2" ref={ref}>
       <button
-        onClick={() => onAssign(item)}
-        className="inline-flex h-9 items-center gap-2 rounded-xl bg-sky-600 px-3 text-[13px] font-semibold text-white hover:bg-sky-700"
-      >
-        <UserPlus className="h-4 w-4" />
-        Assign
-      </button>
-
-      <button
         onClick={() => setOpen((p) => !p)}
         className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 shadow-sm"
       >
@@ -460,18 +459,29 @@ function QueueRowActions({
 
       {open && (
         <div className="absolute right-0 top-11 z-30 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+          {/* <button
+            onClick={() => {
+              onAssign(item);
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <UserPlus className="h-4 w-4" />
+            Assign Inspector
+          </button> */}
+
           <button
             onClick={() => {
               onAutoAssign(item);
               setOpen(false);
             }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 border-t border-slate-100"
           >
             <TimerReset className="h-4 w-4" />
             Auto-Assign
           </button>
 
-          <button
+          {/* <button
             onClick={() => {
               onEscalate(item);
               setOpen(false);
@@ -480,7 +490,7 @@ function QueueRowActions({
           >
             <AlertTriangle className="h-4 w-4" />
             Escalate
-          </button>
+          </button> */}
 
           <button
             onClick={() => {
@@ -498,7 +508,7 @@ function QueueRowActions({
               onCancel(item);
               setOpen(false);
             }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-rose-700 hover:bg-rose-50"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-rose-700 hover:bg-rose-50 border-t border-slate-100"
           >
             <X className="h-4 w-4" />
             Cancel
@@ -551,12 +561,12 @@ function AssignmentDrawer({ item, inspectors, onClose, onConfirmAssign }) {
           <div>
             <h3 className="text-xl font-bold text-slate-900">{item.id}</h3>
             <p className="mt-1 text-sm text-slate-500">
-              {item.city} • {item.type} • SLA Remaining {item.slaTimer}
+              {item.city} • {item.inspectionType} • SLA Remaining {item.slaTimer}
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className={cls("inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold border", typeBadge(item.type))}>
-                {item.type}
+              <span className={cls("inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold border", typeBadge(item.inspectionType))}>
+                {item.inspectionType}
               </span>
               <span className={cls("inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold border", queueSlaBadge(item.slaLevel))}>
                 {item.slaTimer}
@@ -699,7 +709,7 @@ function AssignmentDrawer({ item, inspectors, onClose, onConfirmAssign }) {
 
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <InfoRow label="Inspector" value={selectedInspector.name} />
-                <InfoRow label="Scheduled Date" value={item.preferredDate} />
+                <InfoRow label="Scheduled Date" value={item.scheduledAt} />
                 <InfoRow label="Estimated Completion" value="24h" />
                 <InfoRow label="SLA Status" value={item.slaTimer} />
               </div>
@@ -826,7 +836,6 @@ const AssignInspector = () => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [modal, setModal] = useState(null);
-  const [quickFilter, setQuickFilter] = useState("all");
 
   const [filters, setFilters] = useState({
     city: "",
@@ -835,6 +844,17 @@ const AssignInspector = () => {
     requestedBy: "",
     slaLevel: "",
   });
+
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalElements: DUMMY_QUEUE.length,
+    size: 10,
+  });
+
+  const handlePageChange = (page) => {
+    setPagination((p) => ({ ...p, currentPage: page }));
+  };
 
   const uniqueCities = useMemo(
     () => [...new Set(queue.map((r) => r.city))],
@@ -875,35 +895,13 @@ const AssignInspector = () => {
     }
 
     if (filters.city) data = data.filter((r) => r.city === filters.city);
-    if (filters.type) data = data.filter((r) => r.type === filters.type);
+    if (filters.type) data = data.filter((r) => r.inspectionType === filters.type);
     if (filters.risk) data = data.filter((r) => r.risk === filters.risk);
-    if (filters.requestedBy) data = data.filter((r) => r.requestedBy === filters.requestedBy);
+    if (filters.requestedBy) data = data.filter((r) => r.requestedByName === filters.requestedBy);
     if (filters.slaLevel) data = data.filter((r) => r.slaLevel === filters.slaLevel);
 
-    if (quickFilter === "critical") data = data.filter((r) => r.slaLevel === "critical");
-    if (quickFilter === "premium") data = data.filter((r) => r.type === "Premium");
-    if (quickFilter === "boosted") data = data.filter((r) => r.boosted);
-    if (quickFilter === "highrisk") data = data.filter((r) => r.risk === "High");
-
-    data.sort((a, b) => {
-      const slaPriority = { critical: 0, warning: 1, safe: 2 };
-      if (slaPriority[a.slaLevel] !== slaPriority[b.slaLevel]) {
-        return slaPriority[a.slaLevel] - slaPriority[b.slaLevel];
-      }
-      if (a.type !== b.type) {
-        if (a.type === "Premium") return -1;
-        if (b.type === "Premium") return 1;
-      }
-      if (a.boosted !== b.boosted) return a.boosted ? -1 : 1;
-      if (a.risk !== b.risk) {
-        const riskOrder = { High: 0, Moderate: 1, Low: 2 };
-        return riskOrder[a.risk] - riskOrder[b.risk];
-      }
-      return 0;
-    });
-
     return data;
-  }, [queue, search, filters, quickFilter]);
+  }, [queue, search, filters]);
 
   const handleRefresh = () => {
     setQueue([...DUMMY_QUEUE]);
@@ -913,7 +911,6 @@ const AssignInspector = () => {
 
   const handleClear = () => {
     setSearch("");
-    setQuickFilter("all");
     setFilters({
       city: "",
       type: "",
@@ -1019,141 +1016,106 @@ const AssignInspector = () => {
     setModal(null);
   };
 
-  const updateInspectorStatus = (id, status) => {
-    setInspectors((prev) =>
-      prev.map((x) =>
-        x.id === id
-          ? {
-              ...x,
-              status,
-              suspended: status === "Suspended" ? true : x.suspended,
-            }
-          : x
-      )
-    );
-  };
-
-  const adjustCapacity = (id, delta) => {
-    setInspectors((prev) =>
-      prev.map((x) =>
-        x.id === id
-          ? { ...x, todayCapacity: Math.max(0, x.todayCapacity + delta) }
-          : x
-      )
-    );
-  };
-
   return (
-    <div className="min-h-screen p-0">
+    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
       <style>{`
-        .table-scroll::-webkit-scrollbar { height: 6px; }
+        .table-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
         .table-scroll::-webkit-scrollbar-track { background: transparent; }
         .table-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 6px; }
         .table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.45); }
       `}</style>
 
-      <div className="mx-auto space-y-6">
-        {/* Header */}
-        <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      {/* HEADER BAR */}
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-4 relative z-20 shadow-sm">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">
-              Assign Inspector
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">Assign Inspector</h1>
             <p className="max-w-3xl text-sm leading-relaxed text-slate-500">
-              Dispatch and manage field inspection workforce with workload balance,
-              SLA control, city coverage, conflict checks, and risk protection.
+              Manage the inspection dispatch queue, monitor real-time availability, and optimize assignment scoring for SLA compliance.
             </p>
           </div>
-        </section>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRefresh}
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh Queue
+            </button>
+          </div>
+        </div>
+      </div>
 
-        {/* Summary / Performance */}
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
+      {/* KPI STRIP */}
+      <div className="flex-shrink-0 px-6 py-5 bg-slate-50">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
           <TopCard
-            title="Unassigned Queue"
+            title="Total Queue"
             value={summary.unassigned}
             icon={ClipboardList}
-            active={quickFilter === "all"}
-            onClick={() => setQuickFilter("all")}
           />
           <TopCard
             title="Available Inspectors"
             value={summary.availableInspectors}
             icon={Users}
-            active={quickFilter === "available"}
-            onClick={() => setQuickFilter("available")}
           />
           <TopCard
             title="Critical SLA"
             value={queue.filter((x) => x.slaLevel === "critical").length}
             icon={AlertTriangle}
-            active={quickFilter === "critical"}
-            onClick={() => setQuickFilter("critical")}
           />
           <TopCard
             title="Premium Queue"
-            value={queue.filter((x) => x.type === "Premium").length}
+            value={queue.filter((x) => x.inspectionType === "PREMIUM").length}
             icon={ShieldCheck}
-            active={quickFilter === "premium"}
-            onClick={() => setQuickFilter("premium")}
           />
           <TopCard
             title="Boosted"
             value={queue.filter((x) => x.boosted).length}
             icon={BadgeAlert}
-            active={quickFilter === "boosted"}
-            onClick={() => setQuickFilter("boosted")}
           />
           <TopCard
             title="High Risk"
             value={queue.filter((x) => x.risk === "High").length}
             icon={ShieldAlert}
-            active={quickFilter === "highrisk"}
-            onClick={() => setQuickFilter("highrisk")}
           />
-        </section>
+        </div>
+      </div>
 
-        {/* Queue */}
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-sky-100 blur-[100px] pointer-events-none" />
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 overflow-hidden px-6 pb-6 flex flex-col">
+        {/* Inspection Queue */}
+        <section className="flex-1 min-h-0 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden relative flex flex-col">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-sky-50/50 blur-[100px] pointer-events-none" />
 
-          <div className="p-5 md:p-6 relative z-10 border-b border-slate-200">
+          {/* Queue Filter Bar */}
+          <div className="p-5 md:p-6 relative z-10 border-b border-slate-200 flex-shrink-0">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="relative flex-1 max-w-2xl">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by Request ID, Vehicle, City, Consultant..."
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-[14px] text-slate-900 outline-none transition-all focus:border-sky-400 placeholder:text-slate-400"
+                  placeholder="Search by ID, Vehicle, City, Consultant..."
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-[14px] text-slate-900 outline-none transition-all focus:border-sky-400 placeholder:text-slate-400 shadow-sm"
                 />
               </div>
-
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => setFiltersOpen((p) => !p)}
                   className={cls(
                     "inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-[13px] font-semibold transition-colors",
-                    filtersOpen
-                      ? "bg-sky-600 text-white border-sky-600"
-                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    filtersOpen ? "bg-sky-600 text-white border-sky-600" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-sm"
                   )}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
                   Filters
                 </button>
-
-                <button
-                  onClick={handleRefresh}
-                  className="inline-flex h-11 items-center justify-center w-11 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
-                  title="Refresh List"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
               </div>
             </div>
 
             {filtersOpen && (
-              <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-200 pt-5 md:grid-cols-2 xl:grid-cols-5">
+              <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-200 pt-5 md:grid-cols-5">
                 <div className="flex items-center justify-between col-span-full mb-2">
                   <h4 className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
                     Advanced Filters
@@ -1183,9 +1145,9 @@ const AssignInspector = () => {
                   className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
                 >
                   <option value="">Inspection Type</option>
-                  <option>Basic</option>
-                  <option>Premium</option>
-                  <option>Video</option>
+                  <option>BASIC</option>
+                  <option>PREMIUM</option>
+                  <option>VIDEO CALL WITH REPORT</option>
                 </select>
 
                 <select
@@ -1198,43 +1160,23 @@ const AssignInspector = () => {
                   <option>Moderate</option>
                   <option>High</option>
                 </select>
-
-                <select
-                  value={filters.requestedBy}
-                  onChange={(e) => setFilters((p) => ({ ...p, requestedBy: e.target.value }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
-                >
-                  <option value="">Requested By</option>
-                  <option>Buyer</option>
-                  <option>Consultant</option>
-                </select>
-
-                <select
-                  value={filters.slaLevel}
-                  onChange={(e) => setFilters((p) => ({ ...p, slaLevel: e.target.value }))}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[13px] text-slate-900 outline-none focus:border-sky-400 appearance-none"
-                >
-                  <option value="">SLA Level</option>
-                  <option value="critical">Critical</option>
-                  <option value="warning">Approaching Deadline</option>
-                  <option value="safe">Within Time</option>
-                </select>
               </div>
             )}
           </div>
 
-          <div className="w-full overflow-x-auto table-scroll relative z-10 pb-4">
+          {/* TABLE CONTAINER */}
+          <div className="flex-1 w-full overflow-auto table-scroll relative z-10">
             <table className="min-w-[1450px] w-full border-collapse">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-20">
                 <tr className="text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                  <th className="px-6 py-4 font-semibold whitespace-nowrap">Request ID</th>
                   <th className="px-5 py-4 font-semibold whitespace-nowrap">Vehicle</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">City</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Type</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Requested By</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Preferred Date</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">SLA Timer</th>
-                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Risk</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Requester Name</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Requester Type</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Inspection Type</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Status</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Scheduled</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Created</th>
+                  <th className="px-5 py-4 font-semibold whitespace-nowrap">Inspector</th>
                   <th className="px-6 py-4 text-right font-semibold whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
@@ -1243,49 +1185,60 @@ const AssignInspector = () => {
                 {filteredQueue.length ? (
                   filteredQueue.map((row) => (
                     <tr key={row.id} className="transition-colors duration-200 hover:bg-slate-50 group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-100 to-blue-100 border border-slate-200 flex items-center justify-center shrink-0">
-                            <ClipboardList className="h-4 w-4 text-sky-700" />
-                          </div>
-                          <div>
-                            <div className="text-[14px] font-bold text-slate-900 group-hover:text-sky-700 transition-colors">
-                              {row.id}
-                            </div>
-                            <div className="mt-0.5 text-[12px] text-slate-500">{row.consultant}</div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-700">{row.vehicle}</td>
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500">{row.city}</td>
-
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap", typeBadge(row.type))}>
-                            {row.type}
-                          </span>
-                          {row.videoRequired && (
-                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700">
-                              <Video className="h-3.5 w-3.5" />
-                            </span>
-                          )}
+                          <img
+                            src={row.vehicleThumbnailUrl || "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80"}
+                            alt=""
+                            className="w-10 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
+                          />
+                          <div className="text-[13px] font-bold text-slate-900 leading-tight">
+                            {row.vehicle}
+                          </div>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500">{row.requestedBy}</td>
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">{row.preferredDate}</td>
+                      <td className="px-5 py-4 text-[13px] font-medium text-slate-700">{row.requestedByName}</td>
 
                       <td className="px-5 py-4">
-                        <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap", queueSlaBadge(row.slaLevel))}>
-                          {row.slaTimer}
+                        <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[10px] font-bold border uppercase", requesterTypeBadge(row.requesterType))}>
+                          {row.requesterType}
                         </span>
                       </td>
 
                       <td className="px-5 py-4">
-                        <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap", riskBadge(row.risk))}>
-                          {row.risk}
+                        <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[10px] font-bold border uppercase", typeBadge(row.inspectionType))}>
+                          {row.inspectionType}
                         </span>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold border uppercase", requestStatusBadge(row.status))}>
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                          {row.status}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">{row.scheduledAt}</td>
+
+                      <td className="px-5 py-4 text-[13px] font-medium text-slate-400 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <Clock3 className="h-3.5 w-3.5" />
+                          {row.createdAt}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {row.inspectorName ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-[11px] font-bold">
+                              {row.inspectorName[0]}
+                            </div>
+                            <span className="text-[13px] font-semibold text-slate-700">{row.inspectorName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[12px] text-slate-400 font-medium italic">Unassigned</span>
+                        )}
                       </td>
 
                       <td className="px-6 py-4 text-right">
@@ -1311,7 +1264,7 @@ const AssignInspector = () => {
                           No unassigned inspections found
                         </div>
                         <div className="mt-1 text-[14px] text-slate-500 max-w-sm mx-auto">
-                          Try adjusting your search criteria or clear active filters to see more results.
+                          Try adjusting your search criteria or clear active filters.
                         </div>
                       </div>
                     </td>
@@ -1320,136 +1273,27 @@ const AssignInspector = () => {
               </tbody>
             </table>
           </div>
-        </section>
 
-        {/* Inspector Availability Panel */}
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="p-5 md:p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900">Inspector Availability Panel</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Review availability, workload, capacity, rating, and risk status.
-            </p>
-          </div>
-
-          <div className="w-full overflow-x-auto table-scroll pb-4">
-            <table className="min-w-[1300px] w-full border-collapse">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                  <th className="px-6 py-4">Inspector</th>
-                  <th className="px-5 py-4">City</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Active Jobs</th>
-                  <th className="px-5 py-4">Today Capacity</th>
-                  <th className="px-5 py-4">Rating</th>
-                  <th className="px-5 py-4">Risk</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100">
-                {inspectors.map((inspector) => (
-                  <tr key={inspector.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900">{inspector.name}</div>
-                      <div className="text-[12px] text-slate-500">{inspector.id}</div>
-                    </td>
-                    <td className="px-5 py-4 text-[13px] text-slate-600">{inspector.city}</td>
-                    <td className="px-5 py-4">
-                      <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border", statusBadge(inspector.status))}>
-                        {inspector.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-[13px] text-slate-600">{inspector.activeJobs}</td>
-                    <td className="px-5 py-4 text-[13px] text-slate-600">{inspector.todayCapacity}</td>
-                    <td className="px-5 py-4 text-[13px] text-slate-600">{inspector.rating}</td>
-                    <td className="px-5 py-4">
-                      <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[11px] font-bold border", riskBadge(inspector.risk))}>
-                        {inspector.risk}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => updateInspectorStatus(inspector.id, "On Leave")}
-                          className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                          Mark unavailable
-                        </button>
-                        <button
-                          onClick={() => updateInspectorStatus(inspector.id, "Suspended")}
-                          className="inline-flex h-9 items-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-[12px] font-semibold text-rose-700 hover:bg-rose-100"
-                        >
-                          Suspend
-                        </button>
-                        <button
-                          onClick={() => adjustCapacity(inspector.id, 1)}
-                          className="inline-flex h-9 items-center rounded-xl border border-sky-200 bg-sky-50 px-3 text-[12px] font-semibold text-sky-700 hover:bg-sky-100"
-                        >
-                          + Capacity
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Optional City Map placeholder + assignment log */}
-        <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
-                <Route className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">City Map View</h3>
-                <p className="text-sm text-slate-500">
-                  Pending inspections and available inspectors by city.
-                </p>
-              </div>
+          {/* PAGINATION */}
+          <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between flex-shrink-0 bg-white relative z-20">
+            <div className="text-[13px] text-slate-600 font-medium">
+              Page {pagination.currentPage} of {pagination.totalPages} • {pagination.totalElements} total records
             </div>
-
-            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 h-[260px] flex items-center justify-center text-slate-400 text-sm">
-              Map placeholder for city dispatch view
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900">Assignment Log</h3>
-              <p className="text-sm text-slate-500 mt-1">
-                Immutable activity log for assignment and reassignment events.
-              </p>
-            </div>
-
-            <div className="p-6 space-y-3">
-              {logs.length ? (
-                logs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-[13px] font-semibold text-slate-900">
-                          {log.requestId} • {log.action}
-                        </div>
-                        <div className="mt-1 text-[12px] text-slate-500">
-                          Inspector: {log.inspector} • {log.city}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-[12px] font-medium text-slate-700">{log.admin}</div>
-                        <div className="mt-1 text-[11px] text-slate-500">{log.time}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-slate-500">No logs yet.</div>
-              )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                disabled={pagination.currentPage === 1}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                Prev
+              </button>
+              <button
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                disabled={pagination.currentPage >= pagination.totalPages}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                Next
+              </button>
             </div>
           </div>
         </section>
