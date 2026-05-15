@@ -15,7 +15,10 @@ import {
   ClipboardCheck,
   Images,
   Star,
+  Loader2,
 } from "lucide-react";
+import { getAllVehicleInspectionAssigned } from "../../../api/vehicleInspection.api";
+import toast from "react-hot-toast";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -247,6 +250,8 @@ function InfoRow({ label, value }) {
 ====================================================== */
 
 const ReportsReview = () => {
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -259,48 +264,91 @@ const ReportsReview = () => {
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
-    totalElements: REPORTS.length,
+    totalElements: 0,
     size: 10,
   });
 
   const handlePageChange = (page) => {
-    setPagination((p) => ({ ...p, currentPage: page }));
+    fetchReports(page);
   };
 
   const uniqueCities = useMemo(
-    () => [...new Set(REPORTS.map((r) => r.city))],
-    []
+    () => [...new Set(reports.map((r) => r.city))],
+    [reports]
   );
 
   const filtered = useMemo(() => {
-    let data = [...REPORTS];
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      data = data.filter(
-        (r) =>
-          r.id.toLowerCase().includes(q) ||
-          r.vehicle.toLowerCase().includes(q) ||
-          r.inspectorName.toLowerCase().includes(q) ||
-          r.requestedByName.toLowerCase().includes(q)
-      );
-    }
+    let data = [...reports];
 
     if (filters.city) data = data.filter((r) => r.city === filters.city);
     if (filters.type) data = data.filter((r) => r.inspectionType === filters.type);
     if (filters.status) data = data.filter((r) => r.status === filters.status);
 
     return data;
-  }, [search, filters]);
+  }, [reports, filters]);
+
+  const fetchReports = async (pageNo = 1) => {
+    setLoading(true);
+    try {
+      const res = await getAllVehicleInspectionAssigned({ searchText: search.trim() || null, pageNo, status: "SUBMITTED" });
+      const data = res?.data || [];
+      setReports(Array.isArray(data) ? data : []);
+      if (res?.pageResponse) {
+        setPagination({
+          currentPage: res.pageResponse.currentPage ?? pageNo,
+          totalPages: res.pageResponse.totalPages ?? 1,
+          totalElements: res.pageResponse.totalElements ?? data.length,
+          size: res.pageResponse.pageSize ?? 10,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch reports:", err);
+      toast.error(err?.response?.data?.message || "Failed to load reports queue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports(1);
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => fetchReports(1), 500);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const formatDate = (dt) => {
+    if (!dt) return "—";
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return "—";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const formatScheduledDate = (dt) => {
+    if (!dt) return "—";
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const summary = useMemo(
     () => ({
-      submitted: REPORTS.filter((r) => r.status === "SUBMITTED").length,
-      approved: REPORTS.filter((r) => r.status === "APPROVED").length,
-      rejected: REPORTS.filter((r) => r.status === "REJECTED").length,
-      flagged: REPORTS.filter((r) => r.status === "FLAGGED").length,
+      submitted: pagination.totalElements,
+      approved: reports.filter((r) => r.status === "APPROVED").length,
+      rejected: reports.filter((r) => r.status === "REJECTED").length,
+      flagged: reports.filter((r) => r.status === "FLAGGED").length,
     }),
-    []
+    [reports, pagination.totalElements]
   );
 
   const handleClear = () => {
@@ -310,8 +358,7 @@ const ReportsReview = () => {
   };
 
   const handleRefresh = () => {
-    // Mock refresh
-    console.log("Refreshing reports...");
+    fetchReports(pagination.currentPage);
   };
 
   return (
@@ -441,23 +488,32 @@ const ReportsReview = () => {
               </thead>
 
               <tbody className="divide-y divide-slate-100">
-                {filtered.length ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-28 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <Loader2 className="h-12 w-12 text-sky-600 animate-spin mb-4" />
+                        <div className="text-lg font-bold text-slate-900">Loading reports...</div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtered.length ? (
                   filtered.map((row) => (
-                    <tr key={row.id} className="transition-colors duration-200 hover:bg-slate-50 group">
+                    <tr key={row.assignmentId || row.id} className="transition-colors duration-200 hover:bg-slate-50 group">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <img
-                            src={row.vehicleThumbnailUrl}
+                            src={row.vehicleThumbnailUrl || "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80"}
                             alt=""
                             className="w-10 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
                           />
                           <div className="text-[13px] font-bold text-slate-900 leading-tight">
-                            {row.vehicle}
+                            {row.vehicleName || row.vehicle}
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-700">{row.requestedByName}</td>
+                      <td className="px-5 py-4 text-[13px] font-medium text-slate-700">{row.requestedUserName || row.requestedByName}</td>
 
                       <td className="px-5 py-4">
                         <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[10px] font-bold border uppercase", requesterTypeBadge(row.requesterType))}>
@@ -472,28 +528,36 @@ const ReportsReview = () => {
                       </td>
 
                       <td className="px-5 py-4">
-                        <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold border uppercase", requestStatusBadge(row.status))}>
+                        <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold border uppercase", requestStatusBadge(row.assignmentStatus || row.inspectionRequestStatus || row.status))}>
                           <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                          {row.status}
+                          {row.assignmentStatus || row.inspectionRequestStatus || row.status}
                         </span>
                       </td>
 
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">{row.scheduledAt}</td>
+                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">
+                        {formatScheduledDate(row.videoCallScheduledAt || row.scheduledAt)}
+                      </td>
 
                       <td className="px-5 py-4 text-[13px] font-medium text-slate-400 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <Clock3 className="h-3.5 w-3.5" />
-                          {row.createdAt}
+                          {formatDate(row.createdAt)}
                         </div>
                       </td>
 
                       <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-[11px] font-bold">
-                            {row.inspectorName[0]}
+                        {row.inspectorUsername || row.inspectorName ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-[11px] font-bold">
+                              {(row.inspectorUsername || row.inspectorName)[0]}
+                            </div>
+                            <span className="text-[13px] font-semibold text-slate-700">
+                              {row.inspectorUsername || row.inspectorName}
+                            </span>
                           </div>
-                          <span className="text-[13px] font-semibold text-slate-700">{row.inspectorName}</span>
-                        </div>
+                        ) : (
+                          <span className="text-[12px] text-slate-400 font-medium italic">Unassigned</span>
+                        )}
                       </td>
 
                       <td className="px-6 py-4 text-right">
@@ -565,11 +629,11 @@ const ReportsReview = () => {
             <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5 bg-slate-50">
               <div>
                 <h3 className="text-xl font-bold text-slate-900">{selected.id}</h3>
-                <p className="mt-1 text-sm text-slate-500">{selected.vehicle}</p>
+                <p className="mt-1 text-sm text-slate-500">{selected.vehicleName || selected.vehicle}</p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <span className={cls("inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold border uppercase", requestStatusBadge(selected.status))}>
-                    {selected.status}
+                  <span className={cls("inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold border uppercase", requestStatusBadge(selected.inspectionRequestStatus || selected.status))}>
+                    {selected.inspectionRequestStatus || selected.status}
                   </span>
                   <span className={cls("inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold border uppercase", typeBadge(selected.inspectionType))}>
                     {selected.inspectionType}
@@ -599,12 +663,12 @@ const ReportsReview = () => {
                 </h4>
 
                 <div className="mt-4 space-y-4">
-                  <InfoRow label="Vehicle" value={selected.vehicle} />
-                  <InfoRow label="Inspector" value={selected.inspectorName} />
-                  <InfoRow label="Consultant" value={selected.consultant} />
+                  <InfoRow label="Vehicle" value={selected.vehicleName || selected.vehicle} />
+                  <InfoRow label="Inspector" value={selected.inspectorUsername || selected.inspectorName} />
+                  <InfoRow label="Consultant" value={selected.consultant || "—"} />
                   <InfoRow label="Inspection Type" value={selected.inspectionType} />
-                  <InfoRow label="Scheduled Date" value={selected.scheduledAt} />
-                  <InfoRow label="City" value={selected.city} />
+                  <InfoRow label="Scheduled Date" value={formatScheduledDate(selected.videoCallScheduledAt || selected.scheduledAt)} />
+                  <InfoRow label="City" value={selected.city || "—"} />
                 </div>
               </div>
 

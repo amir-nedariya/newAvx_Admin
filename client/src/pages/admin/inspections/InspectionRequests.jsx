@@ -15,11 +15,23 @@ import {
   CheckCircle2,
   FileText,
   Loader2,
+  XCircle,
+  CreditCard,
+  ClipboardCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getAllVehicleInspections, assignInspector } from "../../../api/vehicleInspection.api";
+import { 
+  getAllVehicleInspections, 
+  getAllVehicleInspectionAssigned, 
+  assignInspector,
+  getVehicleInspectionById,
+  getVehicleInspectionAssignmentById,
+  approveInspection,
+  rejectInspection
+} from "../../../api/vehicleInspection.api";
 import { getAllInspectors } from "../../../api/inspector.api";
 import InspectionRequestDetail from "./modal/InspectionRequestDetail";
+import InspectionCommonDetail from "./modal/InspectionCommonDetail";
 import { ChevronDown } from "lucide-react";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
@@ -149,13 +161,16 @@ function MiniMetric({ title, value }) {
 ========================================================= */
 function InspectionRowActions({
   item,
+  activeTab,
   onView,
   onAssign,
   onReschedule,
   onCancel,
   onRefund,
-  onEscalate,
-  onNote,
+  onApprove,
+  onReject,
+  onReview,
+  onPayment,
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -190,73 +205,113 @@ function InspectionRowActions({
             View Details
           </button>
 
-          <button
-            onClick={() => {
-              onAssign(item);
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sky-700 hover:bg-sky-50 transition-colors"
-          >
-            <UserPlus className="h-4 w-4" />
-            Assign Inspector
-          </button>
+          {activeTab === "PENDING" && (
+            <>
+              <button
+                onClick={() => {
+                  onAssign(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sky-700 hover:bg-sky-50 transition-colors"
+              >
+                <UserPlus className="h-4 w-4" />
+                Assign Inspector
+              </button>
 
-          <button
-            onClick={() => {
-              onReschedule(item);
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 transition-colors"
-          >
-            <CalendarClock className="h-4 w-4" />
-            Reschedule
-          </button>
+              <button
+                onClick={() => {
+                  onReschedule(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 transition-colors"
+              >
+                <CalendarClock className="h-4 w-4" />
+                Reschedule
+              </button>
 
-          <button
-            onClick={() => {
-              onCancel(item);
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-rose-700 hover:bg-rose-50 transition-colors"
-          >
-            <X className="h-4 w-4" />
-            Cancel
-          </button>
+              <button
+                onClick={() => {
+                  onCancel(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-rose-700 hover:bg-rose-50 transition-colors"
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
 
-          <button
-            onClick={() => {
-              onRefund(item);
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-amber-700 hover:bg-amber-50 transition-colors"
-          >
-            <BadgeDollarSign className="h-4 w-4" />
-            Initiate Refund
-          </button>
+              <button
+                onClick={() => {
+                  onRefund(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-amber-700 hover:bg-amber-50 transition-colors"
+              >
+                <BadgeDollarSign className="h-4 w-4" />
+                Initiate Refund
+              </button>
+            </>
+          )}
 
-          {/* <button
-            onClick={() => {
-              onEscalate(item);
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-orange-700 hover:bg-orange-50 transition-colors"
-          >
-            <AlertTriangle className="h-4 w-4" />
-            Escalate
-          </button> */}
+          {activeTab === "SUBMITTED" && (
+            <>
+              <button
+                onClick={() => {
+                  onReview(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sky-700 hover:bg-sky-50 transition-colors border-t border-slate-100"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Review Report
+              </button>
+              <button
+                onClick={() => {
+                  onApprove(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Approve Report
+              </button>
+              <button
+                onClick={() => {
+                  onReject(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-rose-700 hover:bg-rose-50 transition-colors"
+              >
+                <XCircle className="h-4 w-4" />
+                Reject Report
+              </button>
+            </>
+          )}
 
-          {/* <div className="my-1 border-t border-slate-100" /> */}
-
-          {/* <button
-            onClick={() => {
-              onNote(item);
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <NotebookPen className="h-4 w-4 text-slate-500" />
-            Add Internal Note
-          </button> */}
+          {activeTab === "COMPLETED" && (
+            <>
+              <button
+                onClick={() => {
+                  onReview(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sky-700 hover:bg-sky-50 transition-colors border-t border-slate-100"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Review Report
+              </button>
+              <button
+                onClick={() => {
+                  onPayment(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
+              >
+                <CreditCard className="h-4 w-4" />
+                Payment Details
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -855,6 +910,102 @@ function RefundModal({ modal, onClose, onConfirm }) {
   );
 }
 
+function ApproveInspectionModal({ modal, onClose, onConfirm }) {
+  if (!modal || modal.type !== "approve") return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed left-1/2 top-1/2 z-[61] w-[95%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Approve Inspection</h3>
+            <p className="mt-1 text-[13px] text-slate-500">Are you sure you want to approve this inspection report?</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-8 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(modal.item)}
+            className="rounded-xl bg-emerald-600 px-6 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700 transition-colors"
+          >
+            Yes, Approve
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function RejectInspectionModal({ modal, onClose, onConfirm }) {
+  const [remarks, setRemarks] = useState("");
+
+  useEffect(() => {
+    if (modal?.type === "reject") setRemarks("");
+  }, [modal]);
+
+  if (!modal || modal.type !== "reject") return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed left-1/2 top-1/2 z-[61] w-[95%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Reject Inspection</h3>
+            <p className="mt-1 text-[13px] text-slate-500">Please provide a reason for rejecting this report.</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-6">
+          <label className="mb-2 block text-[13px] font-medium text-slate-700">Rejection Remarks</label>
+          <textarea
+            rows={4}
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+            placeholder="Type rejection reason here..."
+            className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px]"
+          />
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(modal.item, remarks)}
+            disabled={!remarks.trim()}
+            className="rounded-xl bg-rose-600 px-6 py-2 text-[13px] font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50"
+          >
+            Confirm Reject
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* =========================================================
    MAIN PAGE
 ========================================================= */
@@ -873,6 +1024,15 @@ const InspectionRequests = () => {
 
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [modal, setModal] = useState(null);
+  const [activeTab, setActiveTab] = useState("PENDING");
+
+  const TABS = [
+    { id: "PENDING", label: "Pending" },
+    { id: "ACCEPTED", label: "Accepted" },
+    { id: "REJECTED", label: "Rejected" },
+    { id: "SUBMITTED", label: "Submitted" },
+    { id: "COMPLETED", label: "Completed" },
+  ];
 
   // Static summary from current page data
   const summary = useMemo(() => ({
@@ -898,7 +1058,12 @@ const InspectionRequests = () => {
   const fetchInspections = async (pageNo = 1) => {
     setLoading(true);
     try {
-      const res = await getAllVehicleInspections({ searchText: search.trim() || null, pageNo });
+      let res;
+      if (activeTab === "PENDING") {
+        res = await getAllVehicleInspections({ searchText: search.trim() || null, pageNo, status: "REQUESTED" });
+      } else {
+        res = await getAllVehicleInspectionAssigned({ searchText: search.trim() || null, pageNo, status: activeTab });
+      }
       const data = res?.data || [];
       setRows(Array.isArray(data) ? data : []);
       if (res?.pageResponse) {
@@ -916,7 +1081,7 @@ const InspectionRequests = () => {
     }
   };
 
-  useEffect(() => { fetchInspections(1); }, []);
+  useEffect(() => { fetchInspections(1); }, [activeTab]);
 
   useEffect(() => {
     const t = setTimeout(() => fetchInspections(1), 500);
@@ -1038,6 +1203,64 @@ const InspectionRequests = () => {
     setModal(null);
   };
 
+  const handleApproveConfirm = async (item) => {
+    try {
+      const res = await approveInspection({ assignmentId: item.assignmentId || item.id });
+      if (!res.error) {
+        toast.success(res.message || "Report approved successfully");
+        fetchInspections(pagination.currentPage);
+        setModal(null);
+        setSelectedRequest(null);
+      } else {
+        toast.error(res.message || "Failed to approve report");
+      }
+    } catch (err) {
+      console.error("Approve error:", err);
+      toast.error(err?.response?.data?.message || "Failed to approve report");
+    }
+  };
+
+  const handleRejectConfirm = async (item, remarks) => {
+    try {
+      const res = await rejectInspection({ assignmentId: item.assignmentId || item.id, remarks });
+      if (!res.error) {
+        toast.success(res.message || "Report rejected successfully");
+        fetchInspections(pagination.currentPage);
+        setModal(null);
+        setSelectedRequest(null);
+      } else {
+        toast.error(res.message || "Failed to reject report");
+      }
+    } catch (err) {
+      console.error("Reject error:", err);
+      toast.error(err?.response?.data?.message || "Failed to reject report");
+    }
+  };
+
+  const handleViewDetails = async (item) => {
+    setLoading(true);
+    try {
+      let res;
+      if (activeTab === "PENDING") {
+        res = await getVehicleInspectionById(item.id);
+      } else {
+        // Use assignmentId or id based on what the API expects
+        res = await getVehicleInspectionAssignmentById(item.assignmentId || item.id);
+      }
+      
+      if (res?.data) {
+        setSelectedRequest(res.data);
+      } else {
+        toast.error("Failed to load inspection details");
+      }
+    } catch (err) {
+      console.error("Error fetching inspection details:", err);
+      toast.error(err?.response?.data?.message || "Failed to load inspection details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleComplete = (item) => {
     setRows((prev) =>
       prev.map((r) =>
@@ -1068,18 +1291,46 @@ const InspectionRequests = () => {
   const formatDate = (dt) => {
     if (!dt) return "—";
     const d = new Date(dt);
-    return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    if (isNaN(d.getTime())) return "—";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const formatScheduledDate = (dt) => {
+    if (!dt) return "—";
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   return (
     <>
       {selectedRequest ? (
-        <InspectionRequestDetail
-          request={selectedRequest}
-          onBack={() => setSelectedRequest(null)}
-          onAssign={(item) => setModal({ type: "assign", item })}
-          onCancel={(item) => setModal({ type: "cancel", item })}
-        />
+        activeTab === "PENDING" ? (
+          <InspectionRequestDetail
+            request={selectedRequest}
+            onBack={() => setSelectedRequest(null)}
+            onAssign={(item) => setModal({ type: "assign", item })}
+            onCancel={(item) => setModal({ type: "cancel", item })}
+          />
+        ) : (
+          <InspectionCommonDetail
+            request={selectedRequest}
+            onBack={() => setSelectedRequest(null)}
+            onApprove={(item) => setModal({ type: "approve", item })}
+            onReject={(item) => setModal({ type: "reject", item })}
+            onReview={(item) => toast.success("Reviewing...")}
+            onPayment={(item) => toast.success("Payment details...")}
+          />
+        )
       ) : (
         <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
           <style>{`
@@ -1106,6 +1357,26 @@ const InspectionRequests = () => {
               <TopCard title="In Progress" value={summary.inProgress} icon={RefreshCw} />
               <TopCard title="Completed" value={summary.completed} icon={CheckCircle2} />
               <TopCard title="Cancelled" value={summary.cancelled} icon={X} />
+            </div>
+          </div>
+
+          {/* TABS */}
+          <div className="flex-shrink-0 px-6 pb-4">
+            <div className="flex flex-wrap items-center gap-3">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cls(
+                    "px-6 py-2.5 rounded-full text-[13px] font-bold transition-all duration-200",
+                    activeTab === tab.id
+                      ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -1177,6 +1448,9 @@ const InspectionRequests = () => {
                       <th className="px-5 py-4 font-semibold whitespace-nowrap">Status</th>
                       <th className="px-5 py-4 font-semibold whitespace-nowrap">Scheduled</th>
                       <th className="px-5 py-4 font-semibold whitespace-nowrap">Created At</th>
+                      {activeTab !== "PENDING" && (
+                        <th className="px-5 py-4 font-semibold whitespace-nowrap">Inspector</th>
+                      )}
                       <th className="px-6 py-4 text-right font-semibold whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
@@ -1193,7 +1467,7 @@ const InspectionRequests = () => {
                       </tr>
                     ) : filteredRows.length ? (
                       filteredRows.map((row) => (
-                        <tr key={row.id} className={cls("transition-colors duration-200 hover:bg-slate-50 group", selectedRequest?.id === row.id && "bg-sky-50/50")}>
+                        <tr key={row.assignmentId || row.id} className={cls("transition-colors duration-200 hover:bg-slate-50 group", selectedRequest?.id === row.id && "bg-sky-50/50")}>
 
                           {/* REQUEST ID */}
                           {/* <td className="px-6 py-4">
@@ -1223,7 +1497,7 @@ const InspectionRequests = () => {
                           {/* REQUESTED BY */}
                           <td className="px-5 py-4">
                             <div>
-                              <div className="text-[13px] font-semibold text-slate-800">{row.requestedByName || "—"}</div>
+                              <div className="text-[13px] font-semibold text-slate-800">{row.requestedUserName || row.requestedByName || "—"}</div>
                             </div>
                           </td>
 
@@ -1253,15 +1527,15 @@ const InspectionRequests = () => {
 
                           {/* STATUS */}
                           <td className="px-5 py-4">
-                            <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap", statusBadge(row.inspectionRequestStatus))}>
+                            <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold border whitespace-nowrap", statusBadge(row.assignmentStatus || row.inspectionRequestStatus))}>
                               <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
-                              {formatStatus(row.inspectionRequestStatus)}
+                              {formatStatus(row.assignmentStatus || row.inspectionRequestStatus)}
                             </span>
                           </td>
 
                           {/* SCHEDULED */}
                           <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">
-                            {formatDate(row.videoCallScheduledAt)}
+                            {formatScheduledDate(row.videoCallScheduledAt || row.scheduledAt)}
                           </td>
 
                           {/* CREATED AT */}
@@ -1272,17 +1546,38 @@ const InspectionRequests = () => {
                             </div>
                           </td>
 
+                          {/* INSPECTOR */}
+                          {activeTab !== "PENDING" && (
+                            <td className="px-5 py-4">
+                              {row.inspectorUsername || row.inspectorName ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-[11px] font-bold">
+                                    {(row.inspectorUsername || row.inspectorName)[0]}
+                                  </div>
+                                  <span className="text-[13px] font-semibold text-slate-700">
+                                    {row.inspectorUsername || row.inspectorName}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-[12px] text-slate-400 font-medium italic">Unassigned</span>
+                              )}
+                            </td>
+                          )}
+
                           {/* ACTIONS */}
                           <td className="px-6 py-4 text-right">
                             <InspectionRowActions
                               item={row}
-                              onView={setSelectedRequest}
+                              activeTab={activeTab}
+                              onView={handleViewDetails}
                               onAssign={(item) => setModal({ type: "assign", item })}
                               onReschedule={handleReschedule}
                               onCancel={(item) => setModal({ type: "cancel", item })}
+                              onApprove={(item) => setModal({ type: "approve", item })}
+                              onReject={(item) => setModal({ type: "reject", item })}
                               onRefund={(item) => setModal({ type: "refund", item })}
-                            // onEscalate={(item) => setModal({ type: "escalate", item })}
-                            // onNote={handleNote}
+                              onReview={() => toast.success("Opening Review...")}
+                              onPayment={() => toast.success("Opening Payment Details...")}
                             />
                           </td>
                         </tr>
@@ -1334,6 +1629,8 @@ const InspectionRequests = () => {
       <CancelInspectionModal modal={modal} onClose={() => setModal(null)} onConfirm={handleCancelConfirm} />
       <EscalateModal modal={modal} onClose={() => setModal(null)} onConfirm={handleEscalateConfirm} />
       <RefundModal modal={modal} onClose={() => setModal(null)} onConfirm={handleRefundConfirm} />
+      <ApproveInspectionModal modal={modal} onClose={() => setModal(null)} onConfirm={handleApproveConfirm} />
+      <RejectInspectionModal modal={modal} onClose={() => setModal(null)} onConfirm={handleRejectConfirm} />
     </>
   );
 

@@ -26,6 +26,8 @@ import {
   Briefcase,
   History,
 } from "lucide-react";
+import { getAllVehicleInspectionAssigned } from "../../../api/vehicleInspection.api";
+import toast from "react-hot-toast";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -828,7 +830,8 @@ function ReassignModal({ modal, inspectors, onClose, onConfirm }) {
 ========================================================= */
 
 const AssignInspector = () => {
-  const [queue, setQueue] = useState(DUMMY_QUEUE);
+  const [queue, setQueue] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [inspectors, setInspectors] = useState(DUMMY_INSPECTORS);
   const [logs, setLogs] = useState(INITIAL_LOGS);
 
@@ -853,7 +856,7 @@ const AssignInspector = () => {
   });
 
   const handlePageChange = (page) => {
-    setPagination((p) => ({ ...p, currentPage: page }));
+    fetchQueue(page);
   };
 
   const uniqueCities = useMemo(
@@ -870,7 +873,7 @@ const AssignInspector = () => {
     const underperformers = inspectors.filter((x) => x.risk === "High").length;
 
     return {
-      unassigned: queue.length,
+      unassigned: pagination.totalElements,
       availableInspectors,
       avgAssignmentTime,
       slaCompliance,
@@ -878,7 +881,7 @@ const AssignInspector = () => {
       topPerformers,
       underperformers,
     };
-  }, [queue, inspectors]);
+  }, [queue, inspectors, pagination.totalElements]);
 
   const filteredQueue = useMemo(() => {
     let data = [...queue];
@@ -903,8 +906,39 @@ const AssignInspector = () => {
     return data;
   }, [queue, search, filters]);
 
+  const fetchQueue = async (pageNo = 1) => {
+    setLoading(true);
+    try {
+      const res = await getAllVehicleInspectionAssigned({ searchText: search.trim() || null, pageNo, status: "ASSIGNED" });
+      const data = res?.data || [];
+      setQueue(Array.isArray(data) ? data : []);
+      if (res?.pageResponse) {
+        setPagination({
+          currentPage: res.pageResponse.currentPage ?? pageNo,
+          totalPages: res.pageResponse.totalPages ?? 1,
+          totalElements: res.pageResponse.totalElements ?? data.length,
+          size: res.pageResponse.pageSize ?? 10,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch queue:", err);
+      toast.error(err?.response?.data?.message || "Failed to load assignment queue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQueue(1);
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => fetchQueue(1), 500);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const handleRefresh = () => {
-    setQueue([...DUMMY_QUEUE]);
+    fetchQueue(pagination.currentPage);
     setInspectors([...DUMMY_INSPECTORS]);
     setLogs([...INITIAL_LOGS]);
   };
@@ -919,6 +953,29 @@ const AssignInspector = () => {
       slaLevel: "",
     });
     setFiltersOpen(false);
+  };
+
+  const formatDate = (dt) => {
+    if (!dt) return "—";
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return "—";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const formatScheduledDate = (dt) => {
+    if (!dt) return "—";
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const addLog = (entry) => {
@@ -1182,9 +1239,18 @@ const AssignInspector = () => {
               </thead>
 
               <tbody className="divide-y divide-slate-100">
-                {filteredQueue.length ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-28 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="h-12 w-12 border-4 border-sky-600/20 border-t-sky-600 rounded-full animate-spin mb-4" />
+                        <div className="text-lg font-bold text-slate-900">Loading queue...</div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredQueue.length ? (
                   filteredQueue.map((row) => (
-                    <tr key={row.id} className="transition-colors duration-200 hover:bg-slate-50 group">
+                    <tr key={row.assignmentId || row.id} className="transition-colors duration-200 hover:bg-slate-50 group">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <img
@@ -1193,12 +1259,12 @@ const AssignInspector = () => {
                             className="w-10 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
                           />
                           <div className="text-[13px] font-bold text-slate-900 leading-tight">
-                            {row.vehicle}
+                            {row.vehicleName || row.vehicle}
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-700">{row.requestedByName}</td>
+                      <td className="px-5 py-4 text-[13px] font-medium text-slate-700">{row.requestedUserName || row.requestedByName}</td>
 
                       <td className="px-5 py-4">
                         <span className={cls("inline-flex rounded-md px-2.5 py-1 text-[10px] font-bold border uppercase", requesterTypeBadge(row.requesterType))}>
@@ -1213,28 +1279,32 @@ const AssignInspector = () => {
                       </td>
 
                       <td className="px-5 py-4">
-                        <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold border uppercase", requestStatusBadge(row.status))}>
+                        <span className={cls("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold border uppercase", requestStatusBadge(row.assignmentStatus || row.inspectionRequestStatus || row.status))}>
                           <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                          {row.status}
+                          {row.assignmentStatus || row.inspectionRequestStatus || row.status}
                         </span>
                       </td>
 
-                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">{row.scheduledAt}</td>
+                      <td className="px-5 py-4 text-[13px] font-medium text-slate-500 whitespace-nowrap">
+                        {formatScheduledDate(row.videoCallScheduledAt || row.scheduledAt)}
+                      </td>
 
                       <td className="px-5 py-4 text-[13px] font-medium text-slate-400 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <Clock3 className="h-3.5 w-3.5" />
-                          {row.createdAt}
+                          {formatDate(row.createdAt)}
                         </div>
                       </td>
 
                       <td className="px-5 py-4">
-                        {row.inspectorName ? (
+                        {row.inspectorUsername || row.inspectorName ? (
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-[11px] font-bold">
-                              {row.inspectorName[0]}
+                              {(row.inspectorUsername || row.inspectorName)[0]}
                             </div>
-                            <span className="text-[13px] font-semibold text-slate-700">{row.inspectorName}</span>
+                            <span className="text-[13px] font-semibold text-slate-700">
+                              {row.inspectorUsername || row.inspectorName}
+                            </span>
                           </div>
                         ) : (
                           <span className="text-[12px] text-slate-400 font-medium italic">Unassigned</span>
