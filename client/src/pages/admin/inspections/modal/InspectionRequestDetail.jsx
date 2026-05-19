@@ -28,6 +28,13 @@ const cls = (...a) => a.filter(Boolean).join(" ");
 
 const safe = (v) => (v === null || v === undefined || v === "" ? "—" : v);
 
+const formatEnum = (val) => {
+    if (val === null || val === undefined || val === "") return "—";
+    return String(val)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 const formatDateTime = (dateTime) => {
     if (!dateTime) return "—";
     const date = new Date(dateTime);
@@ -109,7 +116,7 @@ function DocPhotoCard({ label, imageUrl, onPreview }) {
         <div className="flex flex-col gap-2">
             <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
             {imageUrl ? (
-                <div className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 cursor-pointer" onClick={() => onPreview(imageUrl, label)}>
+                <div className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 cursor-pointer " onClick={() => onPreview(imageUrl, label)}>
                     <img src={imageUrl} alt={label} className="h-28 w-full object-cover" />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <div className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-800 shadow">
@@ -178,6 +185,7 @@ const InspectionRequestDetail = ({ request: requestProp, onBack, onEdit, onDelet
     useEffect(() => {
         setLoading(true);
         if (requestProp) {
+            if (requestProp.isLoadingDetails) return;
             // Map the nested API structure to local state
             const vd = requestProp.vehicleDetail || {};
             const ru = requestProp.requestedUser || {};
@@ -267,20 +275,20 @@ const InspectionRequestDetail = ({ request: requestProp, onBack, onEdit, onDelet
                             <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-3 mb-4">
                                     <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">{request.vehicleName}</h2>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-3">
                                         <span className={cls("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider shadow-sm", statusBadge(request.inspectionRequestStatus))}>
                                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
-                                            {request.inspectionRequestStatus}
+                                            {formatEnum(request.inspectionRequestStatus)}
                                         </span>
                                         <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-bold text-white shadow-sm shadow-slate-200 uppercase tracking-wider">
                                             {request.inspectionType?.includes("VIDEO") ? <Video size={12} className="text-sky-400" /> : <ClipboardList size={12} className="text-sky-400" />}
-                                            {request.inspectionType?.replace(/_/g, " ")}
+                                            {formatEnum(request.inspectionType)}
                                         </span>
                                     </div>
                                 </div>
                                 <p className="text-[13px] text-slate-500 font-semibold mb-4 uppercase tracking-[0.05em] flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                                    {request.requesterType} Request
+                                    {formatEnum(request.requesterType)} Request
                                 </p>
 
                                 {/* Quick stats */}
@@ -291,7 +299,7 @@ const InspectionRequestDetail = ({ request: requestProp, onBack, onEdit, onDelet
                                     </div>
                                     <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
                                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Type</p>
-                                        <p className="mt-1 text-[13px] font-bold text-slate-900">{safe(request.requesterType)}</p>
+                                        <p className="mt-1 text-[13px] font-bold text-slate-900">{formatEnum(request.requesterType)}</p>
                                     </div>
                                     <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
                                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Scheduled At</p>
@@ -329,19 +337,17 @@ const InspectionRequestDetail = ({ request: requestProp, onBack, onEdit, onDelet
                             {/* Request Information */}
                             <SectionCard icon={<ClipboardList size={15} />} title="Request Information">
                                 <InfoRow label="Request ID" value={request.id} mono />
-                                <InfoRow label="Status" value={request.inspectionRequestStatus} />
-                                <InfoRow label="Inspection Type" value={request.inspectionType} />
-                                <InfoRow label="Requester Type" value={request.requesterType} />
+                                <InfoRow label="Status" value={formatEnum(request.inspectionRequestStatus)} />
+                                <InfoRow label="Inspection Type" value={formatEnum(request.inspectionType)} />
+                                <InfoRow label="Requester Type" value={formatEnum(request.requesterType)} />
                                 <InfoRow label="Process Completed" value={request.isProcessCompleted ? "Yes" : "No"} />
                                 <InfoRow label="Created At" value={formatDateTime(request.createdAt)} />
-                                <InfoRow label="Last Updated" value={formatDateTime(request.updatedAt)} />
                             </SectionCard>
 
                             {/* Scheduling & Contact */}
                             <SectionCard icon={<Calendar size={15} />} title="Scheduling & Contact">
                                 <InfoRow label="Scheduled Date" value={formatDateTime(request.videoCallScheduledAt)} />
                                 <InfoRow label="Whatsapp No" value={request.whatsappNumber} />
-                                <InfoRow label="Preferred Slots" value="As per schedule" />
                             </SectionCard>
 
                             {/* Requester Profile */}
@@ -370,11 +376,11 @@ const InspectionRequestDetail = ({ request: requestProp, onBack, onEdit, onDelet
                                 <InfoRow label="Brand" value={request.vehicleDetail?.makerName} />
                                 <InfoRow label="Model" value={request.vehicleDetail?.modelName} />
                                 <InfoRow label="Variant" value={request.vehicleDetail?.variantName} />
-                                <InfoRow label="Vehicle Type" value={request.vehicleDetail?.vehicleType} />
-                                <InfoRow label="Sub Type" value={request.vehicleDetail?.vehicleSubType} />
+                                <InfoRow label="Vehicle Type" value={formatEnum(request.vehicleDetail?.vehicleType)} />
+                                <InfoRow label="Sub Type" value={formatEnum(request.vehicleDetail?.vehicleSubType)} />
                                 <InfoRow label="Year of Mfg" value={request.vehicleDetail?.yearOfMfg} />
-                                <InfoRow label="Transmission" value={request.vehicleDetail?.transmissionType} />
-                                <InfoRow label="Fuel Type" value={request.vehicleDetail?.fuelType} />
+                                <InfoRow label="Transmission" value={formatEnum(request.vehicleDetail?.transmissionType)} />
+                                <InfoRow label="Fuel Type" value={formatEnum(request.vehicleDetail?.fuelType)} />
                                 <InfoRow label="Color" value={request.vehicleDetail?.colour} />
                                 <InfoRow label="Ownership" value={`${request.vehicleDetail?.ownership} Owner`} />
                             </SectionCard>
@@ -393,8 +399,8 @@ const InspectionRequestDetail = ({ request: requestProp, onBack, onEdit, onDelet
                             {/* Status & Pricing */}
                             <SectionCard icon={<BadgeDollarSign size={15} />} title="Status & Pricing">
                                 <InfoRow label="Asking Price" value={`₹${request.vehicleDetail?.price?.toLocaleString()}`} />
-                                <InfoRow label="Verification" value={request.vehicleDetail?.verificationStatus} />
-                                <InfoRow label="Inspection" value={request.vehicleDetail?.inspectionStatus} />
+                                <InfoRow label="Verification" value={formatEnum(request.vehicleDetail?.verificationStatus)} />
+                                <InfoRow label="Inspection" value={formatEnum(request.vehicleDetail?.inspectionStatus)} />
                                 <InfoRow label="Is Sold" value={request.vehicleDetail?.isVehicleSold ? "Yes" : "No"} />
                                 <InfoRow label="Verified At" value={formatDateTime(request.vehicleDetail?.verifiedAt)} />
                                 <InfoRow label="Admin Remark" value={request.vehicleDetail?.adminRemark} />
@@ -411,9 +417,10 @@ const InspectionRequestDetail = ({ request: requestProp, onBack, onEdit, onDelet
 
                     {activeTab === "payment" && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Payment Information */}
                             <SectionCard icon={<BadgeDollarSign size={15} />} title="Payment Information">
                                 <InfoRow label="Amount" value={`₹${request.amount}`} />
-                                <InfoRow label="Payment Status" value={request.paymentStatus} />
+                                <InfoRow label="Payment Status" value={formatEnum(request.paymentStatus)} />
                                 <InfoRow label="Paid By" value={request.paidBy} />
                                 <InfoRow label="Payment Mode" value={request.paymentMode} />
                                 <InfoRow label="Transaction ID" value={request.transactionId} mono />

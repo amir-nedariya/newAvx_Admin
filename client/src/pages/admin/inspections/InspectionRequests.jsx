@@ -18,20 +18,23 @@ import {
   XCircle,
   CreditCard,
   ClipboardCheck,
+  Download,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { 
-  getAllVehicleInspections, 
-  getAllVehicleInspectionAssigned, 
+import {
+  getAllVehicleInspections,
+  getAllVehicleInspectionAssigned,
   assignInspector,
   getVehicleInspectionById,
   getVehicleInspectionAssignmentById,
   approveInspection,
-  rejectInspection
+  rejectInspection,
+  requestChangesInspection
 } from "../../../api/vehicleInspection.api";
 import { getAllInspectors } from "../../../api/inspector.api";
 import InspectionRequestDetail from "./modal/InspectionRequestDetail";
 import InspectionCommonDetail from "./modal/InspectionCommonDetail";
+import InspectionReportReviewModal from "./modal/InspectionReportReviewModal";
 import { ChevronDown } from "lucide-react";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
@@ -73,6 +76,8 @@ const statusBadge = (status) => {
     REFUND_PENDING: "bg-orange-50 text-orange-700 border-orange-200",
     SLA_BREACHED: "bg-rose-50 text-rose-700 border-rose-200",
     ESCALATED: "bg-rose-50 text-rose-700 border-rose-200",
+    REQUEST_CHANGES: "bg-amber-50 text-amber-700 border-amber-200",
+    "Request Changes": "bg-amber-50 text-amber-700 border-amber-200",
     // Legacy display values
     New: "bg-sky-50 text-sky-700 border-sky-200",
     "Awaiting Assignment": "bg-amber-50 text-amber-700 border-amber-200",
@@ -169,6 +174,7 @@ function InspectionRowActions({
   onRefund,
   onApprove,
   onReject,
+  onRequestChanges,
   onReview,
   onPayment,
 }) {
@@ -274,6 +280,16 @@ function InspectionRowActions({
               >
                 <CheckCircle2 className="h-4 w-4" />
                 Approve Report
+              </button>
+              <button
+                onClick={() => {
+                  onRequestChanges(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-amber-700 hover:bg-amber-50 transition-colors"
+              >
+                <NotebookPen className="h-4 w-4" />
+                Request Changes
               </button>
               <button
                 onClick={() => {
@@ -911,7 +927,22 @@ function RefundModal({ modal, onClose, onConfirm }) {
 }
 
 function ApproveInspectionModal({ modal, onClose, onConfirm }) {
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (modal?.type === "approve") setSubmitting(false);
+  }, [modal]);
+
   if (!modal || modal.type !== "approve") return null;
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await onConfirm(modal.item);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -924,7 +955,8 @@ function ApproveInspectionModal({ modal, onClose, onConfirm }) {
           </div>
           <button
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            disabled={submitting}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-50"
           >
             <X className="h-4 w-4" />
           </button>
@@ -933,30 +965,48 @@ function ApproveInspectionModal({ modal, onClose, onConfirm }) {
         <div className="mt-8 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+            disabled={submitting}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(modal.item)}
-            className="rounded-xl bg-emerald-600 px-6 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700 transition-colors"
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="rounded-xl bg-emerald-600 px-6 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[120px]"
           >
-            Yes, Approve
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Yes, Approve"
+            )}
           </button>
         </div>
       </div>
     </>
   );
 }
-
 function RejectInspectionModal({ modal, onClose, onConfirm }) {
   const [remarks, setRemarks] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (modal?.type === "reject") setRemarks("");
+    if (modal?.type === "reject") {
+      setRemarks("");
+      setSubmitting(false);
+    }
   }, [modal]);
 
   if (!modal || modal.type !== "reject") return null;
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await onConfirm(modal.item, remarks);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -969,7 +1019,8 @@ function RejectInspectionModal({ modal, onClose, onConfirm }) {
           </div>
           <button
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            disabled={submitting}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-50"
           >
             <X className="h-4 w-4" />
           </button>
@@ -981,24 +1032,107 @@ function RejectInspectionModal({ modal, onClose, onConfirm }) {
             rows={4}
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
+            disabled={submitting}
             placeholder="Type rejection reason here..."
-            className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px]"
+            className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px] disabled:bg-slate-50 disabled:text-slate-400"
           />
         </div>
 
         <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-200">
           <button
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+            disabled={submitting}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(modal.item, remarks)}
-            disabled={!remarks.trim()}
-            className="rounded-xl bg-rose-600 px-6 py-2 text-[13px] font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50"
+            onClick={handleSubmit}
+            disabled={!remarks.trim() || submitting}
+            className="rounded-xl bg-rose-600 px-6 py-2 text-[13px] font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[130px]"
           >
-            Confirm Reject
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Confirm Reject"
+            )}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function RequestChangesModal({ modal, onClose, onConfirm }) {
+  const [remarks, setRemarks] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (modal?.type === "requestChanges") {
+      setRemarks("");
+      setSubmitting(false);
+    }
+  }, [modal]);
+
+  if (!modal || modal.type !== "requestChanges") return null;
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await onConfirm(modal.item, remarks);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed left-1/2 top-1/2 z-[61] w-[95%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Request Changes</h3>
+            <p className="mt-1 text-[13px] text-slate-500">Please provide remarks describing the requested changes.</p>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-50"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-6">
+          <label className="mb-2 block text-[13px] font-medium text-slate-700">Remarks</label>
+          <textarea
+            rows={4}
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+            disabled={submitting}
+            placeholder="Type your remarks/changes requested here..."
+            className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px] disabled:bg-slate-50 disabled:text-slate-400"
+          />
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!remarks.trim() || submitting}
+            className="rounded-xl bg-amber-600 px-6 py-2 text-[13px] font-semibold text-white hover:bg-amber-700 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[150px]"
+          >
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Request Changes"
+            )}
           </button>
         </div>
       </div>
@@ -1008,7 +1142,7 @@ function RejectInspectionModal({ modal, onClose, onConfirm }) {
 
 /* =========================================================
    MAIN PAGE
-========================================================= */
+ ========================================================= */
 const InspectionRequests = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1023,6 +1157,8 @@ const InspectionRequests = () => {
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalElements: 0 });
 
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [reviewingRequest, setReviewingRequest] = useState(null);
+  const [pdfModalItem, setPdfModalItem] = useState(null);
   const [modal, setModal] = useState(null);
   const [activeTab, setActiveTab] = useState("PENDING");
 
@@ -1031,6 +1167,7 @@ const InspectionRequests = () => {
     { id: "ACCEPTED", label: "Accepted" },
     { id: "REJECTED", label: "Rejected" },
     { id: "SUBMITTED", label: "Submitted" },
+    { id: "REQUEST_CHANGES", label: "Request Changes" },
     { id: "COMPLETED", label: "Completed" },
   ];
 
@@ -1054,6 +1191,57 @@ const InspectionRequests = () => {
     return data;
   }, [rows, filters]);
 
+  const [tabCounts, setTabCounts] = useState({
+    PENDING: 0,
+    ACCEPTED: 0,
+    REJECTED: 0,
+    SUBMITTED: 0,
+    REQUEST_CHANGES: 0,
+    COMPLETED: 0,
+  });
+
+  const fetchTabCounts = async () => {
+    try {
+      getAllVehicleInspections({ pageNo: 1, status: "REQUESTED" })
+        .then(res => {
+          setTabCounts(prev => ({ ...prev, PENDING: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
+        })
+        .catch(err => console.error("Pending count error:", err));
+
+      getAllVehicleInspectionAssigned({ pageNo: 1, status: "ACCEPTED" })
+        .then(res => {
+          setTabCounts(prev => ({ ...prev, ACCEPTED: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
+        })
+        .catch(err => console.error("Accepted count error:", err));
+
+      getAllVehicleInspectionAssigned({ pageNo: 1, status: "REJECTED" })
+        .then(res => {
+          setTabCounts(prev => ({ ...prev, REJECTED: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
+        })
+        .catch(err => console.error("Rejected count error:", err));
+
+      getAllVehicleInspectionAssigned({ pageNo: 1, status: "SUBMITTED" })
+        .then(res => {
+          setTabCounts(prev => ({ ...prev, SUBMITTED: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
+        })
+        .catch(err => console.error("Submitted count error:", err));
+
+      getAllVehicleInspectionAssigned({ pageNo: 1, status: "REQUEST_CHANGES", assignmentStatus: "REQUEST_CHANGES" })
+        .then(res => {
+          setTabCounts(prev => ({ ...prev, REQUEST_CHANGES: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
+        })
+        .catch(err => console.error("Request changes count error:", err));
+
+      getAllVehicleInspectionAssigned({ pageNo: 1, status: "COMPLETED" })
+        .then(res => {
+          setTabCounts(prev => ({ ...prev, COMPLETED: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
+        })
+        .catch(err => console.error("Completed count error:", err));
+    } catch (err) {
+      console.error("Error fetching tab counts:", err);
+    }
+  };
+
   // ── Fetch ─────────────────────────────────────────────────────
   const fetchInspections = async (pageNo = 1) => {
     setLoading(true);
@@ -1061,6 +1249,8 @@ const InspectionRequests = () => {
       let res;
       if (activeTab === "PENDING") {
         res = await getAllVehicleInspections({ searchText: search.trim() || null, pageNo, status: "REQUESTED" });
+      } else if (activeTab === "REQUEST_CHANGES") {
+        res = await getAllVehicleInspectionAssigned({ searchText: search.trim() || null, pageNo, status: "REQUEST_CHANGES", assignmentStatus: "REQUEST_CHANGES" });
       } else {
         res = await getAllVehicleInspectionAssigned({ searchText: search.trim() || null, pageNo, status: activeTab });
       }
@@ -1073,6 +1263,7 @@ const InspectionRequests = () => {
           totalElements: res.pageResponse.totalElements ?? data.length,
         });
       }
+      fetchTabCounts();
     } catch (err) {
       console.error("Failed to fetch inspections:", err);
       toast.error(err?.response?.data?.message || "Failed to load inspection requests");
@@ -1088,7 +1279,10 @@ const InspectionRequests = () => {
     return () => clearTimeout(t);
   }, [search]);
 
-  const handleRefresh = () => fetchInspections(pagination.currentPage);
+  const handleRefresh = () => {
+    fetchInspections(pagination.currentPage);
+    fetchTabCounts();
+  };
   const handlePageChange = (newPage) => fetchInspections(newPage);
 
   const handleClear = () => {
@@ -1112,7 +1306,7 @@ const InspectionRequests = () => {
       }
 
       const res = await assignInspector(payload);
-      
+
       if (!res.error) {
         toast.success(res.message || "Inspector assigned successfully");
         fetchInspections(pagination.currentPage);
@@ -1237,8 +1431,25 @@ const InspectionRequests = () => {
     }
   };
 
+  const handleRequestChangesConfirm = async (item, remarks) => {
+    try {
+      const res = await requestChangesInspection({ assignmentId: item.assignmentId || item.id, remarks });
+      if (!res.error) {
+        toast.success(res.message || "Changes requested successfully");
+        fetchInspections(pagination.currentPage);
+        setModal(null);
+        setSelectedRequest(null);
+      } else {
+        toast.error(res.message || "Failed to request changes");
+      }
+    } catch (err) {
+      console.error("Request changes error:", err);
+      toast.error(err?.response?.data?.message || "Failed to request changes");
+    }
+  };
+
   const handleViewDetails = async (item) => {
-    setLoading(true);
+    setSelectedRequest({ ...item, isLoadingDetails: true });
     try {
       let res;
       if (activeTab === "PENDING") {
@@ -1247,17 +1458,25 @@ const InspectionRequests = () => {
         // Use assignmentId or id based on what the API expects
         res = await getVehicleInspectionAssignmentById(item.assignmentId || item.id);
       }
-      
+
       if (res?.data) {
         setSelectedRequest(res.data);
       } else {
         toast.error("Failed to load inspection details");
+        setSelectedRequest(null);
       }
     } catch (err) {
       console.error("Error fetching inspection details:", err);
       toast.error(err?.response?.data?.message || "Failed to load inspection details");
-    } finally {
-      setLoading(false);
+      setSelectedRequest(null);
+    }
+  };
+
+  const handleReviewReport = (item) => {
+    if (item.reportPdfUrl) {
+      setPdfModalItem(item);
+    } else {
+      setReviewingRequest(item);
     }
   };
 
@@ -1327,7 +1546,8 @@ const InspectionRequests = () => {
             onBack={() => setSelectedRequest(null)}
             onApprove={(item) => setModal({ type: "approve", item })}
             onReject={(item) => setModal({ type: "reject", item })}
-            onReview={(item) => toast.success("Reviewing...")}
+            onRequestChanges={(item) => setModal({ type: "requestChanges", item })}
+            onReview={handleReviewReport}
             onPayment={(item) => toast.success("Payment details...")}
           />
         )
@@ -1374,7 +1594,7 @@ const InspectionRequests = () => {
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   )}
                 >
-                  {tab.label}
+                  {tab.label} ({tabCounts[tab.id] ?? 0})
                 </button>
               ))}
             </div>
@@ -1451,6 +1671,9 @@ const InspectionRequests = () => {
                       {activeTab !== "PENDING" && (
                         <th className="px-5 py-4 font-semibold whitespace-nowrap">Inspector</th>
                       )}
+                      {activeTab === "REQUEST_CHANGES" && (
+                        <th className="px-5 py-4 font-semibold whitespace-nowrap">Remarks</th>
+                      )}
                       <th className="px-6 py-4 text-right font-semibold whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
@@ -1458,7 +1681,7 @@ const InspectionRequests = () => {
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
                       <tr>
-                        <td colSpan={9} className="px-6 py-28 text-center">
+                        <td colSpan={activeTab === "REQUEST_CHANGES" ? 10 : activeTab === "PENDING" ? 8 : 9} className="px-6 py-28 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <Loader2 className="h-12 w-12 text-sky-600 animate-spin mb-4" />
                             <div className="text-lg font-bold text-slate-900">Loading inspection requests...</div>
@@ -1564,6 +1787,13 @@ const InspectionRequests = () => {
                             </td>
                           )}
 
+                          {/* REMARKS */}
+                          {activeTab === "REQUEST_CHANGES" && (
+                            <td className="px-5 py-4 text-[13px] font-medium text-slate-700 max-w-[220px] truncate" title={row.remarks || "—"}>
+                              {row.remarks || "—"}
+                            </td>
+                          )}
+
                           {/* ACTIONS */}
                           <td className="px-6 py-4 text-right">
                             <InspectionRowActions
@@ -1575,8 +1805,9 @@ const InspectionRequests = () => {
                               onCancel={(item) => setModal({ type: "cancel", item })}
                               onApprove={(item) => setModal({ type: "approve", item })}
                               onReject={(item) => setModal({ type: "reject", item })}
+                              onRequestChanges={(item) => setModal({ type: "requestChanges", item })}
                               onRefund={(item) => setModal({ type: "refund", item })}
-                              onReview={() => toast.success("Opening Review...")}
+                              onReview={() => handleReviewReport(row)}
                               onPayment={() => toast.success("Opening Payment Details...")}
                             />
                           </td>
@@ -1584,7 +1815,7 @@ const InspectionRequests = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={9} className="px-6 py-28 text-center">
+                        <td colSpan={activeTab === "REQUEST_CHANGES" ? 10 : activeTab === "PENDING" ? 8 : 9} className="px-6 py-28 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-4">
                               <Search size={28} />
@@ -1631,9 +1862,83 @@ const InspectionRequests = () => {
       <RefundModal modal={modal} onClose={() => setModal(null)} onConfirm={handleRefundConfirm} />
       <ApproveInspectionModal modal={modal} onClose={() => setModal(null)} onConfirm={handleApproveConfirm} />
       <RejectInspectionModal modal={modal} onClose={() => setModal(null)} onConfirm={handleRejectConfirm} />
+      <RequestChangesModal modal={modal} onClose={() => setModal(null)} onConfirm={handleRequestChangesConfirm} />
+      <PdfActionModal item={pdfModalItem} onClose={() => setPdfModalItem(null)} onViewInteractive={(item) => setReviewingRequest(item)} />
+
+      {reviewingRequest && (
+        <InspectionReportReviewModal
+          request={reviewingRequest}
+          onClose={() => setReviewingRequest(null)}
+          onUpdate={() => fetchInspections(pagination.currentPage)}
+        />
+      )}
     </>
   );
 
 };
+
+function PdfActionModal({ item, onClose, onViewInteractive }) {
+  if (!item) return null;
+
+  const handleView = () => {
+    onViewInteractive(item);
+    onClose();
+  };
+
+  const handleDownload = () => {
+    if (item.reportPdfUrl) {
+      const link = document.createElement("a");
+      link.href = item.reportPdfUrl;
+      link.download = item.reportPdfUrl.split("/").pop() || "report.pdf";
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    onClose();
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed left-1/2 top-1/2 z-[61] w-[90%] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl transition-all duration-300">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600 border border-red-100">
+            <FileText className="h-7 w-7" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">Inspection Report PDF</h3>
+          <p className="mt-1.5 text-xs text-slate-500 max-w-[240px]">
+            {item.vehicleName || "Vehicle Report"}
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-2.5">
+          <button
+            onClick={handleView}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 py-2.5 text-xs font-semibold text-white hover:bg-sky-700 active:scale-95 transition-all shadow-md shadow-sky-600/10"
+          >
+            <Eye className="h-4 w-4" />
+            View in App
+          </button>
+          
+          <button
+            onClick={handleDownload}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all"
+          >
+            <Download className="h-4 w-4 text-slate-500" />
+            Download PDF
+          </button>
+
+          <button
+            onClick={onClose}
+            className="mt-1 flex w-full items-center justify-center py-2 text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default InspectionRequests;

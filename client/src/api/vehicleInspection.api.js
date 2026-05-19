@@ -67,3 +67,22 @@ export const rejectInspection = async (data) => {
   const response = await axios.patch("/vehicle/inspection/reject", data);
   return response.data;
 };
+
+/**
+ * Request changes for inspection report
+ * PATCH /api/vehicle/inspection/request-changes
+ * @param {Object} data - { assignmentId, remarks }
+ */
+export const requestChangesInspection = async (data) => {
+  const response = await axios.patch("/vehicle/inspection/request-changes", data);
+  return response.data;
+};
+
+/**
+ * Get inspection report by assignment id
+ * GET /api/vehicle/inspection/report/{assignmentId}
+ */
+export const getVehicleInspectionReport = async (assignmentId) => {
+  const response = await axios.get(`/vehicle/inspection/report/${assignmentId}`);
+  return response.data;
+};

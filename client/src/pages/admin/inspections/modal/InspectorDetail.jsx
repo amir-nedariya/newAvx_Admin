@@ -105,8 +105,8 @@ function DocPhotoCard({ label, imageUrl, onPreview }) {
         <div className="flex flex-col gap-2">
             <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
             {imageUrl ? (
-                <div className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 cursor-pointer" onClick={() => onPreview(imageUrl, label)}>
-                    <img src={imageUrl} alt={label} className="h-28 w-full object-cover" />
+                <div className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 cursor-pointer h-[250px]" onClick={() => onPreview(imageUrl, label)}>
+                    <img src={imageUrl} alt={label} className="w-full object-cover" />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <div className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-800 shadow">
                             <Eye className="h-3.5 w-3.5" />

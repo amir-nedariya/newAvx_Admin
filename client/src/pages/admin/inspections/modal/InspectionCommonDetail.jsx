@@ -28,6 +28,13 @@ const cls = (...a) => a.filter(Boolean).join(" ");
 
 const safe = (v) => (v === null || v === undefined || v === "" ? "—" : v);
 
+const formatEnum = (val) => {
+    if (val === null || val === undefined || val === "") return "—";
+    return String(val)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 const formatDateTime = (dateTime) => {
     if (!dateTime) return "—";
     const date = new Date(dateTime);
@@ -132,7 +139,7 @@ function DocPhotoCard({ label, imageUrl, onPreview }) {
 }
 
 /* ── MAIN COMPONENT ──────────────────────────────────────── */
-const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onReject, onReview, onPayment }) => {
+const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onReject, onRequestChanges, onReview, onPayment }) => {
     const [request, setRequest] = useState(null);
     const [loading, setLoading] = useState(true);
     const [preview, setPreview] = useState({ open: false, url: "", title: "" });
@@ -155,6 +162,7 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
     useEffect(() => {
         setLoading(true);
         if (requestProp) {
+            if (requestProp.isLoadingDetails) return;
             const vd = requestProp.vehicleDetail || {};
             const ir = requestProp.inspectionRequest || {};
             const ru = requestProp.requestedUser || ir.requestedUser || {};
@@ -228,6 +236,9 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
                                 <button onClick={() => onApprove?.(request)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700 transition-all active:scale-95 shadow-sm shadow-emerald-600/20">
                                     Approve
                                 </button>
+                                <button onClick={() => onRequestChanges?.(request)} className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-amber-700 transition-all active:scale-95 shadow-sm shadow-amber-600/20">
+                                    Request Changes
+                                </button>
                                 <button onClick={() => onReject?.(request)} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-rose-700 transition-all active:scale-95 shadow-sm shadow-rose-600/20">
                                     Reject
                                 </button>
@@ -265,17 +276,17 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
                                     <div className="flex items-center gap-2">
                                         <span className={cls("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider shadow-sm", statusBadge(request.assignmentStatus))}>
                                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
-                                            {request.assignmentStatus}
+                                            {formatEnum(request.assignmentStatus)}
                                         </span>
                                         <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-bold text-white shadow-sm shadow-slate-200 uppercase tracking-wider">
                                             {request.inspectionType?.includes("VIDEO") ? <Video size={12} className="text-sky-400" /> : <ClipboardList size={12} className="text-sky-400" />}
-                                            {request.inspectionType?.replace(/_/g, " ")}
+                                            {formatEnum(request.inspectionType)}
                                         </span>
                                     </div>
                                 </div>
                                 <p className="text-[13px] text-slate-500 font-semibold mb-4 uppercase tracking-[0.05em] flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                                    {request.requesterType} Request
+                                    {formatEnum(request.requesterType)} Request
                                 </p>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -323,7 +334,7 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
                             {/* Assignment Info */}
                             <SectionCard icon={<ClipboardList size={15} />} title="Assignment Information">
                                 <InfoRow label="Assignment ID" value={request.assignmentId} mono />
-                                <InfoRow label="Status" value={request.assignmentStatus} />
+                                <InfoRow label="Status" value={formatEnum(request.assignmentStatus)} />
                                 <InfoRow label="Assigned At" value={formatDateTime(request.assignedAt)} />
                                 <InfoRow label="Accepted At" value={formatDateTime(request.acceptedAt)} />
                                 <InfoRow label="Started At" value={formatDateTime(request.inspectionStartedAt)} />
@@ -356,11 +367,10 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
                             {/* Request Meta */}
                             <SectionCard icon={<History size={15} />} title="Request Lifecycle">
                                 <InfoRow label="Request ID" value={request.inspectionRequest?.id} mono />
-                                <InfoRow label="Inspection Type" value={request.inspectionType} />
-                                <InfoRow label="Requester Type" value={request.requesterType} />
+                                <InfoRow label="Inspection Type" value={formatEnum(request.inspectionType)} />
+                                <InfoRow label="Requester Type" value={formatEnum(request.requesterType)} />
                                 <InfoRow label="Process Status" value={request.inspectionRequest?.isProcessCompleted ? "Completed" : "Pending"} />
                                 <InfoRow label="Created At" value={formatDateTime(request.createdAt)} />
-                                <InfoRow label="Last Updated" value={formatDateTime(request.updatedAt)} />
                             </SectionCard>
                         </div>
                     )}
@@ -371,11 +381,11 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
                                 <InfoRow label="Brand" value={request.vehicleDetail?.makerName} />
                                 <InfoRow label="Model" value={request.vehicleDetail?.modelName} />
                                 <InfoRow label="Variant" value={request.vehicleDetail?.variantName} />
-                                <InfoRow label="Vehicle Type" value={request.vehicleDetail?.vehicleType} />
-                                <InfoRow label="Sub Type" value={request.vehicleDetail?.vehicleSubType} />
+                                <InfoRow label="Vehicle Type" value={formatEnum(request.vehicleDetail?.vehicleType)} />
+                                <InfoRow label="Sub Type" value={formatEnum(request.vehicleDetail?.vehicleSubType)} />
                                 <InfoRow label="Year of Mfg" value={request.vehicleDetail?.yearOfMfg} />
-                                <InfoRow label="Fuel Type" value={request.vehicleDetail?.fuelType} />
-                                <InfoRow label="Transmission" value={request.vehicleDetail?.transmissionType} />
+                                <InfoRow label="Fuel Type" value={formatEnum(request.vehicleDetail?.fuelType)} />
+                                <InfoRow label="Transmission" value={formatEnum(request.vehicleDetail?.transmissionType)} />
                                 <InfoRow label="Color" value={request.vehicleDetail?.colour} />
                                 <InfoRow label="Ownership" value={`${request.vehicleDetail?.ownership} Owner`} />
                             </SectionCard>
@@ -391,8 +401,8 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
 
                             <SectionCard icon={<BadgeDollarSign size={15} />} title="Pricing & Status">
                                 <InfoRow label="Asking Price" value={`₹${request.vehicleDetail?.price?.toLocaleString()}`} />
-                                <InfoRow label="Verification" value={request.vehicleDetail?.verificationStatus} />
-                                <InfoRow label="Inspection Status" value={request.vehicleDetail?.inspectionStatus} />
+                                <InfoRow label="Verification" value={formatEnum(request.vehicleDetail?.verificationStatus)} />
+                                <InfoRow label="Inspection Status" value={formatEnum(request.vehicleDetail?.inspectionStatus)} />
                                 <InfoRow label="Admin Remark" value={request.vehicleDetail?.adminRemark} />
                             </SectionCard>
 
