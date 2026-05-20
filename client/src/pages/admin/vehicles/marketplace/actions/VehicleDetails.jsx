@@ -340,6 +340,7 @@ const VehicleDetails = () => {
       mapped.inquiriesList = detail?.inquiries || [];
       mapped.activityLogsList = detail?.activityLogs || [];
       mapped.flagReviewsList = detail?.flagReviews || [];
+      mapped.inspectionsList = detail?.inspections || [];
 
       setVehicle(mapped);
       setSelectedImage(mapped.galleryImages?.[0] || null);
@@ -1174,16 +1175,146 @@ const VehicleDetails = () => {
           )}
 
           {activeTab === "Inspection" && (
-            <SectionCard title="Inspection Summary" subtitle="Available from current API">
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <InfoItem label="Inspection Status" value={formatEnumLabel(vehicle.inspectionStatus)} />
-                <InfoItem label="Verification Status" value={formatEnumLabel(vehicle.verificationStatus)} />
-                <InfoItem label="Verified At" value={formatDateTime(vehicle.verifiedAt)} />
-                <InfoItem label="Inspection Report PDF" value={safeText(vehicle.raw?.reportPdfUrl)} />
-                <InfoItem label="Inspection Video" value={safeText(vehicle.raw?.videoUrl)} />
-                <InfoItem label="Inspector ID" value={safeText(vehicle.raw?.inspectorId)} />
-              </div>
-            </SectionCard>
+            <div className="space-y-6">
+              {/* Inspection Summary Card */}
+              <SectionCard title="Inspection Overview" subtitle="High-level inspection status metrics">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                  <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Inspection Status</div>
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <span className={cls("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ring-1", inspectionBadge(vehicle.inspectionStatus))}>
+                        <ShieldCheck className="h-4 w-4" />
+                        {vehicle.inspectionStatus?.replace(/_/g, " ") || "-"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Verification Status</div>
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <span className={cls("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ring-1", verificationBadge(vehicle.verificationStatus))}>
+                        <CheckCircle2 className="h-4 w-4" />
+                        {vehicle.verificationStatus === "VERIFIED" ? "Verified" : formatEnumLabel(vehicle.verificationStatus)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Last Verified At</div>
+                    <div className="mt-2.5 text-sm font-bold text-zinc-900">
+                      {formatDateTime(vehicle.verifiedAt)}
+                    </div>
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* Inspection Records List */}
+              <SectionCard title="Inspection History" subtitle={`${vehicle.inspectionsList?.length || 0} inspection records found`}>
+                {vehicle.inspectionsList && vehicle.inspectionsList.length > 0 ? (
+                  <div className="space-y-6">
+                    {vehicle.inspectionsList.map((inspection) => (
+                      <div
+                        key={inspection.id}
+                        className="group relative rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-zinc-300 overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 w-80 h-80 bg-zinc-50/50 blur-3xl pointer-events-none group-hover:bg-sky-50/40 transition-colors duration-300" />
+                        
+                        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                            {/* Inspector Profile Badge */}
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 text-white font-bold text-lg shadow-lg">
+                              {inspection.inspectorName ? inspection.inspectorName[0].toUpperCase() : "I"}
+                            </div>
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2.5">
+                                <h4 className="text-base font-bold text-zinc-900">
+                                  {inspection.inspectorName || "Unknown Inspector"}
+                                </h4>
+                                <span
+                                  className={cls(
+                                    "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ring-1",
+                                    inspection.assignmentStatus === "COMPLETED"
+                                      ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                      : inspection.assignmentStatus === "REJECTED"
+                                        ? "bg-rose-50 text-rose-700 ring-rose-100"
+                                        : inspection.assignmentStatus === "ACCEPTED" || inspection.assignmentStatus === "IN_PROGRESS"
+                                          ? "bg-sky-50 text-sky-700 ring-sky-100"
+                                          : "bg-amber-50 text-amber-700 ring-amber-100"
+                                  )}
+                                >
+                                  {inspection.assignmentStatus}
+                                </span>
+                              </div>
+                              
+                              <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4 text-xs font-semibold text-zinc-500">
+                                <div className="flex items-center gap-1.5">
+                                  <Phone className="h-3.5 w-3.5 text-zinc-400" />
+                                  <span>{inspection.inspectorPhone || "N/A"}</span>
+                                </div>
+                                <span className="hidden sm:inline text-zinc-300">•</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action button if reportPdfUrl exists */}
+                          {inspection.reportPdfUrl && (
+                            <button
+                              onClick={() => window.open(inspection.reportPdfUrl, "_blank")}
+                              className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-zinc-950/15 transition-all hover:bg-zinc-800 hover:scale-102 active:scale-98"
+                            >
+                              <FileText className="h-4 w-4 text-zinc-400" />
+                              View Report PDF
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Timeline / Dates Grid */}
+                        <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/50 p-4 md:grid-cols-4">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Scheduled At</p>
+                            <p className="mt-1 text-xs font-bold text-zinc-800">{formatDateTime(inspection.scheduledAt)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Assigned At</p>
+                            <p className="mt-1 text-xs font-bold text-zinc-800">{formatDateTime(inspection.assignedAt)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Started At</p>
+                            <p className="mt-1 text-xs font-bold text-zinc-800">{formatDateTime(inspection.inspectionStartedAt)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Submitted At</p>
+                            <p className="mt-1 text-xs font-bold text-zinc-800">{formatDateTime(inspection.inspectionSubmittedAt)}</p>
+                          </div>
+                        </div>
+
+                        {/* Remark or Rejection Reason if present */}
+                        {(inspection.remark || inspection.rejectionReason) && (
+                          <div className="relative z-10 mt-4 space-y-2">
+                            {inspection.remark && (
+                              <div className="rounded-2xl bg-zinc-50 border border-zinc-100 p-4">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Remarks</p>
+                                <p className="mt-1 text-sm text-zinc-700 font-medium leading-relaxed">{inspection.remark}</p>
+                              </div>
+                            )}
+                            {inspection.rejectionReason && (
+                              <div className="rounded-2xl bg-rose-50/30 border border-rose-100 p-4">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Rejection Reason</p>
+                                <p className="mt-1 text-sm text-rose-700 font-medium leading-relaxed">{inspection.rejectionReason}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<ShieldAlert className="h-5 w-5" />}
+                    title="No inspection records found"
+                    subtitle="This vehicle has no registered inspection history."
+                  />
+                )}
+              </SectionCard>
+            </div>
           )}
 
           {activeTab === "Inquiries" && (
