@@ -25,9 +25,14 @@ import {
   Ban,
   Briefcase,
   History,
+  Eye,
 } from "lucide-react";
-import { getAllVehicleInspectionAssigned } from "../../../api/vehicleInspection.api";
+import { 
+  getAllVehicleInspectionAssigned,
+  getVehicleInspectionAssignmentById,
+} from "../../../api/vehicleInspection.api";
 import toast from "react-hot-toast";
+import InspectionCommonDetail from "./modal/InspectionCommonDetail";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
 
@@ -433,6 +438,7 @@ function isEligibleInspector(inspector, request) {
 
 function QueueRowActions({
   item,
+  onView,
   onAssign,
   onAutoAssign,
   onEscalate,
@@ -461,6 +467,17 @@ function QueueRowActions({
 
       {open && (
         <div className="absolute right-0 top-11 z-30 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+          <button
+            onClick={() => {
+              onView(item);
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <Eye className="h-4 w-4 text-slate-500" />
+            View Details
+          </button>
+
           {/* <button
             onClick={() => {
               onAssign(item);
@@ -838,7 +855,25 @@ const AssignInspector = () => {
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [viewingRequest, setViewingRequest] = useState(null);
   const [modal, setModal] = useState(null);
+
+  const handleViewDetails = async (item) => {
+    setViewingRequest({ ...item, isLoadingDetails: true });
+    try {
+      const res = await getVehicleInspectionAssignmentById(item.assignmentId || item.id);
+      if (res?.data) {
+        setViewingRequest(res.data);
+      } else {
+        toast.error("Failed to load inspection details");
+        setViewingRequest(null);
+      }
+    } catch (err) {
+      console.error("Error fetching inspection details:", err);
+      toast.error(err?.response?.data?.message || "Failed to load inspection details");
+      setViewingRequest(null);
+    }
+  };
 
   const [filters, setFilters] = useState({
     city: "",
@@ -1074,7 +1109,14 @@ const AssignInspector = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+    <>
+      {viewingRequest ? (
+        <InspectionCommonDetail
+          request={viewingRequest}
+          onBack={() => setViewingRequest(null)}
+        />
+      ) : (
+        <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
       <style>{`
         .table-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
         .table-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -1314,6 +1356,7 @@ const AssignInspector = () => {
                       <td className="px-6 py-4 text-right">
                         <QueueRowActions
                           item={row}
+                          onView={handleViewDetails}
                           onAssign={setSelectedRequest}
                           onAutoAssign={handleAutoAssign}
                           onEscalate={handleEscalate}
@@ -1383,6 +1426,8 @@ const AssignInspector = () => {
         onConfirm={handleReassignConfirm}
       />
     </div>
+      )}
+    </>
   );
 };
 

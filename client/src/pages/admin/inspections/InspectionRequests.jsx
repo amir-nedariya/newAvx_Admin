@@ -518,6 +518,8 @@ function AssignInspectorModal({ modal, onClose, onConfirm }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const dropdownRef = useRef(null);
+  const dateInputRef = useRef(null);
+  const isDateFocused = useRef(false);
 
   useEffect(() => {
     if (modal?.type === "assign") {
@@ -528,6 +530,7 @@ function AssignInspectorModal({ modal, onClose, onConfirm }) {
       setSearchQuery("");
       setDropdownOpen(false);
       setActiveIndex(-1);
+      isDateFocused.current = false;
     }
   }, [modal]);
 
@@ -600,7 +603,18 @@ function AssignInspectorModal({ modal, onClose, onConfirm }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm"
+        onClick={(e) => {
+          if (isDateFocused.current) {
+            if (dateInputRef.current) {
+              dateInputRef.current.blur();
+            }
+          } else {
+            onClose();
+          }
+        }}
+      />
       <div className="fixed left-1/2 top-1/2 z-[61] w-[95%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
         <div className="flex items-start justify-between">
           <div>
@@ -685,9 +699,18 @@ function AssignInspectorModal({ modal, onClose, onConfirm }) {
           <div>
             <label className="mb-2 block text-[13px] font-medium text-slate-700">Schedule Date</label>
             <input
+              ref={dateInputRef}
               type="datetime-local"
               value={date}
               onChange={(e) => setDate(e.target.value)}
+              onFocus={() => {
+                isDateFocused.current = true;
+              }}
+              onBlur={() => {
+                setTimeout(() => {
+                  isDateFocused.current = false;
+                }, 200);
+              }}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px]"
             />
           </div>
@@ -1474,7 +1497,7 @@ const InspectionRequests = () => {
 
   const handleReviewReport = (item) => {
     if (item.reportPdfUrl) {
-      setPdfModalItem(item);
+      window.open(item.reportPdfUrl, "_blank");
     } else {
       setReviewingRequest(item);
     }
