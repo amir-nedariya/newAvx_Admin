@@ -132,11 +132,31 @@ const Stat = ({ label, value, highlight = false }) => (
   </div>
 );
 
-function StatItem({ label, value }) {
+function StatItem({ label, value, tone = "zinc" }) {
+  const toneClasses = {
+    zinc: {
+      card: "border-zinc-200 bg-zinc-50",
+      label: "text-zinc-500",
+      value: "text-zinc-900",
+    },
+    emerald: {
+      card: "border-emerald-200 bg-emerald-50/50",
+      label: "text-emerald-600",
+      value: "text-emerald-700 font-extrabold",
+    },
+    rose: {
+      card: "border-rose-200 bg-rose-50/50",
+      label: "text-rose-600",
+      value: "text-rose-700 font-extrabold",
+    },
+  };
+
+  const colors = toneClasses[tone] || toneClasses.zinc;
+
   return (
-    <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-      <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{label}</div>
-      <div className="mt-1 text-lg font-bold text-zinc-900">{value}</div>
+    <div className={`rounded-xl border px-4 py-3 ${colors.card}`}>
+      <div className={`text-xs font-semibold uppercase tracking-wider ${colors.label}`}>{label}</div>
+      <div className={`mt-1 text-lg font-bold ${colors.value}`}>{value}</div>
     </div>
   );
 }
@@ -1257,6 +1277,8 @@ const ConsultantProfile = () => {
       avgRating: stats?.avgRating ?? 0,
       totalReviews: fmtInt(stats?.totalReviews),
       totalFollowers: fmtInt(stats?.totalFollowers),
+      totalApprovedInspections: fmtInt(stats?.totalApprovedInspections),
+      totalRejectedInspections: fmtInt(stats?.totalRejectedInspections),
 
       gstNumber: documentInfo?.gstNumber || "—",
       panCardNumber: documentInfo?.panCardNumber || "—",
@@ -2198,6 +2220,8 @@ const ConsultantProfile = () => {
                   <StatItem label="Avg Rating" value={safe(profile?.avgRating)} />
                   <StatItem label="Total Reviews" value={safe(profile?.totalReviews)} />
                   <StatItem label="Total Followers" value={safe(profile?.totalFollowers)} />
+                  <StatItem label="Approved Inspections" value={safe(profile?.totalApprovedInspections)} />
+                  <StatItem label="Rejected Inspections" value={safe(profile?.totalRejectedInspections)} />
                 </div>
               )}
             </div>
