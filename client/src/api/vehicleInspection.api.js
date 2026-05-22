@@ -86,3 +86,27 @@ export const getVehicleInspectionReport = async (assignmentId) => {
   const response = await axios.get(`/vehicle/inspection/report/${assignmentId}`);
   return response.data;
 };
+
+/**
+ * Pay to inspector
+ * POST /api/vehicle/inspection/pay-inspector
+ * @param {FormData} formData - Contains assignmentId, amount, screenshot
+ */
+export const payInspector = async (formData) => {
+  const response = await axios.post("/vehicle/inspection/pay-inspector", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+};
+
+/**
+ * Get all paid vehicle inspections with filter + pagination
+ * POST /api/vehicle/inspection/payments
+ * @param {Object} filter - { searchText, pageNo }
+ */
+export const getPaidVehicleInspections = async (filter = {}) => {
+  const response = await axios.post("/vehicle/inspection/payments", filter);
+  return response.data;
+};

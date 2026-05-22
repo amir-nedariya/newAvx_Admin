@@ -58,6 +58,7 @@ const statusBadge = (status) => {
         SCHEDULED: "bg-violet-50 text-violet-700 border-violet-200",
         SUBMITTED: "bg-teal-50 text-teal-700 border-teal-200",
         COMPLETED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        PAYMENT_DONE: "bg-teal-50 text-teal-700 border-teal-200",
         REJECTED: "bg-rose-50 text-rose-700 border-rose-200",
         CANCELLED: "bg-slate-100 text-slate-700 border-slate-200",
     };
@@ -145,11 +146,13 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
     const [preview, setPreview] = useState({ open: false, url: "", title: "" });
     const [activeTab, setActiveTab] = useState("overview");
 
+    const isPaymentDone = (request?.assignmentStatus || requestProp?.assignmentStatus) === "PAYMENT_DONE" || (request?.paidByAdmin || requestProp?.paidByAdmin);
+
     const TABS = [
         { key: "overview", label: "Overview", icon: <ClipboardList size={13} /> },
         { key: "vehicle", label: "Vehicle Info", icon: <Car size={13} /> },
         { key: "inspector", label: "Inspector", icon: <User size={13} /> },
-        { key: "payment", label: "Payment", icon: <BadgeDollarSign size={13} /> },
+        ...(isPaymentDone ? [{ key: "payment", label: "Payment", icon: <BadgeDollarSign size={13} /> }] : []),
     ];
 
     const TAB_COLORS = {
@@ -251,7 +254,7 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
                                 </button>
                                 <button onClick={() => onPayment?.(request)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700 transition-all active:scale-95 shadow-sm shadow-emerald-600/20">
                                     <CreditCard size={14} />
-                                    Payment Details
+                                    Pay to Inspector
                                 </button>
                             </>
                         )}
@@ -451,10 +454,18 @@ const InspectionCommonDetail = ({ request: requestProp, onBack, onApprove, onRej
 
                     {activeTab === "payment" && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <SectionCard icon={<BadgeDollarSign size={15} />} title="Payment Information">
-                                <InfoRow label="Amount" value={`₹${request.vehicleDetail?.price?.toLocaleString()}`} />
-                                <InfoRow label="Status" value="Processing" />
+                            <SectionCard icon={<BadgeDollarSign size={15} />} title="Inspector Payment Information">
+                                <InfoRow label="Paid By Admin" value={request.paidByAdmin ? "Yes" : "No"} />
+                                <InfoRow label="Paid Amount" value={request.paidAmountByAdmin ? `₹${request.paidAmountByAdmin.toLocaleString()}` : "—"} />
+                                <InfoRow label="Inspector UPI ID" value={request.inspector?.upiId || request.inspectorUpiId || "—"} />
                             </SectionCard>
+                            {request.paidByAdminProofUrl && (
+                                <SectionCard icon={<FileText size={15} />} title="Payment Proof">
+                                    <div className="max-w-xs">
+                                        <DocPhotoCard label="Transaction Screenshot" imageUrl={request.paidByAdminProofUrl} onPreview={openPreview} />
+                                    </div>
+                                </SectionCard>
+                            )}
                         </div>
                     )}
 

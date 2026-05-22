@@ -29,7 +29,9 @@ import {
   getVehicleInspectionAssignmentById,
   approveInspection,
   rejectInspection,
-  requestChangesInspection
+  requestChangesInspection,
+  payInspector,
+  getPaidVehicleInspections
 } from "../../../api/vehicleInspection.api";
 import { getAllInspectors } from "../../../api/inspector.api";
 import InspectionRequestDetail from "./modal/InspectionRequestDetail";
@@ -78,6 +80,8 @@ const statusBadge = (status) => {
     ESCALATED: "bg-rose-50 text-rose-700 border-rose-200",
     REQUEST_CHANGES: "bg-amber-50 text-amber-700 border-amber-200",
     "Request Changes": "bg-amber-50 text-amber-700 border-amber-200",
+    PAYMENT_DONE: "bg-teal-50 text-teal-700 border-teal-200",
+    "Payment Done": "bg-teal-50 text-teal-700 border-teal-200",
     // Legacy display values
     New: "bg-sky-50 text-sky-700 border-sky-200",
     "Awaiting Assignment": "bg-amber-50 text-amber-700 border-amber-200",
@@ -324,7 +328,22 @@ function InspectionRowActions({
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
               >
                 <CreditCard className="h-4 w-4" />
-                Payment Details
+                Pay to Inspector
+              </button>
+            </>
+          )}
+
+          {activeTab === "PAYMENT_DONE" && (
+            <>
+              <button
+                onClick={() => {
+                  onReview(item);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sky-700 hover:bg-sky-50 transition-colors border-t border-slate-100"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Review Report
               </button>
             </>
           )}
@@ -1192,6 +1211,7 @@ const InspectionRequests = () => {
     { id: "SUBMITTED", label: "Submitted" },
     { id: "REQUEST_CHANGES", label: "Request Changes" },
     { id: "COMPLETED", label: "Completed" },
+    { id: "PAYMENT_DONE", label: "Payment Done" },
   ];
 
   // Static summary from current page data
@@ -1221,6 +1241,7 @@ const InspectionRequests = () => {
     SUBMITTED: 0,
     REQUEST_CHANGES: 0,
     COMPLETED: 0,
+    PAYMENT_DONE: 0,
   });
 
   const fetchTabCounts = async () => {
@@ -1260,6 +1281,12 @@ const InspectionRequests = () => {
           setTabCounts(prev => ({ ...prev, COMPLETED: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
         })
         .catch(err => console.error("Completed count error:", err));
+
+      getPaidVehicleInspections({ pageNo: 1 })
+        .then(res => {
+          setTabCounts(prev => ({ ...prev, PAYMENT_DONE: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
+        })
+        .catch(err => console.error("Payment Done count error:", err));
     } catch (err) {
       console.error("Error fetching tab counts:", err);
     }
@@ -1274,6 +1301,8 @@ const InspectionRequests = () => {
         res = await getAllVehicleInspections({ searchText: search.trim() || null, pageNo, status: "REQUESTED" });
       } else if (activeTab === "REQUEST_CHANGES") {
         res = await getAllVehicleInspectionAssigned({ searchText: search.trim() || null, pageNo, status: "REQUEST_CHANGES", assignmentStatus: "REQUEST_CHANGES" });
+      } else if (activeTab === "PAYMENT_DONE") {
+        res = await getPaidVehicleInspections({ searchText: search.trim() || null, pageNo });
       } else {
         res = await getAllVehicleInspectionAssigned({ searchText: search.trim() || null, pageNo, status: activeTab });
       }
@@ -1523,6 +1552,38 @@ const InspectionRequests = () => {
     alert(`Reschedule request ${item.id}`);
   };
 
+  const handlePayToInspectorConfirm = async (item) => {
+    try {
+      const assignmentId = item.assignmentId || item.id;
+      if (!assignmentId) {
+        toast.error("Assignment ID is missing");
+        return;
+      }
+      if (!item.screenshot) {
+        toast.error("Screenshot is required");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("assignmentId", assignmentId);
+      formData.append("amount", item.paidAmount);
+      formData.append("screenshot", item.screenshot);
+
+      const res = await payInspector(formData);
+
+      if (!res.error) {
+        toast.success(res.message || `Payment of ₹${item.paidAmount} recorded successfully!`);
+        setModal(null);
+        fetchInspections(pagination.currentPage);
+      } else {
+        toast.error(res.message || "Failed to record payment");
+      }
+    } catch (err) {
+      console.error("Failed to record payment:", err);
+      toast.error(err?.response?.data?.message || "Failed to record payment");
+    }
+  };
+
   const handleNote = (item) => {
     alert(`Add internal note for ${item.id}`);
   };
@@ -1571,7 +1632,7 @@ const InspectionRequests = () => {
             onReject={(item) => setModal({ type: "reject", item })}
             onRequestChanges={(item) => setModal({ type: "requestChanges", item })}
             onReview={handleReviewReport}
-            onPayment={(item) => toast.success("Payment details...")}
+            onPayment={(item) => setModal({ type: "payToInspector", item })}
           />
         )
       ) : (
@@ -1697,6 +1758,12 @@ const InspectionRequests = () => {
                       {activeTab === "REQUEST_CHANGES" && (
                         <th className="px-5 py-4 font-semibold whitespace-nowrap">Remarks</th>
                       )}
+                      {activeTab === "PAYMENT_DONE" && (
+                        <>
+                          <th className="px-5 py-4 font-semibold whitespace-nowrap">Paid Amount</th>
+                          <th className="px-5 py-4 font-semibold whitespace-nowrap">Payment Proof</th>
+                        </>
+                      )}
                       <th className="px-6 py-4 text-right font-semibold whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
@@ -1704,7 +1771,7 @@ const InspectionRequests = () => {
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
                       <tr>
-                        <td colSpan={activeTab === "REQUEST_CHANGES" ? 10 : activeTab === "PENDING" ? 8 : 9} className="px-6 py-28 text-center">
+                        <td colSpan={activeTab === "PAYMENT_DONE" ? 11 : activeTab === "REQUEST_CHANGES" ? 10 : activeTab === "PENDING" ? 8 : 9} className="px-6 py-28 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <Loader2 className="h-12 w-12 text-sky-600 animate-spin mb-4" />
                             <div className="text-lg font-bold text-slate-900">Loading inspection requests...</div>
@@ -1810,11 +1877,35 @@ const InspectionRequests = () => {
                             </td>
                           )}
 
-                          {/* REMARKS */}
+                           {/* REMARKS */}
                           {activeTab === "REQUEST_CHANGES" && (
                             <td className="px-5 py-4 text-[13px] font-medium text-slate-700 max-w-[220px] truncate" title={row.remarks || "—"}>
                               {row.remarks || "—"}
                             </td>
+                          )}
+
+                          {/* PAID AMOUNT & PROOF (PAYMENT_DONE ONLY) */}
+                          {activeTab === "PAYMENT_DONE" && (
+                            <>
+                              <td className="px-5 py-4 text-[13px] font-bold text-slate-800 whitespace-nowrap">
+                                {row.paidAmountByAdmin ? `₹${Number(row.paidAmountByAdmin).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "—"}
+                              </td>
+                              <td className="px-5 py-4 whitespace-nowrap">
+                                {row.paidByAdminProofUrl ? (
+                                  <a
+                                    href={row.paidByAdminProofUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-sky-100 bg-sky-50 px-2.5 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-100 transition-colors shadow-sm"
+                                  >
+                                    <Eye size={12} />
+                                    View Proof
+                                  </a>
+                                ) : (
+                                  <span className="text-[12px] text-slate-400 font-medium italic">No Proof</span>
+                                )}
+                              </td>
+                            </>
                           )}
 
                           {/* ACTIONS */}
@@ -1831,14 +1922,14 @@ const InspectionRequests = () => {
                               onRequestChanges={(item) => setModal({ type: "requestChanges", item })}
                               onRefund={(item) => setModal({ type: "refund", item })}
                               onReview={() => handleReviewReport(row)}
-                              onPayment={() => toast.success("Opening Payment Details...")}
+                              onPayment={(item) => setModal({ type: "payToInspector", item })}
                             />
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={activeTab === "REQUEST_CHANGES" ? 10 : activeTab === "PENDING" ? 8 : 9} className="px-6 py-28 text-center">
+                        <td colSpan={activeTab === "PAYMENT_DONE" ? 11 : activeTab === "REQUEST_CHANGES" ? 10 : activeTab === "PENDING" ? 8 : 9} className="px-6 py-28 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-4">
                               <Search size={28} />
@@ -1886,6 +1977,7 @@ const InspectionRequests = () => {
       <ApproveInspectionModal modal={modal} onClose={() => setModal(null)} onConfirm={handleApproveConfirm} />
       <RejectInspectionModal modal={modal} onClose={() => setModal(null)} onConfirm={handleRejectConfirm} />
       <RequestChangesModal modal={modal} onClose={() => setModal(null)} onConfirm={handleRequestChangesConfirm} />
+      <PayToInspectorModal modal={modal} onClose={() => setModal(null)} onConfirm={handlePayToInspectorConfirm} />
       <PdfActionModal item={pdfModalItem} onClose={() => setPdfModalItem(null)} onViewInteractive={(item) => setReviewingRequest(item)} />
 
       {reviewingRequest && (
@@ -1899,6 +1991,187 @@ const InspectionRequests = () => {
   );
 
 };
+
+function PayToInspectorModal({ modal, onClose, onConfirm }) {
+  const [paidAmount, setPaidAmount] = useState("");
+  const [screenshot, setScreenshot] = useState(null);
+  const [screenshotPreview, setScreenshotPreview] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (modal?.type === "payToInspector") {
+      setPaidAmount("");
+      setScreenshot(null);
+      setScreenshotPreview("");
+      setLoading(false);
+    }
+  }, [modal]);
+
+  if (!modal || modal.type !== "payToInspector") return null;
+
+  const item = modal.item;
+  const upiId = item?.inspector?.upiId || item?.inspectorUpiId || item?.upiId || "Not Available";
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setScreenshot(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setScreenshotPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePaidSubmit = async () => {
+    if (!paidAmount) {
+      toast.error("Please enter the paid amount");
+      return;
+    }
+    setLoading(true);
+    try {
+      await onConfirm({
+        ...item,
+        paidAmount,
+        screenshot,
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed left-1/2 top-1/2 z-[61] w-[95%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Pay to Inspector</h3>
+            <p className="mt-1 text-[13px] text-slate-500">
+              {item.vehicleName || item.vehicle || item.id}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          {/* UPI ID Field */}
+          <div>
+            <label className="block text-[12px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Inspector UPI ID
+            </label>
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 font-mono text-[13px] text-slate-800">
+              <span>{upiId}</span>
+              {upiId !== "Not Available" && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(upiId);
+                    toast.success("UPI ID copied to clipboard!");
+                  }}
+                  className="text-[11px] font-bold text-sky-600 hover:text-sky-700 transition-colors"
+                >
+                  Copy
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Paid Amount Field */}
+          <div>
+            <label className="block text-[12px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Paid Amount (₹)
+            </label>
+            <input
+              type="number"
+              value={paidAmount}
+              onChange={(e) => setPaidAmount(e.target.value)}
+              disabled={loading}
+              placeholder="Enter amount paid"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px]"
+            />
+          </div>
+
+          {/* Screenshot Upload Field */}
+          <div>
+            <label className="block text-[12px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Upload Payment Screenshot
+            </label>
+            <div className="mt-1 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 transition hover:bg-slate-100/50 relative">
+              {screenshotPreview ? (
+                <div className="relative w-full max-h-40 overflow-hidden rounded-lg border border-slate-200">
+                  <img
+                    src={screenshotPreview}
+                    alt="Payment screenshot preview"
+                    className="w-full h-full object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScreenshot(null);
+                      setScreenshotPreview("");
+                    }}
+                    className="absolute right-2 top-2 rounded-full bg-slate-900/60 p-1.5 text-white hover:bg-slate-900/80 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center cursor-pointer w-full py-4">
+                  <div className="rounded-full bg-white p-2.5 shadow-sm text-slate-400 mb-2 border border-slate-100">
+                    <Download className="h-5 w-5 rotate-180 animate-bounce" />
+                  </div>
+                  <span className="text-[13px] font-medium text-slate-600">
+                    Click to upload screenshot
+                  </span>
+                  <span className="text-[11px] text-slate-400 mt-0.5">
+                    PNG, JPG or JPEG
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    disabled={loading}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handlePaidSubmit}
+            disabled={loading}
+            className="rounded-xl bg-emerald-600 px-6 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Paid"
+            )}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 function PdfActionModal({ item, onClose, onViewInteractive }) {
   if (!item) return null;
