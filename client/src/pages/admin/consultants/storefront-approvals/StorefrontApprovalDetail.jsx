@@ -442,7 +442,7 @@ const StorefrontApprovalDetail = () => {
                </div>
 
                {/* Theme Content */}
-               <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm min-h-[600px]">
+              <div className="rounded-3xl border border-slate-200 p-8 text-white shadow-sm min-h-[600px] bg-[linear-gradient(90deg,_#313131_0%,_#1A1919_45%,_#000000_100%)]">
                   {activeTab === "about" && AboutThemeComponent && (
                      <AboutThemeComponent data={mappedData.aboutUs} />
                   )}

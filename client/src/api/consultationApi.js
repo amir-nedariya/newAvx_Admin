@@ -757,3 +757,12 @@ export const adminRemarkOnReview = async ({ reviewId, adminRemark }) => {
   });
   return res.data;
 };
+
+/* =======================================================
+   ✅ CONSULTATION: GET HELP TICKETS (POST)
+   BODY: HelpTicketFilterRequest { pageNo, ticketStatus, priority }
+======================================================= */
+export const getHelpTickets = async (payload = {}) => {
+  const res = await api.post("/consultation/help-tickets", payload);
+  return res.data;
+};

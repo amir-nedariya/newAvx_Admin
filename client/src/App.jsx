@@ -25,6 +25,7 @@ import StorefrontApprovalDetail from "./pages/admin/consultants/storefront-appro
 import RankingControl from "./pages/admin/consultants/RankingControl";
 import SuspendedConsultants from "./pages/admin/consultants/SuspendedConsultants";
 import FlaggedConsultations from "./pages/admin/consultants/FlaggedConsultations";
+import HelpCenter from "./pages/admin/consultants/HelpCenter";
 
 // Vehicles
 import Allvehicles from "./pages/admin/vehicles/Allvehicles";
@@ -74,6 +75,7 @@ import Logs from "./pages/admin/inquiries/Logs";
 import Abuse from "./pages/admin/inquiries/Abuse";
 
 // PPC
+import PPCHub from "./pages/admin/ppc/PPCHub";
 import Campaigns from "./pages/admin/ppc/Campaigns";
 import Featured from "./pages/admin/ppc/Featured";
 
@@ -153,6 +155,7 @@ const App = () => {
         <Route path="consultants/ranking-control" element={<RankingControl />} />
         <Route path="consultants/suspended" element={<SuspendedConsultants />} />
         <Route path="consultants/flagged-consultations" element={<FlaggedConsultations />} />
+        <Route path="consultants/help-center" element={<HelpCenter />} />
 
         {/* Vehicles */}
         <Route path="vehicles/all" element={<Allvehicles />} />
@@ -218,8 +221,15 @@ const App = () => {
         <Route path="subscriptions/tiers/:id" element={<TierDetail />} />
         <Route path="subscriptions/consultants" element={<Consultants />} />
 
-        {/* PPC */}
-        <Route path="ppc/campaigns" element={<Campaigns />} />
+        {/* PPC Control Hub */}
+        <Route path="ppc" element={<PPCHub initialTab="dashboard" />} />
+        <Route path="ppc/dashboard" element={<PPCHub initialTab="dashboard" />} />
+        <Route path="ppc/pricing" element={<PPCHub initialTab="pricing" />} />
+        <Route path="ppc/rules" element={<PPCHub initialTab="rules" />} />
+        <Route path="ppc/campaigns" element={<PPCHub initialTab="campaigns" />} />
+        <Route path="ppc/moderation" element={<PPCHub initialTab="moderation" />} />
+        <Route path="ppc/overrides" element={<PPCHub initialTab="overrides" />} />
+        <Route path="ppc/wallets" element={<PPCHub initialTab="wallets" />} />
         <Route path="ppc/featured" element={<Featured />} />
 
         {/* Other */}

@@ -188,6 +188,7 @@ const TierManagement = () => {
   const [selectedTier, setSelectedTier] = useState(null);
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [busyFeatureId, setBusyFeatureId] = useState(null);
+  const [expandedTiers, setExpandedTiers] = useState({});
 
   const [form, setForm] = useState({
     title: "",
@@ -668,31 +669,49 @@ const TierManagement = () => {
                     </div>
                   ) : (
                     <div className="space-y-2 mb-3">
-                      {limits.slice(0, 3).map((l) => (
-                        <div
-                          key={l?.id || l?._id || l?.limitsName}
-                          className="flex items-center justify-between rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5 transition-all hover:border-slate-300"
-                        >
-                          <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                            {l?.limitsName?.replace(/_/g, ' ')}
-                          </span>
-                          <span className={cls(
-                            "rounded-lg px-2.5 py-1 text-xs font-extrabold",
-                            String(l?.limitsValue).toLowerCase() === 'false'
-                              ? "bg-rose-100 text-rose-700"
-                              : String(l?.limitsValue).toLowerCase() === 'true'
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-slate-900 text-white"
-                          )}>
-                            {String(l?.limitsValue ?? "—")}
-                          </span>
-                        </div>
-                      ))}
-                      {limits.length > 3 && (
-                        <p className="text-xs font-semibold text-slate-400 text-center pt-1">
-                          +{limits.length - 3} more limits
-                        </p>
-                      )}
+                      {((() => {
+                        const tierId = tier?.id || tier?._id || title;
+                        const isExpanded = !!expandedTiers[tierId];
+                        const displayedLimits = isExpanded ? limits : limits.slice(0, 3);
+                        return (
+                          <>
+                            {displayedLimits.map((l) => (
+                              <div
+                                key={l?.id || l?._id || l?.limitsName}
+                                className="flex items-center justify-between rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5 transition-all hover:border-slate-300"
+                              >
+                                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                  {l?.limitsName?.replace(/_/g, ' ')}
+                                </span>
+                                <span className={cls(
+                                  "rounded-lg px-2.5 py-1 text-xs font-extrabold",
+                                  String(l?.limitsValue).toLowerCase() === 'false'
+                                    ? "bg-rose-100 text-rose-700"
+                                    : String(l?.limitsValue).toLowerCase() === 'true'
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-slate-900 text-white"
+                                )}>
+                                  {String(l?.limitsValue ?? "—")}
+                                </span>
+                              </div>
+                            ))}
+                            {limits.length > 3 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setExpandedTiers((prev) => ({
+                                    ...prev,
+                                    [tierId]: !prev[tierId],
+                                  }));
+                                }}
+                                className="w-full text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline text-center pt-1 transition-all cursor-pointer focus:outline-none"
+                              >
+                                {isExpanded ? "Show less" : `+${limits.length - 3} more limits`}
+                              </button>
+                            )}
+                          </>
+                        );
+                      })())}
                     </div>
                   )}
 

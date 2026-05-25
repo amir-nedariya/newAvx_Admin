@@ -388,6 +388,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             <SubItem to="/admin/consultants/ranking-control" label="Ranking Control" />
             <SubItem to="/admin/consultants/suspended" label="Suspended Consultants" />
             <SubItem to="/admin/consultants/flagged-consultations" label="Flagged Consultations" />
+            <SubItem to="/admin/consultants/help-center" label="Help Center" />
           </TreeItem>
 
           <TreeItem
@@ -497,17 +498,15 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
           </TreeItem>
 
           <TreeItem
-            title="Marketing"
+            title="PPC Control Hub"
             icon={Megaphone}
+            to="/admin/ppc/dashboard"
             collapsed={collapsed}
             onToggleCollapsed={onToggle}
             onNavigate={mobile ? onClose : undefined}
             openMenu={openMenu}
             setOpenMenu={setOpenMenu}
-          >
-            <SubItem to="/admin/ppc/campaigns" label="Campaigns" />
-            <SubItem to="/admin/ppc/featured" label="Featured" />
-          </TreeItem>
+          />
 
           <TreeItem
             title="Analytics"
