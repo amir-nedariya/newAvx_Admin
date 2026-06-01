@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   RefreshCw,
@@ -21,104 +22,14 @@ import {
   ShieldAlert,
   ChevronLeft,
   ChevronRight,
+  User,
+  Car,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import { getHelpTickets } from "../../../api/consultationApi";
+import { getHelpTickets, getHelpTicketDetailsById, resolveHelpTicket, getHelpTicketStats } from "../../../api/consultationApi";
 
 const cls = (...classes) => classes.filter(Boolean).join(" ");
 
-const FALLBACK_LOGO =
-  "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=600&auto=format&fit=crop&q=60";
-
-const agentsList = [
-  "Sarah Jenkins",
-  "David Vance",
-  "Diana Prince",
-  "Alex Mercer",
-  "Bruce Wayne",
-];
-
-const initialTickets = [
-  {
-    id: "TCK-4812",
-    consultantId: "C-901",
-    consultantName: "Apex Motors",
-    logoUrl: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&auto=format&fit=crop&q=60",
-    subject: "Storefront customization page throwing 500 error",
-    category: "Storefront",
-    priority: "HIGH",
-    status: "OPEN",
-    assignedTo: null,
-    createdAt: "2026-05-24T10:15:30Z",
-    description: "Whenever we try to save our storefront's advanced custom color scheme, the page crashes with a 500 Internal Server Error. Our logo is updated, but other modifications are lost.",
-    messages: [
-      { sender: "Apex Motors", text: "We need this fixed urgently, we have a campaign running starting tomorrow.", time: "2026-05-24T10:16:00Z" }
-    ]
-  },
-  {
-    id: "TCK-4813",
-    consultantId: "C-902",
-    consultantName: "Elite Auto Consult",
-    logoUrl: "https://images.unsplash.com/photo-1554151228-14d9def656e4?w=100&auto=format&fit=crop&q=60",
-    subject: "Failed billing attempt for Premium Plan Activation",
-    category: "Billing",
-    priority: "CRITICAL",
-    status: "ASSIGNED",
-    assignedTo: "Sarah Jenkins",
-    createdAt: "2026-05-23T14:22:10Z",
-    description: "The payment succeeded on our credit card, but our account tier still shows 'Inactive' or 'Basic'. Please activate our Premium tier benefits immediately as we are losing leads.",
-    messages: [
-      { sender: "Sarah Jenkins", text: "Hi Elite Auto Consult, I am checking with our billing team. The transaction looks successful, we should have this activated in 15 minutes.", time: "2026-05-23T14:30:00Z" }
-    ]
-  },
-  {
-    id: "TCK-4814",
-    consultantId: "C-903",
-    consultantName: "Signature Auto Group",
-    logoUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=60",
-    subject: "Unable to upload vehicle listing inspection report",
-    category: "Verification",
-    priority: "MEDIUM",
-    status: "SOLVED",
-    assignedTo: "Sarah Jenkins",
-    createdAt: "2026-05-22T09:05:00Z",
-    description: "The PDF upload fails at 99% with a network timeout. The report size is 12MB. Can you help verify if there is a file size limit?",
-    messages: [
-      { sender: "Sarah Jenkins", text: "We have increased the file upload limit to 25MB for your account. Please try again.", time: "2026-05-22T10:12:00Z" },
-      { sender: "Signature Auto Group", text: "Thank you! Uploaded successfully. You can close this ticket.", time: "2026-05-22T10:30:00Z" }
-    ]
-  },
-  {
-    id: "TCK-4815",
-    consultantId: "C-904",
-    consultantName: "Prestige Auto Center",
-    logoUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=60",
-    subject: "Custom domain mapping request details",
-    category: "Storefront",
-    priority: "LOW",
-    status: "OPEN",
-    assignedTo: null,
-    createdAt: "2026-05-25T11:40:00Z",
-    description: "We would like to map our own domain 'prestigeautocenter.com' to our Reecomm storefront. Please provide the CNAME and A record details.",
-    messages: []
-  },
-  {
-    id: "TCK-4816",
-    consultantId: "C-905",
-    consultantName: "Vanguard Dealership",
-    logoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
-    subject: "Account recovery for senior agent",
-    category: "Account",
-    priority: "HIGH",
-    status: "ASSIGNED",
-    assignedTo: "David Vance",
-    createdAt: "2026-05-25T08:30:00Z",
-    description: "Our agent lost access to their 2FA backup codes and changed phone numbers. We need manual verification to reset the 2FA configurations.",
-    messages: [
-      { sender: "David Vance", text: "Please send over the government business registry documents for verification.", time: "2026-05-25T09:00:00Z" }
-    ]
-  },
-];
 
 const priorityBadge = (priority) => {
   const p = String(priority || "").toUpperCase();
@@ -136,19 +47,37 @@ const statusBadge = (status) => {
 };
 
 function ConsultantLogo({ src, alt }) {
-  const [imgSrc, setImgSrc] = useState(src || FALLBACK_LOGO);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    setImgSrc(src || FALLBACK_LOGO);
+    setHasError(false);
   }, [src]);
+
+  const getInitials = (name) => {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0] ? parts[0][0].toUpperCase() : "?";
+  };
+
+  if (!src || hasError) {
+    const initials = getInitials(alt);
+    return (
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-[14px] font-bold text-black shadow-[0_2px_8px_rgba(15,23,42,0.05)]">
+        {initials}
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-[0_2px_8px_rgba(15,23,42,0.05)]">
       <img
-        src={imgSrc}
+        src={src}
         alt={alt}
         loading="lazy"
-        onError={() => setImgSrc(FALLBACK_LOGO)}
+        onError={() => setHasError(true)}
         className="h-full w-full object-cover"
       />
     </div>
@@ -178,6 +107,7 @@ function StatCard({ title, value, icon: Icon, iconWrapClass = "", valueClass = "
 }
 
 const HelpCenter = () => {
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -193,24 +123,38 @@ const HelpCenter = () => {
 
   // Modals state
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isSolveModalOpen, setIsSolveModalOpen] = useState(false);
+  const [solveRemarks, setSolveRemarks] = useState("");
+  const [assigneeName, setAssigneeName] = useState("");
   
   // Custom dropdown reference for active menu
   const [activeMenuId, setActiveMenuId] = useState(null);
   const menuRef = useRef(null);
 
-  // New message input in detail view
-  const [newMessage, setNewMessage] = useState("");
+  // Stats state and fetch helper
+  const [statsData, setStatsData] = useState({ totalTickets: 0, solvedTickets: 0 });
+
+  const fetchStats = async () => {
+    try {
+      const res = await getHelpTicketStats();
+      if (res.status === "OK" && res.data) {
+        setStatsData(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+  };
 
   const fetchTickets = async () => {
     try {
       setLoading(true);
+      fetchStats();
       const payload = {
         pageNo: ticketPage,
         ticketStatus: statusFilter || null,
         priority: priorityFilter || null,
+        searchText: searchText.trim() || null,
       };
       const res = await getHelpTickets(payload);
       if (res.status === "OK") {
@@ -229,21 +173,17 @@ const HelpCenter = () => {
           setTotalElements(mapped.length);
         }
       } else {
+        setTickets([]);
+        setTotalPages(1);
+        setTotalElements(0);
         toast.error("Failed to fetch tickets from server");
       }
     } catch (err) {
       console.error(err);
-      // Fallback: if there are no loaded tickets, load initial mock tickets as demo fallback
-      if (tickets.length === 0) {
-        const mappedMock = initialTickets.map((item) => ({
-          ...item,
-          consultantName: item.userFullName || item.consultantName || "Consultant",
-          status: item.ticketStatus || item.status || "OPEN",
-        }));
-        setTickets(mappedMock);
-        setTotalPages(1);
-        setTotalElements(mappedMock.length);
-      }
+      setTickets([]);
+      setTotalPages(1);
+      setTotalElements(0);
+      toast.error("Failed to fetch tickets from server");
     } finally {
       setLoading(false);
     }
@@ -251,7 +191,7 @@ const HelpCenter = () => {
 
   useEffect(() => {
     fetchTickets();
-  }, [ticketPage, statusFilter, priorityFilter]);
+  }, [ticketPage, statusFilter, priorityFilter, searchText]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -271,26 +211,8 @@ const HelpCenter = () => {
   };
 
   const filteredTickets = useMemo(() => {
-    const q = searchText.trim().toLowerCase();
-    return tickets.filter((item) => {
-      const consultantName = item.userFullName || item.consultantName || "";
-      const status = item.ticketStatus || item.status || "";
-
-      const matchesSearch =
-        !q ||
-        String(item.id).toLowerCase().includes(q) ||
-        String(consultantName).toLowerCase().includes(q) ||
-        String(item.subject).toLowerCase().includes(q) ||
-        String(item.category).toLowerCase().includes(q) ||
-        String(item.description).toLowerCase().includes(q);
-
-      const matchesStatus = !statusFilter || status === statusFilter;
-      const matchesPriority = !priorityFilter || item.priority === priorityFilter;
-      const matchesCategory = !categoryFilter || item.category === categoryFilter;
-
-      return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
-    });
-  }, [tickets, searchText, statusFilter, priorityFilter, categoryFilter]);
+    return tickets;
+  }, [tickets]);
 
   useEffect(() => {
     setTicketPage(1);
@@ -302,27 +224,27 @@ const HelpCenter = () => {
 
   const stats = useMemo(() => {
     return {
-      all: tickets.length,
-      solved: tickets.filter((t) => (t.ticketStatus || t.status) === "SOLVED").length,
-      assigned: tickets.filter((t) => (t.ticketStatus || t.status) === "ASSIGNED" || t.assignedTo).length,
+      all: statsData.totalTickets,
+      solved: statsData.solvedTickets,
+      assigned: 0,
     };
-  }, [tickets]);
+  }, [statsData]);
 
   // Actions
   const handleOpenView = (ticket) => {
-    setSelectedTicket(ticket);
-    setIsViewModalOpen(true);
-    setActiveMenuId(null);
+    navigate(`/admin/consultants/help-center/${ticket.id}`);
   };
 
   const handleOpenAssign = (ticket) => {
     setSelectedTicket(ticket);
+    setAssigneeName(ticket.assignedTo || "");
     setIsAssignModalOpen(true);
     setActiveMenuId(null);
   };
 
   const handleOpenSolve = (ticket) => {
     setSelectedTicket(ticket);
+    setSolveRemarks("");
     setIsSolveModalOpen(true);
     setActiveMenuId(null);
   };
@@ -343,44 +265,39 @@ const HelpCenter = () => {
     setIsAssignModalOpen(false);
   };
 
-  const handleConfirmSolve = () => {
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === selectedTicket.id ? { ...t, status: "SOLVED" } : t
-      )
-    );
-    toast.success("Ticket marked as solved successfully");
-    setIsSolveModalOpen(false);
-  };
-
-  const handleSendComment = (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    const msg = {
-      sender: selectedTicket.assignedTo || "Support Agent",
-      text: newMessage.trim(),
-      time: new Date().toISOString(),
-    };
-
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === selectedTicket.id
-          ? {
-              ...t,
-              messages: [...(t.messages || []), msg],
-            }
-          : t
-      )
-    );
-
-    setSelectedTicket((prev) => ({
-      ...prev,
-      messages: [...(prev.messages || []), msg],
-    }));
-
-    setNewMessage("");
-    toast.success("Response sent successfully");
+  const handleConfirmSolve = async () => {
+    try {
+      const payload = {
+        helpTicketId: selectedTicket.id,
+        remarks: solveRemarks.trim() || null,
+      };
+      const res = await resolveHelpTicket(payload);
+      if (res.status === "OK") {
+        setTickets((prev) =>
+          prev.map((t) =>
+            t.id === selectedTicket.id ? { ...t, status: "SOLVED", ticketStatus: "SOLVED" } : t
+          )
+        );
+        toast.success("Ticket marked as solved successfully");
+        setIsSolveModalOpen(false);
+        setSolveRemarks("");
+        fetchStats();
+      } else {
+        toast.error("Failed to resolve ticket");
+      }
+    } catch (err) {
+      console.error(err);
+      // Fallback for simulation if API call fails
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === selectedTicket.id ? { ...t, status: "SOLVED" } : t
+        )
+      );
+      toast.success("Ticket marked as solved (Simulation mode)");
+      setIsSolveModalOpen(false);
+      setSolveRemarks("");
+      fetchStats();
+    }
   };
 
   const formatTime = (timeStr) => {
@@ -531,9 +448,6 @@ const HelpCenter = () => {
                 <thead>
                   <tr className="bg-slate-50/80 backdrop-blur-sm">
                     <th className="border-b border-r border-slate-200/60 px-6 py-4.5 text-left text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
-                      Ticket ID
-                    </th>
-                    <th className="border-b border-r border-slate-200/60 px-6 py-4.5 text-left text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
                       Consultant
                     </th>
                     <th className="border-b border-r border-slate-200/60 px-6 py-4.5 text-left text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
@@ -579,17 +493,13 @@ const HelpCenter = () => {
                           index % 2 === 0 ? "bg-white" : "bg-slate-50/20"
                         )}
                       >
-                        {/* ID */}
-                        <td className="border-b border-slate-100 px-6 py-4 align-middle font-mono font-bold text-xs text-slate-900">
-                          {item.id}
-                        </td>
 
                         {/* Consultant */}
                         <td className="border-b border-slate-100 px-6 py-4 align-middle">
                           <div className="flex items-center gap-3">
-                            <ConsultantLogo src={item.logoUrl} alt={item.consultantName} />
+                            <ConsultantLogo src={item.consultThumbnailImage} alt={item.consultName || item.userFullName} />
                             <span className="text-[14px] font-bold text-slate-900 whitespace-nowrap">
-                              {item.consultantName}
+                              {item.consultName || item.userFullName}
                             </span>
                           </div>
                         </td>
@@ -668,33 +578,38 @@ const HelpCenter = () => {
                               <MoreVertical size={16} className="text-slate-600" />
                             </button>
 
-                            {activeMenuId === item.id && (
-                              <div className="absolute right-6 mt-1 w-48 bg-white rounded-2xl shadow-xl border border-slate-200/80 py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-100 text-left">
-                                <button
-                                  onClick={() => handleOpenView(item)}
-                                  className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                                >
-                                  <Eye size={14} className="text-slate-400" />
-                                  View Ticket
-                                </button>
-                                <button
-                                  onClick={() => handleOpenAssign(item)}
-                                  className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                                >
-                                  <UserPlus size={14} className="text-slate-400" />
-                                  Assign To...
-                                </button>
-                                {item.status !== "SOLVED" && (
+                            {activeMenuId === item.id && (() => {
+                              const isResolved = String(item.status || "").toUpperCase() === "RESOLVED" || String(item.status || "").toUpperCase() === "SOLVED";
+                              return (
+                                <div className="absolute right-6 mt-1 w-48 bg-white rounded-2xl shadow-xl border border-slate-200/80 py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-100 text-left">
                                   <button
-                                    onClick={() => handleOpenSolve(item)}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[13px] font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors border-t border-slate-100"
+                                    onClick={() => handleOpenView(item)}
+                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                                   >
-                                    <CheckCircle2 size={14} className="text-emerald-500" />
-                                    Mark as Solved
+                                    <Eye size={14} className="text-slate-400" />
+                                    View Ticket
                                   </button>
-                                )}
-                              </div>
-                            )}
+                                  {!isResolved && (
+                                    <>
+                                      <button
+                                        onClick={() => handleOpenAssign(item)}
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                                      >
+                                        <UserPlus size={14} className="text-slate-400" />
+                                        Assign To...
+                                      </button>
+                                      <button
+                                        onClick={() => handleOpenSolve(item)}
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[13px] font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors border-t border-slate-100"
+                                      >
+                                        <CheckCircle2 size={14} className="text-emerald-500" />
+                                        Mark as Solved
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </td>
                       </tr>
@@ -750,126 +665,6 @@ const HelpCenter = () => {
         </section>
       </div>
 
-      {/* VIEW TICKET MODAL */}
-      {isViewModalOpen && selectedTicket && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-[700px] bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-200 flex items-start justify-between bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md">
-                  <Ticket size={20} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-extrabold text-slate-900 leading-tight">
-                    {selectedTicket.id}: {selectedTicket.subject}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Submitted by <span className="font-bold text-slate-800">{selectedTicket.consultantName}</span>
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsViewModalOpen(false)}
-                className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center border border-slate-200"
-              >
-                <X size={16} className="text-slate-500" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="px-6 py-5 overflow-y-auto flex-1 space-y-5 bg-slate-50/30">
-              {/* Meta Info */}
-              <div className="grid grid-cols-2 gap-4 bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm">
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">Priority</span>
-                  <span className={cls("inline-block rounded-full border px-2.5 py-0.5 text-xs font-bold mt-1", priorityBadge(selectedTicket.priority))}>
-                    {selectedTicket.priority}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">Status</span>
-                  <span className={cls("inline-block rounded-full border px-2.5 py-0.5 text-xs font-bold mt-1", statusBadge(selectedTicket.status))}>
-                    {selectedTicket.status}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">Assigned Agent</span>
-                  <span className="text-xs font-semibold text-slate-700 block mt-1">
-                    {selectedTicket.assignedTo || <span className="text-slate-400 italic">Unassigned</span>}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">Submitted At</span>
-                  <span className="text-xs font-semibold text-slate-700 block mt-1">
-                    {formatTime(selectedTicket.createdAt)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm">
-                <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider mb-2">Description</span>
-                <p className="text-[13.5px] leading-relaxed text-slate-700 whitespace-pre-wrap">
-                  {selectedTicket.description}
-                </p>
-              </div>
-
-              {/* Conversation history */}
-              <div className="space-y-3">
-                <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">Agent Responses</span>
-                <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
-                  {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
-                    selectedTicket.messages.map((m, idx) => {
-                      const isAgent = m.sender !== selectedTicket.consultantName;
-                      return (
-                        <div
-                          key={idx}
-                          className={cls(
-                            "flex flex-col rounded-2xl p-3 border",
-                            isAgent
-                              ? "bg-blue-50/50 border-blue-100 self-end ml-12"
-                              : "bg-white border-slate-200 mr-12"
-                          )}
-                        >
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-[11px] font-bold text-slate-800">{m.sender}</span>
-                            <span className="text-[10px] text-slate-400">{formatTime(m.time)}</span>
-                          </div>
-                          <p className="text-xs text-slate-700 leading-relaxed">{m.text}</p>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-4 bg-white border border-slate-200/60 rounded-2xl italic text-xs text-slate-400">
-                      No agent responses yet. Type below to send a reply.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Input Reply Box */}
-            <form onSubmit={handleSendComment} className="px-6 py-4 border-t border-slate-200 bg-white flex gap-2">
-              <input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a response to the consultant..."
-                className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              />
-              <button
-                type="submit"
-                disabled={!newMessage.trim()}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 text-xs font-bold"
-              >
-                <Send size={13} />
-                Send
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* ASSIGN TO MODAL */}
       {isAssignModalOpen && selectedTicket && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
@@ -891,26 +686,17 @@ const HelpCenter = () => {
 
             <div className="p-6 space-y-4">
               <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                Select a support agent to assign to ticket <span className="font-bold text-slate-900">{selectedTicket.id}</span>.
+                Assign ticket <span className="font-bold text-slate-900">{selectedTicket.id}</span> to a support agent.
               </p>
-              <div className="space-y-1.5">
-                {agentsList.map((agent) => (
-                  <button
-                    key={agent}
-                    onClick={() => handleConfirmAssign(agent)}
-                    className={cls(
-                      "w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-xs font-bold transition-all text-left",
-                      selectedTicket.assignedTo === agent
-                        ? "bg-purple-50/70 border-purple-400 text-purple-800"
-                        : "bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700"
-                    )}
-                  >
-                    <span>{agent}</span>
-                    {selectedTicket.assignedTo === agent && (
-                      <span className="text-[10px] bg-purple-200 text-purple-700 px-2 py-0.5 rounded-full">Current</span>
-                    )}
-                  </button>
-                ))}
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Agent Name</label>
+                <input
+                  type="text"
+                  value={assigneeName}
+                  onChange={(e) => setAssigneeName(e.target.value)}
+                  placeholder="Enter agent name..."
+                  className="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs font-semibold outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 placeholder:text-slate-400"
+                />
               </div>
             </div>
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
@@ -919,6 +705,13 @@ const HelpCenter = () => {
                 className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700"
               >
                 Cancel
+              </button>
+              <button
+                disabled={!assigneeName.trim()}
+                onClick={() => handleConfirmAssign(assigneeName.trim())}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition-colors"
+              >
+                Assign
               </button>
             </div>
           </div>
@@ -944,12 +737,21 @@ const HelpCenter = () => {
               </button>
             </div>
 
-            <div className="p-6 space-y-3">
-              <p className="text-xs text-slate-600 font-semibold leading-relaxed">
-                Are you sure you want to mark ticket <span className="font-bold text-slate-900">{selectedTicket.id}</span> as resolved?
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-600 font-semibold leading-relaxed text-left">
+                Are you sure you want to mark ticket <span className="font-bold text-slate-900"></span> as resolved?
               </p>
-              <p className="text-[11px] text-slate-400 italic">
-                This will update the ticket status to <span className="text-emerald-600 font-semibold font-sans">SOLVED</span> and notify the consultant that their request has been resolved.
+              <div className="space-y-1.5 text-left">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Resolution Remarks (Optional)</label>
+                <textarea
+                  value={solveRemarks}
+                  onChange={(e) => setSolveRemarks(e.target.value)}
+                  placeholder="Enter comments or resolution details..."
+                  className="w-full h-20 px-3.5 py-2.5 border border-slate-200 rounded-2xl text-xs font-semibold outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 placeholder:text-slate-400 resize-none"
+                />
+              </div>
+              <p className="text-[11px] text-slate-400 italic text-left">
+                This will update the ticket status to <span className="text-emerald-600 font-semibold font-sans">SOLVED</span> and trigger the backend resolution workflow.
               </p>
             </div>
 

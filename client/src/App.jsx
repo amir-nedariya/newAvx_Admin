@@ -26,6 +26,7 @@ import RankingControl from "./pages/admin/consultants/RankingControl";
 import SuspendedConsultants from "./pages/admin/consultants/SuspendedConsultants";
 import FlaggedConsultations from "./pages/admin/consultants/FlaggedConsultations";
 import HelpCenter from "./pages/admin/consultants/HelpCenter";
+import HelpTicketDetail from "./pages/admin/consultants/HelpTicketDetail";
 
 // Vehicles
 import Allvehicles from "./pages/admin/vehicles/Allvehicles";
@@ -62,6 +63,7 @@ import InspectionRequests from "./pages/admin/inspections/InspectionRequests";
 import AssignInspector from "./pages/admin/inspections/AssignInspector";
 import ReportsReview from "./pages/admin/inspections/ReportsReview";
 import Disputes from "./pages/admin/inspections/Disputes";
+import InspectionRefund from "./pages/admin/inspections/InspectionRefund";
 
 
 // Operations
@@ -86,6 +88,7 @@ import VehicleImages from "./pages/admin/other/vehicleimages";
 // General
 import Users from "./pages/admin/Users";
 import UserDetails from "./pages/admin/users/UserDetails";
+import UserHelpTicketDetail from "./pages/admin/users/UserHelpTicketDetail";
 import Reviews from "./pages/admin/Reviews";
 import Analytics from "./pages/admin/Analytics";
 import MarketplaceMetrics from "./pages/admin/analytics/MarketplaceMetrics";
@@ -156,6 +159,7 @@ const App = () => {
         <Route path="consultants/suspended" element={<SuspendedConsultants />} />
         <Route path="consultants/flagged-consultations" element={<FlaggedConsultations />} />
         <Route path="consultants/help-center" element={<HelpCenter />} />
+        <Route path="consultants/help-center/:id" element={<HelpTicketDetail />} />
 
         {/* Vehicles */}
         <Route path="vehicles/all" element={<Allvehicles />} />
@@ -202,6 +206,7 @@ const App = () => {
         <Route path="inspections/reports-review" element={<ReportsReview />} />
         <Route path="inspections/disputes" element={<Disputes />} />
         <Route path="inspections/inspector" element={<Inspector />} />
+        <Route path="inspections/inspection-refund" element={<InspectionRefund />} />
 
 
         {/* Operations */}
@@ -238,6 +243,7 @@ const App = () => {
 
         {/* General */}
         <Route path="users" element={<Users />} />
+        <Route path="users/help-center/:id" element={<UserHelpTicketDetail />} />
         <Route path="users/:id" element={<UserDetails />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="analytics" element={<Analytics />}>

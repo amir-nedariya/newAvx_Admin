@@ -451,6 +451,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             <SubItem to="/admin/inspections/inspector" label="Inspector" />
             <SubItem to="/admin/inspections/requests" label="Inspection Requests" />
             <SubItem to="/admin/inspections/assign" label="Assigned Inspection" />
+            <SubItem to="/admin/inspections/inspection-refund" label="Inspection Refund" />
             {/* <SubItem to="/admin/inspections/reports-review" label="Reports Review" /> */}
             <SubItem to="/admin/inspections/disputes" label="Disputes" />
           </TreeItem>

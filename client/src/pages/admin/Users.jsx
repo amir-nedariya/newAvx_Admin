@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   User,
   Eye,
@@ -18,7 +18,6 @@ import {
   MoreVertical,
   X,
   UserPlus,
-  Send,
   CalendarDays,
   Tag,
   ChevronDown,
@@ -27,7 +26,7 @@ import {
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import {
   getUsers,
@@ -35,119 +34,46 @@ import {
   getSuspendedUserSellers,
   getFlaggedUserSellers,
   getUserSellerStats,
+  getUserHelpTickets,
+  getUserHelpTicketStats,
+  resolveUserHelpTicket,
 } from "../../api/user.api";
 
 const cls = (...classes) => classes.filter(Boolean).join(" ");
 
 const Users = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState("all"); // "all", "pending", "suspended", "flagged", "help-center"
+  const [activeTab, setActiveTab] = useState(() => {
+    return location.state?.activeTab || "all";
+  }); // "all", "pending", "suspended", "flagged", "help-center"
 
   // Help Center states
-  const [tickets, setTickets] = useState([
-    {
-      id: "TCK-4812",
-      consultantId: "C-901",
-      consultantName: "Apex Motors",
-      logoUrl: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&auto=format&fit=crop&q=60",
-      subject: "Storefront customization page throwing 500 error",
-      category: "Storefront",
-      priority: "HIGH",
-      status: "OPEN",
-      assignedTo: null,
-      createdAt: "2026-05-24T10:15:30Z",
-      description: "Whenever we try to save our storefront's advanced custom color scheme, the page crashes with a 500 Internal Server Error. Our logo is updated, but other modifications are lost.",
-      messages: [
-        { sender: "Apex Motors", text: "We need this fixed urgently, we have a campaign running starting tomorrow.", time: "2026-05-24T10:16:00Z" }
-      ]
-    },
-    {
-      id: "TCK-4813",
-      consultantId: "C-902",
-      consultantName: "Elite Auto Consult",
-      logoUrl: "https://images.unsplash.com/photo-1554151228-14d9def656e4?w=100&auto=format&fit=crop&q=60",
-      subject: "Failed billing attempt for Premium Plan Activation",
-      category: "Billing",
-      priority: "CRITICAL",
-      status: "ASSIGNED",
-      assignedTo: "Sarah Jenkins",
-      createdAt: "2026-05-23T14:22:10Z",
-      description: "The payment succeeded on our credit card, but our account tier still shows 'Inactive' or 'Basic'. Please activate our Premium tier benefits immediately as we are losing leads.",
-      messages: [
-        { sender: "Sarah Jenkins", text: "Hi Elite Auto Consult, I am checking with our billing team. The transaction looks successful, we should have this activated in 15 minutes.", time: "2026-05-23T14:30:00Z" }
-      ]
-    },
-    {
-      id: "TCK-4814",
-      consultantId: "C-903",
-      consultantName: "Signature Auto Group",
-      logoUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=60",
-      subject: "Unable to upload vehicle listing inspection report",
-      category: "Verification",
-      priority: "MEDIUM",
-      status: "SOLVED",
-      assignedTo: "Sarah Jenkins",
-      createdAt: "2026-05-22T09:05:00Z",
-      description: "The PDF upload fails at 99% with a network timeout. The report size is 12MB. Can you help verify if there is a file size limit?",
-      messages: [
-        { sender: "Sarah Jenkins", text: "We have increased the file upload limit to 25MB for your account. Please try again.", time: "2026-05-22T10:12:00Z" },
-        { sender: "Signature Auto Group", text: "Thank you! Uploaded successfully. You can close this ticket.", time: "2026-05-22T10:30:00Z" }
-      ]
-    },
-    {
-      id: "TCK-4815",
-      consultantId: "C-904",
-      consultantName: "Prestige Auto Center",
-      logoUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=60",
-      subject: "Custom domain mapping request details",
-      category: "Storefront",
-      priority: "LOW",
-      status: "OPEN",
-      assignedTo: null,
-      createdAt: "2026-05-25T11:40:00Z",
-      description: "We would like to map our own domain 'prestigeautocenter.com' to our Reecomm storefront. Please provide the CNAME and A record details.",
-      messages: []
-    },
-    {
-      id: "TCK-4816",
-      consultantId: "C-905",
-      consultantName: "Vanguard Dealership",
-      logoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
-      subject: "Account recovery for senior agent",
-      category: "Account",
-      priority: "HIGH",
-      status: "ASSIGNED",
-      assignedTo: "David Vance",
-      createdAt: "2026-05-25T08:30:00Z",
-      description: "Our agent lost access to their 2FA backup codes and changed phone numbers. We need manual verification to reset the 2FA configurations.",
-      messages: [
-        { sender: "David Vance", text: "Please send over the government business registry documents for verification.", time: "2026-05-25T09:00:00Z" }
-      ]
-    },
-  ]);
+  const [tickets, setTickets] = useState([]);
   const [ticketSearch, setTicketSearch] = useState("");
   const [ticketStatusFilter, setTicketStatusFilter] = useState("");
   const [ticketPriorityFilter, setTicketPriorityFilter] = useState("");
-  const [ticketCategoryFilter, setTicketCategoryFilter] = useState("");
   const [ticketPage, setTicketPage] = useState(1);
-  const ticketsPerPage = 3;
+  const [ticketTotalPages, setTicketTotalPages] = useState(1);
+  const [ticketTotalElements, setTicketTotalElements] = useState(0);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketsRefreshing, setTicketsRefreshing] = useState(false);
+
+  // Help Center — API-sourced stats
+  const [apiTicketStats, setApiTicketStats] = useState({ totalTickets: 0, solvedTickets: 0 });
 
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isSolveModalOpen, setIsSolveModalOpen] = useState(false);
+  const [solveRemarks, setSolveRemarks] = useState("");
+  const [solving, setSolving] = useState(false);
+
+  // Dynamic assignee name
+  const [assigneeName, setAssigneeName] = useState("");
 
   const [activeMenuId, setActiveMenuId] = useState(null);
-  const [newMessage, setNewMessage] = useState("");
-
-  const agentsList = [
-    "Sarah Jenkins",
-    "David Vance",
-    "Diana Prince",
-    "Alex Mercer",
-    "Bruce Wayne",
-  ];
+  const menuRef = useRef(null);
 
   const priorityBadge = (priority) => {
     const p = String(priority || "").toUpperCase();
@@ -165,25 +91,42 @@ const Users = () => {
   };
 
   function ConsultantLogo({ src, alt }) {
-    const [imgSrc, setImgSrc] = useState(src || FALLBACK_LOGO);
+    const [hasError, setHasError] = useState(false);
+
     useEffect(() => {
-      setImgSrc(src || FALLBACK_LOGO);
+      setHasError(false);
     }, [src]);
+
+    const getInitials = (name) => {
+      if (!name) return "?";
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return parts[0] ? parts[0][0].toUpperCase() : "?";
+    };
+
+    if (!src || hasError) {
+      const initials = getInitials(alt);
+      return (
+        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-[12px] font-bold text-black shadow-sm">
+          {initials}
+        </div>
+      );
+    }
+
     return (
       <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 shadow-sm">
         <img
-          src={imgSrc}
+          src={src}
           alt={alt}
           loading="lazy"
-          onError={() => setImgSrc(FALLBACK_LOGO)}
+          onError={() => setHasError(true)}
           className="h-full w-full object-cover"
         />
       </div>
     );
   }
-
-  const FALLBACK_LOGO =
-    "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=600&auto=format&fit=crop&q=60";
   const [users, setUsers] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
   const [suspendedUsers, setSuspendedUsers] = useState([]);
@@ -298,7 +241,7 @@ const Users = () => {
 
   useEffect(() => {
     const handler = (e) => {
-      if (!e.target.closest(".action-menu-container")) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
         setActiveMenuId(null);
       }
     };
@@ -306,45 +249,105 @@ const Users = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filteredTickets = useMemo(() => {
-    const q = ticketSearch.trim().toLowerCase();
-    return tickets.filter((item) => {
-      const matchesSearch =
-        !q ||
-        String(item.id).toLowerCase().includes(q) ||
-        String(item.consultantName).toLowerCase().includes(q) ||
-        String(item.subject).toLowerCase().includes(q) ||
-        String(item.category).toLowerCase().includes(q) ||
-        String(item.description).toLowerCase().includes(q);
+  /* ================= FETCH HELP TICKET STATS ================= */
+  const fetchTicketStats = async () => {
+    try {
+      const res = await getUserHelpTicketStats();
+      if (res.status === "OK" && res.data) {
+        setApiTicketStats({
+          totalTickets: res.data.totalTickets ?? 0,
+          solvedTickets: res.data.solvedTickets ?? 0,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch ticket stats:", err);
+    }
+  };
 
-      const matchesStatus = !ticketStatusFilter || item.status === ticketStatusFilter;
-      const matchesPriority = !ticketPriorityFilter || item.priority === ticketPriorityFilter;
-      const matchesCategory = !ticketCategoryFilter || item.category === ticketCategoryFilter;
+  /* ================= FETCH HELP TICKETS ================= */
+  const fetchHelpTickets = async () => {
+    try {
+      setTicketsLoading(true);
+      const payload = {
+        pageNo: ticketPage,
+        searchText: ticketSearch.trim() || null,
+        ticketStatus: ticketStatusFilter || null,
+        priority: ticketPriorityFilter || null,
+      };
+      const res = await getUserHelpTickets(payload);
+      if (res.status === "OK") {
+        const mapped = (res.data || []).map((item) => ({
+          ...item,
+          consultantName: item.userFullName || "User",
+          status: item.ticketStatus || item.status || "OPEN",
+          logoUrl: item.consultThumbnailImage || null,
+        }));
+        setTickets(mapped);
+        if (res.pageResponse) {
+          setTicketTotalPages(res.pageResponse.totalPages || 1);
+          setTicketTotalElements(res.pageResponse.totalElements || 0);
+        } else {
+          setTicketTotalPages(1);
+          setTicketTotalElements(mapped.length);
+        }
+      } else {
+        setTickets([]);
+        setTicketTotalPages(1);
+        setTicketTotalElements(0);
+        toast.error("Failed to fetch tickets from server");
+      }
+    } catch (err) {
+      console.error(err);
+      setTickets([]);
+      setTicketTotalPages(1);
+      setTicketTotalElements(0);
+      toast.error("Error loading help tickets");
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
 
-      return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
-    });
-  }, [tickets, ticketSearch, ticketStatusFilter, ticketPriorityFilter, ticketCategoryFilter]);
+  const handleRefreshTickets = async () => {
+    setTicketsRefreshing(true);
+    await Promise.all([fetchHelpTickets(), fetchTicketStats()]);
+    setTicketsRefreshing(false);
+    toast.success("Help Center tickets refreshed");
+  };
+
+  useEffect(() => {
+    if (activeTab === "help-center") {
+      fetchHelpTickets();
+      fetchTicketStats();
+    }
+  }, [activeTab, ticketPage, ticketStatusFilter, ticketPriorityFilter, ticketSearch]);
+
+  useEffect(() => {
+      const handler = (e) => {
+        if (menuRef.current && !menuRef.current.contains(e.target)) {
+          setActiveMenuId(null);
+        }
+      };
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+  // Filtering is done server-side; tickets returned by the API are already filtered
+  const filteredTickets = tickets;
 
   useEffect(() => {
     setTicketPage(1);
-  }, [ticketSearch, ticketStatusFilter, ticketPriorityFilter, ticketCategoryFilter]);
+  }, [ticketSearch, ticketStatusFilter, ticketPriorityFilter]);
 
-  const totalTicketPages = useMemo(() => {
-    return Math.ceil(filteredTickets.length / ticketsPerPage) || 1;
-  }, [filteredTickets, ticketsPerPage]);
+  const totalTicketPages = ticketTotalPages;
 
-  const paginatedTickets = useMemo(() => {
-    const startIndex = (ticketPage - 1) * ticketsPerPage;
-    return filteredTickets.slice(startIndex, startIndex + ticketsPerPage);
-  }, [filteredTickets, ticketPage, ticketsPerPage]);
+  const paginatedTickets = filteredTickets;
 
-  const ticketStats = useMemo(() => {
-    return {
-      all: tickets.length,
-      solved: tickets.filter((t) => t.status === "SOLVED").length,
-      assigned: tickets.filter((t) => t.status === "ASSIGNED" || t.assignedTo).length,
-    };
-  }, [tickets]);
+  // Stats come from the API; "assigned" is not returned by backend so kept as 0
+  const ticketStats = {
+    all: apiTicketStats.totalTickets,
+    solved: apiTicketStats.solvedTickets,
+    assigned: 0,
+  };
 
   const handleConfirmAssign = (agent) => {
     setTickets((prev) =>
@@ -362,14 +365,29 @@ const Users = () => {
     setIsAssignModalOpen(false);
   };
 
-  const handleConfirmSolve = () => {
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === selectedTicket.id ? { ...t, status: "SOLVED" } : t
-      )
-    );
-    toast.success("Ticket marked as solved successfully");
-    setIsSolveModalOpen(false);
+  const handleConfirmSolve = async () => {
+    try {
+      setSolving(true);
+      const payload = {
+        helpTicketId: selectedTicket.id,
+        remarks: solveRemarks.trim() || null,
+      };
+      await resolveUserHelpTicket(payload);
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === selectedTicket.id ? { ...t, status: "RESOLVED", ticketStatus: "RESOLVED" } : t
+        )
+      );
+      toast.success("Ticket marked as resolved successfully");
+      setIsSolveModalOpen(false);
+      setSolveRemarks("");
+      fetchTicketStats();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to resolve ticket");
+    } finally {
+      setSolving(false);
+    }
   };
 
   const handleSendComment = (e) => {
@@ -1093,7 +1111,7 @@ const Users = () => {
                           <input
                             value={ticketSearch}
                             onChange={(e) => setTicketSearch(e.target.value)}
-                            placeholder="Search ticket ID, consultant name, subject, category..."
+                            placeholder="Search ticket ID, user name, subject, category..."
                             className="h-11 md:h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-[13px] md:text-[14px] font-medium text-slate-900 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100 placeholder:text-slate-400"
                           />
                         </div>
@@ -1129,22 +1147,6 @@ const Users = () => {
                             </select>
                             <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                           </div>
-
-                          {/* Category Filter */}
-                          <div className="relative min-w-[140px]">
-                            <select
-                              value={ticketCategoryFilter}
-                              onChange={(e) => setTicketCategoryFilter(e.target.value)}
-                              className="h-11 md:h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 pr-10 text-[13px] font-semibold text-slate-900 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100 cursor-pointer"
-                            >
-                              <option value="">All Categories</option>
-                              <option value="Storefront">Storefront</option>
-                              <option value="Billing">Billing</option>
-                              <option value="Verification">Verification</option>
-                              <option value="Account">Account</option>
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          </div>
                         </div>
                       </div>
 
@@ -1154,7 +1156,6 @@ const Users = () => {
                             setTicketSearch("");
                             setTicketStatusFilter("");
                             setTicketPriorityFilter("");
-                            setTicketCategoryFilter("");
                           }}
                           className="inline-flex h-11 md:h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-[13px] font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
                           type="button"
@@ -1163,11 +1164,16 @@ const Users = () => {
                         </button>
 
                         <button
-                          onClick={() => toast.success("Help Center tickets refreshed")}
-                          className="inline-flex h-11 md:h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-[13px] font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
+                          onClick={handleRefreshTickets}
+                          disabled={ticketsRefreshing || ticketsLoading}
+                          className="inline-flex h-11 md:h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-[13px] font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                           type="button"
                         >
-                          <RefreshCw className="h-4 w-4" />
+                          {ticketsRefreshing || ticketsLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
                           Refresh
                         </button>
                       </div>
@@ -1180,10 +1186,7 @@ const Users = () => {
                       <thead>
                         <tr className="bg-slate-50/80 backdrop-blur-sm">
                           <th className="border-b border-r border-slate-200/60 px-6 py-4.5 text-left text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
-                            TICKET ID
-                          </th>
-                          <th className="border-b border-r border-slate-200/60 px-6 py-4.5 text-left text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
-                            CONSULTANT
+                            USER
                           </th>
                           <th className="border-b border-r border-slate-200/60 px-6 py-4.5 text-left text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500/90">
                             SUBJECT
@@ -1210,145 +1213,173 @@ const Users = () => {
                       </thead>
 
                       <tbody className="divide-y divide-slate-100 text-left">
-                        {paginatedTickets.map((item, index) => (
-                          <tr
-                            key={item.id}
-                            className={cls(
-                              "group transition-colors duration-200 hover:bg-slate-50/50",
-                              index % 2 === 0 ? "bg-white" : "bg-slate-50/20"
-                            )}
-                          >
-                            <td className="border-b border-slate-100 px-6 py-4 align-middle font-mono font-bold text-xs text-slate-900">
-                              {item.id}
-                            </td>
-
-                            <td className="border-b border-slate-100 px-6 py-4 align-middle">
-                              <div className="flex items-center gap-3">
-                                <ConsultantLogo src={item.logoUrl} alt={item.consultantName} />
-                                <span className="text-[14px] font-bold text-slate-900 whitespace-nowrap">
-                                  {item.consultantName}
-                                </span>
-                              </div>
-                            </td>
-
-                            <td className="border-b border-slate-100 px-6 py-4 align-middle min-w-[260px] max-w-[400px]">
-                              <div
-                                onClick={() => {
-                                  setSelectedTicket(item);
-                                  setIsViewModalOpen(true);
-                                }}
-                                className="truncate text-[13.5px] font-semibold text-slate-700 hover:text-blue-600 transition-colors cursor-pointer"
-                                title={item.subject}
-                              >
-                                {item.subject}
-                              </div>
-                            </td>
-
-                            <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
-                                <Tag size={12} className="text-slate-400" />
-                                {item.category}
-                              </span>
-                            </td>
-
-                            <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
-                              <span
-                                className={cls(
-                                  "inline-flex rounded-full border px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.03em] whitespace-nowrap",
-                                  priorityBadge(item.priority)
-                                )}
-                              >
-                                {item.priority}
-                              </span>
-                            </td>
-
-                            <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
-                              <div className="inline-flex items-center gap-2 text-[12.5px] font-medium text-slate-500 whitespace-nowrap">
-                                <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                                {new Date(item.createdAt).toLocaleString("en-IN", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </div>
-                            </td>
-
-                            <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
-                              <div className="text-[13px] font-semibold text-slate-700 whitespace-nowrap">
-                                {item.assignedTo ? (
-                                  <span className="text-slate-800">{item.assignedTo}</span>
-                                ) : (
-                                  <span className="text-slate-400 italic">Unassigned</span>
-                                )}
-                              </div>
-                            </td>
-
-                            <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
-                              <span
-                                className={cls(
-                                  "inline-flex rounded-full border px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.03em] whitespace-nowrap",
-                                  statusBadge(item.status)
-                                )}
-                              >
-                                {item.status}
-                              </span>
-                            </td>
-
-                            <td className="border-b border-slate-100 px-6 py-4 text-right align-middle relative">
-                              <div className="inline-block action-menu-container">
-                                <button
-                                  onClick={() =>
-                                    setActiveMenuId(activeMenuId === item.id ? null : item.id)
-                                  }
-                                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
-                                >
-                                  <MoreVertical size={16} className="text-slate-600" />
-                                </button>
-
-                                {activeMenuId === item.id && (
-                                  <div className="absolute right-6 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-200/80 py-1.5 z-50 text-left">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedTicket(item);
-                                        setIsViewModalOpen(true);
-                                        setActiveMenuId(null);
-                                      }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                                    >
-                                      <Eye size={12} className="text-slate-400" />
-                                      View Ticket
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedTicket(item);
-                                        setIsAssignModalOpen(true);
-                                        setActiveMenuId(null);
-                                      }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                                    >
-                                      <UserCheck size={12} className="text-slate-400" />
-                                      Assign To...
-                                    </button>
-                                    {item.status !== "SOLVED" && (
-                                      <button
-                                        onClick={() => {
-                                          setSelectedTicket(item);
-                                          setIsSolveModalOpen(true);
-                                          setActiveMenuId(null);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors border-t border-slate-100"
-                                      >
-                                        <CheckCircle size={12} className="text-emerald-500" />
-                                        Mark as Solved
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
+                        {ticketsLoading ? (
+                          <tr>
+                            <td colSpan={9} className="px-6 py-24 text-center">
+                              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+                                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                                Loading tickets...
                               </div>
                             </td>
                           </tr>
-                        ))}
+                        ) : paginatedTickets.length > 0 ? (
+                          paginatedTickets.map((item, index) => (
+                            <tr
+                              key={item.id}
+                              className={cls(
+                                "group transition-colors duration-200 hover:bg-slate-50/50",
+                                index % 2 === 0 ? "bg-white" : "bg-slate-50/20"
+                              )}
+                            >
+
+                              <td className="border-b border-slate-100 px-6 py-4 align-middle">
+                                <div className="flex items-center gap-3">
+                                  <ConsultantLogo src={item.logoUrl} alt={item.consultantName} />
+                                  <span className="text-[14px] font-bold text-slate-900 whitespace-nowrap">
+                                    {item.consultantName}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="border-b border-slate-100 px-6 py-4 align-middle min-w-[260px] max-w-[400px]">
+                                <div
+                                  onClick={() => {
+                                    navigate(`/admin/users/help-center/${item.id}`);
+                                  }}
+                                  className="truncate text-[13.5px] font-semibold text-slate-700 hover:text-blue-600 transition-colors cursor-pointer"
+                                  title={item.subject}
+                                >
+                                  {item.subject}
+                                </div>
+                              </td>
+
+                              <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
+                                  <Tag size={12} className="text-slate-400" />
+                                  {item.category}
+                                </span>
+                              </td>
+
+                              <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
+                                <span
+                                  className={cls(
+                                    "inline-flex rounded-full border px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.03em] whitespace-nowrap",
+                                    priorityBadge(item.priority)
+                                  )}
+                                >
+                                  {item.priority}
+                                </span>
+                              </td>
+
+                              <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
+                                <div className="inline-flex items-center gap-2 text-[12.5px] font-medium text-slate-500 whitespace-nowrap">
+                                  <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                                  {new Date(item.createdAt).toLocaleString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </div>
+                              </td>
+
+                              <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
+                                <div className="text-[13px] font-semibold text-slate-700 whitespace-nowrap">
+                                  {item.assignedTo ? (
+                                    <span className="text-slate-800">{item.assignedTo}</span>
+                                  ) : (
+                                    <span className="text-slate-400 italic">Unassigned</span>
+                                  )}
+                                </div>
+                              </td>
+
+                              <td className="border-b border-slate-100 px-5 py-4 text-center align-middle">
+                                <span
+                                  className={cls(
+                                    "inline-flex rounded-full border px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.03em] whitespace-nowrap",
+                                    statusBadge(item.status)
+                                  )}
+                                >
+                                  {item.status}
+                                </span>
+                              </td>
+
+                              <td className="border-b border-slate-100 px-6 py-4 text-right align-middle relative">
+                                <div className="inline-block" ref={activeMenuId === item.id ? menuRef : null}>
+                                  <button
+                                    onClick={() =>
+                                      setActiveMenuId(activeMenuId === item.id ? null : item.id)
+                                    }
+                                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                  >
+                                    <MoreVertical size={16} className="text-slate-600" />
+                                  </button>
+
+                                  {activeMenuId === item.id && (() => {
+                                    const isResolved = String(item.status || "").toUpperCase() === "RESOLVED" || String(item.status || "").toUpperCase() === "SOLVED";
+                                    return (
+                                      <div className="absolute right-6 mt-1 w-48 bg-white rounded-2xl shadow-xl border border-slate-200/80 py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-100 text-left">
+                                        <button
+                                          onClick={() => {
+                                            navigate(`/admin/users/help-center/${item.id}`);
+                                            setActiveMenuId(null);
+                                          }}
+                                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                                        >
+                                          <Eye size={12} className="text-slate-400" />
+                                          View Ticket
+                                        </button>
+                                        {!isResolved && (
+                                          <>
+                                            <button
+                                              onClick={() => {
+                                                setSelectedTicket(item);
+                                                setAssigneeName(item.assignedTo || "");
+                                                setIsAssignModalOpen(true);
+                                                setActiveMenuId(null);
+                                              }}
+                                              className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                                            >
+                                              <UserCheck size={12} className="text-slate-400" />
+                                              Assign To...
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                setSelectedTicket(item);
+                                                setIsSolveModalOpen(true);
+                                                setActiveMenuId(null);
+                                              }}
+                                              className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors border-t border-slate-100"
+                                            >
+                                              <CheckCircle size={12} className="text-emerald-500" />
+                                              Mark as Solved
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={9} className="px-6 py-28 text-center">
+                              <div className="flex flex-col items-center justify-center">
+                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400 shadow-sm">
+                                  <ShieldAlert size={28} />
+                                </div>
+                                <div className="text-lg font-bold tracking-tight text-slate-900">
+                                  No tickets found
+                                </div>
+                                <div className="mx-auto mt-1 max-w-sm text-[14px] text-slate-500">
+                                  Try adjusting your search query or dropdown filters.
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1387,7 +1418,7 @@ const Users = () => {
               <div className="flex shrink-0 flex-col gap-2 border-t border-slate-200 bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
                 <div className="text-sm text-slate-500">
                   Showing <span className="font-semibold text-slate-900">{paginatedTickets.length}</span> of{" "}
-                  <span className="font-semibold text-slate-900">{filteredTickets.length}</span> tickets
+                  <span className="font-semibold text-slate-900">{ticketTotalElements}</span> tickets
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -1414,132 +1445,6 @@ const Users = () => {
         </div>
       </div>
 
-      {/* VIEW TICKET MODAL */}
-      {isViewModalOpen && selectedTicket && (
-        <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-[650px] bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-200 flex items-start justify-between bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md">
-                  <Ticket size={20} />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">
-                    {selectedTicket.id}: {selectedTicket.subject}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Submitted by <span className="font-bold text-slate-800">{selectedTicket.consultantName}</span>
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsViewModalOpen(false)}
-                className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center border border-slate-200"
-              >
-                <X size={16} className="text-slate-500" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4 bg-slate-50/30 text-left">
-              {/* Meta Info */}
-              <div className="grid grid-cols-2 gap-3 bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Priority</span>
-                  <span className={cls("inline-block rounded-full border px-2 py-0.5 text-xs font-bold mt-1", priorityBadge(selectedTicket.priority))}>
-                    {selectedTicket.priority}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Status</span>
-                  <span className={cls("inline-block rounded-full border px-2 py-0.5 text-xs font-bold mt-1", statusBadge(selectedTicket.status))}>
-                    {selectedTicket.status}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Assigned Agent</span>
-                  <span className="text-xs font-semibold text-slate-700 block mt-1">
-                    {selectedTicket.assignedTo || <span className="text-slate-400 italic">Unassigned</span>}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Submitted At</span>
-                  <span className="text-xs font-semibold text-slate-700 block mt-1">
-                    {new Date(selectedTicket.createdAt).toLocaleString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm">
-                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider mb-2">Description</span>
-                <p className="text-xs leading-relaxed text-slate-700 whitespace-pre-wrap">
-                  {selectedTicket.description}
-                </p>
-              </div>
-
-              {/* Conversation history */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Agent Responses</span>
-                <div className="space-y-2.5 max-h-[180px] overflow-y-auto pr-1">
-                  {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
-                    selectedTicket.messages.map((m, idx) => {
-                      const isAgent = m.sender !== selectedTicket.consultantName;
-                      return (
-                        <div
-                          key={idx}
-                          className={cls(
-                            "flex flex-col rounded-2xl p-3 border text-xs",
-                            isAgent
-                              ? "bg-blue-50/50 border-blue-100 ml-10"
-                              : "bg-white border-slate-200 mr-10"
-                          )}
-                        >
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="font-bold text-slate-800">{m.sender}</span>
-                            <span className="text-[10px] text-slate-400">
-                              {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <p className="text-slate-700 leading-relaxed">{m.text}</p>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-4 bg-white border border-slate-200/60 rounded-2xl italic text-xs text-slate-400">
-                      No agent responses yet. Type below to send a reply.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Input Reply Box */}
-            <form onSubmit={handleSendComment} className="px-6 py-4 border-t border-slate-200 bg-white flex gap-2">
-              <input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a response to the consultant..."
-                className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              />
-              <button
-                type="submit"
-                disabled={!newMessage.trim()}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 text-xs font-bold"
-              >
-                <Send size={12} />
-                Send
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ASSIGN TO MODAL */}
       {isAssignModalOpen && selectedTicket && (
@@ -1562,26 +1467,17 @@ const Users = () => {
 
             <div className="p-5 space-y-3 text-left">
               <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                Select a support agent to assign to ticket <span className="font-bold text-slate-900">{selectedTicket.id}</span>.
+                Assign ticket <span className="font-bold text-slate-900">{selectedTicket.id}</span> to a support agent.
               </p>
-              <div className="space-y-1">
-                {agentsList.map((agent) => (
-                  <button
-                    key={agent}
-                    onClick={() => handleConfirmAssign(agent)}
-                    className={cls(
-                      "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all text-left",
-                      selectedTicket.assignedTo === agent
-                        ? "bg-purple-50/70 border-purple-400 text-purple-800"
-                        : "bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700"
-                    )}
-                  >
-                    <span>{agent}</span>
-                    {selectedTicket.assignedTo === agent && (
-                      <span className="text-[9px] bg-purple-200 text-purple-700 px-2 py-0.5 rounded-full">Current</span>
-                    )}
-                  </button>
-                ))}
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Agent Name</label>
+                <input
+                  type="text"
+                  value={assigneeName}
+                  onChange={(e) => setAssigneeName(e.target.value)}
+                  placeholder="Enter agent name..."
+                  className="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs font-semibold outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 placeholder:text-slate-400"
+                />
               </div>
             </div>
             <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
@@ -1591,6 +1487,13 @@ const Users = () => {
               >
                 Cancel
               </button>
+              <button
+                disabled={!assigneeName.trim()}
+                onClick={() => handleConfirmAssign(assigneeName.trim())}
+                className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition-colors animate-in duration-200"
+              >
+                Assign
+              </button>
             </div>
           </div>
         </div>
@@ -1599,7 +1502,7 @@ const Users = () => {
       {/* MARK AS SOLVED MODAL */}
       {isSolveModalOpen && selectedTicket && (
         <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-[380px] bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-[420px] bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="px-5 py-4 border-b border-slate-200 flex justify-between items-center bg-gradient-to-br from-slate-50 via-white to-slate-50/50 text-left">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md">
@@ -1608,33 +1511,49 @@ const Users = () => {
                 <h3 className="font-extrabold text-slate-900 text-sm">Mark as Solved</h3>
               </div>
               <button
-                onClick={() => setIsSolveModalOpen(false)}
+                onClick={() => { setIsSolveModalOpen(false); setSolveRemarks(""); }}
                 className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center border border-slate-200"
               >
                 <X size={14} className="text-slate-500" />
               </button>
             </div>
 
-            <div className="p-5 space-y-2 text-left">
-              <p className="text-xs text-slate-650 font-semibold leading-relaxed">
-                Are you sure you want to mark ticket <span className="font-bold text-slate-900">{selectedTicket.id}</span> as resolved?
+            <div className="p-5 space-y-3 text-left">
+              <p className="text-xs text-slate-600 font-semibold leading-relaxed">
+                Are you sure you want to mark this ticket as resolved?
               </p>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Resolution Remarks (Optional)
+                </label>
+                <textarea
+                  value={solveRemarks}
+                  onChange={(e) => setSolveRemarks(e.target.value)}
+                  placeholder="Enter comments or resolution details..."
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-2xl text-xs font-semibold outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 placeholder:text-slate-400 resize-none"
+                />
+              </div>
               <p className="text-[10px] text-slate-400 italic">
-                This will update the ticket status to SOLVED and notify the consultant that their request has been resolved.
+                This will update the ticket status to{" "}
+                <span className="text-emerald-600 font-semibold">RESOLVED</span> and notify the user that their request has been resolved.
               </p>
             </div>
 
             <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
               <button
-                onClick={() => setIsSolveModalOpen(false)}
-                className="px-3.5 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700"
+                disabled={solving}
+                onClick={() => { setIsSolveModalOpen(false); setSolveRemarks(""); }}
+                className="px-3.5 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
+                disabled={solving}
                 onClick={handleConfirmSolve}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
               >
+                {solving && <Loader2 className="h-3 w-3 animate-spin" />}
                 Confirm Resolve
               </button>
             </div>

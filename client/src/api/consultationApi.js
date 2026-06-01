@@ -766,3 +766,29 @@ export const getHelpTickets = async (payload = {}) => {
   const res = await api.post("/consultation/help-tickets", payload);
   return res.data;
 };
+
+/* =======================================================
+   ✅ CONSULTATION: GET HELP TICKET DETAILS BY ID (GET)
+======================================================= */
+export const getHelpTicketDetailsById = async (id) => {
+  const res = await api.get(`/consultation/help-tickets/${id}`);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ CONSULTATION: RESOLVE HELP TICKET (PATCH)
+   BODY: ResolveHelpTicketRequest { helpTicketId, remarks }
+======================================================= */
+export const resolveHelpTicket = async (payload = {}) => {
+  const res = await api.patch("/consultation/help-tickets/resolve", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ CONSULTATION: GET HELP TICKET STATS (GET)
+======================================================= */
+export const getHelpTicketStats = async () => {
+  const res = await api.get("/consultation/help-tickets/stats");
+  return res.data;
+};
+

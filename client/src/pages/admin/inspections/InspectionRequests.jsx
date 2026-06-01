@@ -23,6 +23,7 @@ import {
 import toast from "react-hot-toast";
 import {
   getAllVehicleInspections,
+  getAllVehicleInspectionsAllTab,
   getAllVehicleInspectionAssigned,
   assignInspector,
   getVehicleInspectionById,
@@ -185,6 +186,17 @@ function InspectionRowActions({
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
+  const effectiveTab = useMemo(() => {
+    if (activeTab !== "ALL") return activeTab;
+    const status = item.assignmentStatus || item.inspectionRequestStatus;
+    if (status === "REQUESTED" || status === "PENDING" || !item.inspectorId) return "PENDING";
+    if (status === "SUBMITTED" || status === "REPORT_SUBMITTED") return "SUBMITTED";
+    if (status === "COMPLETED") return "COMPLETED";
+    if (status === "PAYMENT_DONE" || status === "Payment Done") return "PAYMENT_DONE";
+    if (status === "REQUEST_CHANGES" || status === "Request Changes") return "REQUEST_CHANGES";
+    return "PENDING";
+  }, [activeTab, item]);
+
   useEffect(() => {
     const handleClick = (e) => {
       if (!ref.current?.contains(e.target)) setOpen(false);
@@ -215,7 +227,7 @@ function InspectionRowActions({
             View Details
           </button>
 
-          {activeTab === "PENDING" && (
+          {effectiveTab === "PENDING" && (
             <>
               <button
                 onClick={() => {
@@ -263,7 +275,7 @@ function InspectionRowActions({
             </>
           )}
 
-          {activeTab === "SUBMITTED" && (
+          {effectiveTab === "SUBMITTED" && (
             <>
               <button
                 onClick={() => {
@@ -308,7 +320,7 @@ function InspectionRowActions({
             </>
           )}
 
-          {activeTab === "COMPLETED" && (
+          {effectiveTab === "COMPLETED" && (
             <>
               <button
                 onClick={() => {
@@ -325,7 +337,7 @@ function InspectionRowActions({
                   onPayment(item);
                   setOpen(false);
                 }}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
               >
                 <CreditCard className="h-4 w-4" />
                 Pay to Inspector
@@ -333,7 +345,7 @@ function InspectionRowActions({
             </>
           )}
 
-          {activeTab === "PAYMENT_DONE" && (
+          {effectiveTab === "PAYMENT_DONE" && (
             <>
               <button
                 onClick={() => {
@@ -1189,6 +1201,8 @@ const InspectionRequests = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [allTabStatus, setAllTabStatus] = useState("");
+  const [allTabRequesterType, setAllTabRequesterType] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
     status: "",
@@ -1202,9 +1216,10 @@ const InspectionRequests = () => {
   const [reviewingRequest, setReviewingRequest] = useState(null);
   const [pdfModalItem, setPdfModalItem] = useState(null);
   const [modal, setModal] = useState(null);
-  const [activeTab, setActiveTab] = useState("PENDING");
+  const [activeTab, setActiveTab] = useState("ALL");
 
   const TABS = [
+    { id: "ALL", label: "All" },
     { id: "PENDING", label: "Pending" },
     { id: "ACCEPTED", label: "Accepted" },
     { id: "REJECTED", label: "Rejected" },
@@ -1235,6 +1250,7 @@ const InspectionRequests = () => {
   }, [rows, filters]);
 
   const [tabCounts, setTabCounts] = useState({
+    ALL: 0,
     PENDING: 0,
     ACCEPTED: 0,
     REJECTED: 0,
@@ -1246,6 +1262,12 @@ const InspectionRequests = () => {
 
   const fetchTabCounts = async () => {
     try {
+      getAllVehicleInspectionsAllTab({ pageNo: 1, status: null })
+        .then(res => {
+          setTabCounts(prev => ({ ...prev, ALL: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
+        })
+        .catch(err => console.error("All count error:", err));
+
       getAllVehicleInspections({ pageNo: 1, status: "REQUESTED" })
         .then(res => {
           setTabCounts(prev => ({ ...prev, PENDING: res?.pageResponse?.totalElements ?? res?.data?.length ?? 0 }));
@@ -1297,7 +1319,14 @@ const InspectionRequests = () => {
     setLoading(true);
     try {
       let res;
-      if (activeTab === "PENDING") {
+      if (activeTab === "ALL") {
+        res = await getAllVehicleInspectionsAllTab({
+          searchText: search.trim() || null,
+          pageNo,
+          status: allTabStatus || null,
+          requesterType: allTabRequesterType || null,
+        });
+      } else if (activeTab === "PENDING") {
         res = await getAllVehicleInspections({ searchText: search.trim() || null, pageNo, status: "REQUESTED" });
       } else if (activeTab === "REQUEST_CHANGES") {
         res = await getAllVehicleInspectionAssigned({ searchText: search.trim() || null, pageNo, status: "REQUEST_CHANGES", assignmentStatus: "REQUEST_CHANGES" });
@@ -1324,7 +1353,7 @@ const InspectionRequests = () => {
     }
   };
 
-  useEffect(() => { fetchInspections(1); }, [activeTab]);
+  useEffect(() => { fetchInspections(1); }, [activeTab, allTabStatus, allTabRequesterType]);
 
   useEffect(() => {
     const t = setTimeout(() => fetchInspections(1), 500);
@@ -1617,7 +1646,7 @@ const InspectionRequests = () => {
   return (
     <>
       {selectedRequest ? (
-        activeTab === "PENDING" ? (
+        (activeTab === "PENDING" || (activeTab === "ALL" && (!selectedRequest.inspectorId || selectedRequest.inspectionRequestStatus === "REQUESTED"))) ? (
           <InspectionRequestDetail
             request={selectedRequest}
             onBack={() => setSelectedRequest(null)}
@@ -1670,7 +1699,16 @@ const InspectionRequests = () => {
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tab.id === "ALL") {
+                      setFiltersOpen(false);
+                      setFilters({ status: "", requestType: "", inspectionType: "", inspectorAssigned: "" });
+                    } else {
+                      setAllTabStatus("");
+                      setAllTabRequesterType("");
+                    }
+                  }}
                   className={cls(
                     "px-6 py-2.5 rounded-full text-[13px] font-bold transition-all duration-200",
                     activeTab === tab.id
@@ -1692,27 +1730,61 @@ const InspectionRequests = () => {
               {/* SEARCH + FILTER BAR */}
               <div className="p-5 md:p-6 relative z-10 border-b border-slate-200 flex-shrink-0">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                  <div className="relative flex-1 max-w-2xl">
-                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search by Request ID, Vehicle, Buyer, Inspector..."
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-[14px] text-slate-900 outline-none transition-all focus:border-sky-400 placeholder:text-slate-400"
-                    />
+                  <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center max-w-4xl">
+                    <div className="relative flex-1">
+                      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search by Request ID, Vehicle, Buyer, Inspector..."
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-[14px] text-slate-900 outline-none transition-all focus:border-sky-400 placeholder:text-slate-400"
+                      />
+                    </div>
+                    {activeTab === "ALL" && (
+                      <>
+                        <div className="relative shrink-0">
+                          <select
+                            value={allTabStatus}
+                            onChange={(e) => setAllTabStatus(e.target.value)}
+                            className="h-11 rounded-xl border border-slate-200 bg-white pl-4 pr-10 text-[13.5px] font-semibold text-slate-700 outline-none focus:border-sky-400 appearance-none cursor-pointer min-w-[200px]"
+                          >
+                            <option value="">All Statuses</option>
+                            <option value="PAYMENT_PENDING">Payment Pending</option>
+                            <option value="PENDING_OWNER_APPROVAL">Pending Owner Approval</option>
+                            <option value="REJECTED_BY_OWNER">Rejected By Owner</option>
+                            <option value="REQUESTED">Pending</option>
+                          </select>
+                          <ChevronDown className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                        <div className="relative shrink-0">
+                          <select
+                            value={allTabRequesterType}
+                            onChange={(e) => setAllTabRequesterType(e.target.value)}
+                            className="h-11 rounded-xl border border-slate-200 bg-white pl-4 pr-10 text-[13.5px] font-semibold text-slate-700 outline-none focus:border-sky-400 appearance-none cursor-pointer min-w-[180px]"
+                          >
+                            <option value="">All Requesters</option>
+                            <option value="BUYER">BUYER</option>
+                            <option value="OWNER">OWNER</option>
+                          </select>
+                          <ChevronDown className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <button onClick={() => setFiltersOpen((p) => !p)} className={cls("inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-[13px] font-semibold transition-colors", filtersOpen ? "bg-sky-600 text-white border-sky-600" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50")}>
-                      <SlidersHorizontal className="h-4 w-4" />
-                      Filters
-                    </button>
+                    {activeTab !== "ALL" && (
+                      <button onClick={() => setFiltersOpen((p) => !p)} className={cls("inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-[13px] font-semibold transition-colors", filtersOpen ? "bg-sky-600 text-white border-sky-600" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50")}>
+                        <SlidersHorizontal className="h-4 w-4" />
+                        Filters
+                      </button>
+                    )}
                     <button onClick={handleRefresh} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors">
                       <RefreshCw className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                {filtersOpen && (
+                {activeTab !== "ALL" && filtersOpen && (
                   <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-200 pt-5 md:grid-cols-2 xl:grid-cols-4">
                     <div className="flex items-center justify-between col-span-full mb-2">
                       <h4 className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">Advanced Filters</h4>
@@ -1752,7 +1824,7 @@ const InspectionRequests = () => {
                       <th className="px-5 py-4 font-semibold whitespace-nowrap">Status</th>
                       <th className="px-5 py-4 font-semibold whitespace-nowrap">Scheduled</th>
                       <th className="px-5 py-4 font-semibold whitespace-nowrap">Created At</th>
-                      {activeTab !== "PENDING" && (
+                      {(activeTab === "ALL" || activeTab !== "PENDING") && (
                         <th className="px-5 py-4 font-semibold whitespace-nowrap">Inspector</th>
                       )}
                       {activeTab === "REQUEST_CHANGES" && (
@@ -1860,7 +1932,7 @@ const InspectionRequests = () => {
                           </td>
 
                           {/* INSPECTOR */}
-                          {activeTab !== "PENDING" && (
+                          {(activeTab === "ALL" || activeTab !== "PENDING") && (
                             <td className="px-5 py-4">
                               {row.inspectorUsername || row.inspectorName ? (
                                 <div className="flex items-center gap-2">

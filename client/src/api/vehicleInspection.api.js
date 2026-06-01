@@ -10,6 +10,17 @@ export const getAllVehicleInspections = async (filter = {}) => {
   return response.data;
 };
 
+/**
+ * Get all vehicle inspection requests (All tab) with filter + pagination
+ * POST /api/vehicle/inspection/all
+ * @param {Object} filter - { searchText, pageNo, status }
+ */
+export const getAllVehicleInspectionsAllTab = async (filter = {}) => {
+  const response = await axios.post("/vehicle/inspection/all", filter);
+  return response.data;
+};
+
+
 
 /**
  * Get all vehicle assigned inspection with filter + pagination
@@ -110,3 +121,23 @@ export const getPaidVehicleInspections = async (filter = {}) => {
   const response = await axios.post("/vehicle/inspection/payments", filter);
   return response.data;
 };
+
+/**
+ * Get refund inspection payments with filter + pagination
+ * POST /api/vehicle/inspection/refunds
+ * @param {Object} filter - { searchText, pageNo, refundStatus }
+ */
+export const getRefundInspectionPayments = async (filter = {}) => {
+  const response = await axios.post("/vehicle/inspection/refunds", filter);
+  return response.data;
+};
+
+/**
+ * Get inspection payment / refund details by id
+ * GET /api/vehicle/inspection/refunds/{id}
+ */
+export const getInspectionPaymentById = async (id) => {
+  const response = await axios.get(`/vehicle/inspection/refunds/${id}`);
+  return response.data;
+};
+

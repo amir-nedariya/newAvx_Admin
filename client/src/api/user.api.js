@@ -164,3 +164,47 @@ export const requestChangesUserSellerKYC = async (data) => {
     throw error;
   }
 };
+
+/* ================= GET USER HELP TICKETS ================= */
+export const getUserHelpTickets = async (payload = {}) => {
+  try {
+    const res = await api.post("/user/help-tickets", payload);
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching user help tickets:", error);
+    throw error;
+  }
+};
+
+/* ================= GET USER HELP TICKET BY ID ================= */
+export const getUserHelpTicketById = async (id) => {
+  try {
+    const res = await api.get(`/user/help-tickets/${id}`);
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching user help ticket by ID:", error);
+    throw error;
+  }
+};
+
+/* ================= RESOLVE USER HELP TICKET ================= */
+export const resolveUserHelpTicket = async (payload = {}) => {
+  try {
+    const res = await api.patch("/user/help-tickets/resolve", payload);
+    return res.data;
+  } catch (error) {
+    console.error("Error resolving user help ticket:", error);
+    throw error;
+  }
+};
+
+/* ================= GET USER HELP TICKET STATS ================= */
+export const getUserHelpTicketStats = async () => {
+  try {
+    const res = await api.get("/user/help-tickets/stats");
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching user help ticket stats:", error);
+    throw error;
+  }
+};
