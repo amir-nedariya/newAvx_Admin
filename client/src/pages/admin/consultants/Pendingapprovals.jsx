@@ -30,6 +30,9 @@ import {
   rejectKYCConsultation,
   requestUploadKYCConsultation,
   getConsultationUpdateRequests,
+  approveConsultationUpdate,
+  rejectConsultationUpdate,
+  requestChangeConsultationUpdate,
 } from "../../../api/consultationApi";
 import { getTierPlans } from "../../../api/tierPlan.api";
 import { getStates, getAllCitiesFromSearch, getCities } from "../../../api/addressApi";
@@ -216,7 +219,7 @@ function RowActions({ item, onApprove, onReject, onRequestReupload, isUpdation =
             type="button"
           >
             <CheckCircle2 className="h-4 w-4" />
-            Approve KYC
+            {isUpdation ? "Approve Update" : "Approve KYC"}
           </button>
 
           <button
@@ -225,7 +228,7 @@ function RowActions({ item, onApprove, onReject, onRequestReupload, isUpdation =
             type="button"
           >
             <XCircle className="h-4 w-4" />
-            Reject KYC
+            {isUpdation ? "Reject Update" : "Reject KYC"}
           </button>
 
           <button
@@ -234,7 +237,7 @@ function RowActions({ item, onApprove, onReject, onRequestReupload, isUpdation =
             type="button"
           >
             <RotateCcw className="h-4 w-4" />
-            Request Re-upload
+            {isUpdation ? "Request Change" : "Request Re-upload"}
           </button>
         </div>
       )}
@@ -282,7 +285,7 @@ function PaginationBar({ page, totalPages, totalCount, loading, onPageChange }) 
 /* =========================================================
    APPROVE KYC MODAL
 ========================================================= */
-function ApproveKYCModal({ open, consultantName, remark, setRemark, loading, onClose, onConfirm }) {
+function ApproveKYCModal({ open, consultantName, remark, setRemark, loading, onClose, onConfirm, isUpdation = false }) {
   if (!open) return null;
 
   return (
@@ -298,7 +301,7 @@ function ApproveKYCModal({ open, consultantName, remark, setRemark, loading, onC
               <CheckCircle2 className="h-6 w-6 text-emerald-600" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-zinc-900">Approve KYC</h3>
+              <h3 className="text-xl font-bold text-zinc-900">{isUpdation ? "Approve Update Request" : "Approve KYC"}</h3>
               {consultantName && (
                 <p className="mt-1 text-sm text-zinc-500">{consultantName}</p>
               )}
@@ -316,20 +319,22 @@ function ApproveKYCModal({ open, consultantName, remark, setRemark, loading, onC
         <div className="p-6">
           <div className="mb-6 rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-3">
             <p className="text-sm font-semibold text-emerald-800">
-              KYC will be approved. Consultant will be able to list vehicles immediately.
+              {isUpdation
+                ? "Update request will be approved and consultant profile will be updated immediately."
+                : "KYC will be approved. Consultant will be able to list vehicles immediately."}
             </p>
           </div>
 
           <div className="mb-6">
             <label className="mb-2 block text-sm font-bold text-zinc-700">
-              Remark <span className="text-zinc-400">(Optional)</span>
+              Remark / Reason <span className="text-zinc-400">(Optional)</span>
             </label>
 
             <textarea
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               rows={4}
-              placeholder="Enter remark for approving KYC..."
+              placeholder={isUpdation ? "Enter reason/remark for approving update..." : "Enter remark for approving KYC..."}
               className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
             />
           </div>
@@ -347,7 +352,7 @@ function ApproveKYCModal({ open, consultantName, remark, setRemark, loading, onC
               disabled={loading}
               className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Processing..." : "Approve KYC"}
+              {loading ? "Processing..." : isUpdation ? "Approve Update" : "Approve KYC"}
             </button>
           </div>
         </div>
@@ -358,7 +363,7 @@ function ApproveKYCModal({ open, consultantName, remark, setRemark, loading, onC
 
 /* =========================================================
    REJECT KYC MODAL
-========================================================= */
+ ========================================================= */
 function RejectKYCModal({
   open,
   consultantName,
@@ -369,18 +374,27 @@ function RejectKYCModal({
   loading,
   onClose,
   onConfirm,
+  isUpdation = false,
 }) {
   if (!open) return null;
 
-  const rejectionReasons = [
-    "Incomplete documents",
-    "Invalid documents",
-    "Document mismatch",
-    "Expired documents",
-    "Fraudulent information",
-    "Policy violation",
-    "Other",
-  ];
+  const rejectionReasons = isUpdation
+    ? [
+        "Incorrect details provided",
+        "Document proof unclear / invalid",
+        "Mismatch with official records",
+        "Policy violation",
+        "Other",
+      ]
+    : [
+        "Incomplete documents",
+        "Invalid documents",
+        "Document mismatch",
+        "Expired documents",
+        "Fraudulent information",
+        "Policy violation",
+        "Other",
+      ];
 
   return (
     <>
@@ -395,7 +409,7 @@ function RejectKYCModal({
               <XCircle className="h-6 w-6 text-rose-600" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-zinc-900">Reject KYC</h3>
+              <h3 className="text-xl font-bold text-zinc-900">{isUpdation ? "Reject Update Request" : "Reject KYC"}</h3>
               {consultantName && (
                 <p className="mt-1 text-sm text-zinc-500">{consultantName}</p>
               )}
@@ -413,7 +427,9 @@ function RejectKYCModal({
         <div className="p-6">
           <div className="mb-6 rounded-2xl bg-rose-50 border border-rose-100 px-4 py-3">
             <p className="text-sm font-semibold text-rose-800">
-              KYC will be rejected. Consultant will be notified with the rejection reason.
+              {isUpdation
+                ? "Update request will be rejected. Consultant will be notified with the rejection reason."
+                : "KYC will be rejected. Consultant will be notified with the rejection reason."}
             </p>
           </div>
 
@@ -472,7 +488,7 @@ function RejectKYCModal({
               }
               className="rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Processing..." : "Confirm Rejection"}
+              {loading ? "Processing..." : isUpdation ? "Confirm Rejection" : "Confirm Rejection"}
             </button>
           </div>
         </div>
@@ -483,7 +499,7 @@ function RejectKYCModal({
 
 /* =========================================================
    REQUEST RE-UPLOAD MODAL
-========================================================= */
+ ========================================================= */
 function RequestReuploadModal({
   open,
   consultantName,
@@ -492,6 +508,7 @@ function RequestReuploadModal({
   loading,
   onClose,
   onConfirm,
+  isUpdation = false,
 }) {
   if (!open) return null;
 
@@ -508,7 +525,7 @@ function RequestReuploadModal({
               <RotateCcw className="h-6 w-6 text-amber-600" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-zinc-900">Request KYC Re-upload</h3>
+              <h3 className="text-xl font-bold text-zinc-900">{isUpdation ? "Request Changes" : "Request KYC Re-upload"}</h3>
               {consultantName && (
                 <p className="mt-1 text-sm text-zinc-500">{consultantName}</p>
               )}
@@ -526,7 +543,9 @@ function RequestReuploadModal({
         <div className="p-6">
           <div className="mb-6 rounded-2xl bg-amber-50 border border-amber-100 px-4 py-3">
             <p className="text-sm font-semibold text-amber-800">
-              Consultant will be notified to re-upload KYC documents with your remarks.
+              {isUpdation
+                ? "Consultant will be notified to correct and re-submit update details with your remarks."
+                : "Consultant will be notified to re-upload KYC documents with your remarks."}
             </p>
           </div>
 
@@ -538,7 +557,7 @@ function RequestReuploadModal({
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               rows={4}
-              placeholder="Enter remark for requesting re-upload..."
+              placeholder={isUpdation ? "Enter details / reason for requesting changes..." : "Enter remark for requesting re-upload..."}
               className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
             />
           </div>
@@ -556,7 +575,7 @@ function RequestReuploadModal({
               disabled={loading || !remark.trim()}
               className="rounded-xl bg-amber-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Processing..." : "Request Re-upload"}
+              {loading ? "Processing..." : isUpdation ? "Request Change" : "Request Re-upload"}
             </button>
           </div>
         </div>
@@ -1092,23 +1111,32 @@ const Pendingapprovals = () => {
 
   const handleApproveKYC = async () => {
     try {
-      const consultId = kycModal.consultant?.id;
-      if (!consultId) {
-        toast.error("Consultant ID not found");
+      const id = kycModal.consultant?.id;
+      if (!id) {
+        toast.error("ID not found");
         return;
       }
 
       setKycLoading(true);
 
-      await approveKYCConsultation({
-        consultId,
-        remark: approveRemark.trim() || "KYC approved",
-      });
-
-      toast.success("KYC approved successfully");
-      closeKycModal();
-      await fetchList({ nextPage: page, nextSearch: search, nextTierId: tierId, nextCityId: cityId, nextStateId: stateId, nextStatus: status, silent: true, force: true });
-      await loadKpi();
+      if (activeTab === "updation") {
+        await approveConsultationUpdate({
+          consultationUpdateId: id,
+          reason: approveRemark.trim() || "Update approved",
+        });
+        toast.success("Consultation update approved successfully");
+        closeKycModal();
+        await loadUpdationRequests();
+      } else {
+        await approveKYCConsultation({
+          consultId: id,
+          remark: approveRemark.trim() || "KYC approved",
+        });
+        toast.success("KYC approved successfully");
+        closeKycModal();
+        await fetchList({ nextPage: page, nextSearch: search, nextTierId: tierId, nextCityId: cityId, nextStateId: stateId, nextStatus: status, silent: true, force: true });
+        await loadKpi();
+      }
     } catch (e) {
       const message = safeErrorMessage(e);
       toast.error(message);
@@ -1119,9 +1147,9 @@ const Pendingapprovals = () => {
 
   const handleRejectKYC = async () => {
     try {
-      const consultId = kycModal.consultant?.id;
-      if (!consultId) {
-        toast.error("Consultant ID not found");
+      const id = kycModal.consultant?.id;
+      if (!id) {
+        toast.error("ID not found");
         return;
       }
 
@@ -1142,15 +1170,24 @@ const Pendingapprovals = () => {
 
       setKycLoading(true);
 
-      await rejectKYCConsultation({
-        consultId,
-        remark: finalReason,
-      });
-
-      toast.success("KYC rejected successfully");
-      closeKycModal();
-      await fetchList({ nextPage: page, nextSearch: search, nextTierId: tierId, nextCityId: cityId, nextStateId: stateId, nextStatus: status, silent: true, force: true });
-      await loadKpi();
+      if (activeTab === "updation") {
+        await rejectConsultationUpdate({
+          consultationUpdateId: id,
+          reason: finalReason,
+        });
+        toast.success("Consultation update rejected successfully");
+        closeKycModal();
+        await loadUpdationRequests();
+      } else {
+        await rejectKYCConsultation({
+          consultId: id,
+          remark: finalReason,
+        });
+        toast.success("KYC rejected successfully");
+        closeKycModal();
+        await fetchList({ nextPage: page, nextSearch: search, nextTierId: tierId, nextCityId: cityId, nextStateId: stateId, nextStatus: status, silent: true, force: true });
+        await loadKpi();
+      }
     } catch (e) {
       const message = safeErrorMessage(e);
       toast.error(message);
@@ -1161,9 +1198,9 @@ const Pendingapprovals = () => {
 
   const handleRequestReupload = async () => {
     try {
-      const consultId = kycModal.consultant?.id;
-      if (!consultId) {
-        toast.error("Consultant ID not found");
+      const id = kycModal.consultant?.id;
+      if (!id) {
+        toast.error("ID not found");
         return;
       }
 
@@ -1174,15 +1211,24 @@ const Pendingapprovals = () => {
 
       setKycLoading(true);
 
-      await requestUploadKYCConsultation({
-        consultId,
-        remark: reuploadRemark.trim(),
-      });
-
-      toast.success("KYC re-upload requested successfully");
-      closeKycModal();
-      await fetchList({ nextPage: page, nextSearch: search, nextTierId: tierId, nextCityId: cityId, nextStateId: stateId, nextStatus: status, silent: true, force: true });
-      await loadKpi();
+      if (activeTab === "updation") {
+        await requestChangeConsultationUpdate({
+          consultationUpdateId: id,
+          reason: reuploadRemark.trim(),
+        });
+        toast.success("Change request sent successfully");
+        closeKycModal();
+        await loadUpdationRequests();
+      } else {
+        await requestUploadKYCConsultation({
+          consultId: id,
+          remark: reuploadRemark.trim(),
+        });
+        toast.success("KYC re-upload requested successfully");
+        closeKycModal();
+        await fetchList({ nextPage: page, nextSearch: search, nextTierId: tierId, nextCityId: cityId, nextStateId: stateId, nextStatus: status, silent: true, force: true });
+        await loadKpi();
+      }
     } catch (e) {
       const message = safeErrorMessage(e);
       toast.error(message);
@@ -1652,6 +1698,7 @@ const Pendingapprovals = () => {
         loading={kycLoading}
         onClose={closeKycModal}
         onConfirm={handleApproveKYC}
+        isUpdation={activeTab === "updation"}
       />
 
       <RejectKYCModal
@@ -1664,6 +1711,7 @@ const Pendingapprovals = () => {
         loading={kycLoading}
         onClose={closeKycModal}
         onConfirm={handleRejectKYC}
+        isUpdation={activeTab === "updation"}
       />
 
       <RequestReuploadModal
@@ -1674,6 +1722,7 @@ const Pendingapprovals = () => {
         loading={kycLoading}
         onClose={closeKycModal}
         onConfirm={handleRequestReupload}
+        isUpdation={activeTab === "updation"}
       />
 
       {/* Filter Sidebar */}

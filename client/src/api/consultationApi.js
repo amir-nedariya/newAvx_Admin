@@ -791,4 +791,56 @@ export const getHelpTicketStats = async () => {
   const res = await api.get("/consultation/help-tickets/stats");
   return res.data;
 };
+/* =======================================================
+   ✅ CONSULTATION: APPROVE UPDATE REQUEST (PATCH)
+   BODY: { consultationUpdateId, reason }
+======================================================= */
+export const approveConsultationUpdate = async ({ consultationUpdateId, reason }) => {
+  if (!consultationUpdateId) {
+    throw new Error("consultationUpdateId is required");
+  }
 
+  const payload = {
+    consultationUpdateId,
+    reason: reason ? String(reason).trim() : "",
+  };
+
+  const res = await api.patch("/consultation/update-requests/approve", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ CONSULTATION: REJECT UPDATE REQUEST (PATCH)
+   BODY: { consultationUpdateId, reason }
+======================================================= */
+export const rejectConsultationUpdate = async ({ consultationUpdateId, reason }) => {
+  if (!consultationUpdateId) {
+    throw new Error("consultationUpdateId is required");
+  }
+
+  const payload = {
+    consultationUpdateId,
+    reason: reason ? String(reason).trim() : "",
+  };
+
+  const res = await api.patch("/consultation/update-requests/reject", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ CONSULTATION: REQUEST CHANGE ON UPDATE REQUEST (PATCH)
+   BODY: { consultationUpdateId, reason }
+======================================================= */
+export const requestChangeConsultationUpdate = async ({ consultationUpdateId, reason }) => {
+  if (!consultationUpdateId) {
+    throw new Error("consultationUpdateId is required");
+  }
+
+  const payload = {
+    consultationUpdateId,
+    reason: reason ? String(reason).trim() : "",
+  };
+
+  const res = await api.patch("/consultation/update-requests/request-change", payload);
+  return res.data;
+};
