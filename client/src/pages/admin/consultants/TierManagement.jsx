@@ -116,6 +116,8 @@ const TierManagement = () => {
     yearly_price: "",
     monthlyDurationInDays: 30,
     yearlyDurationInDays: 365,
+    monthlyGracePeriodDays: 0,
+    yearlyGracePeriodDays: 0,
     badgeLogo: null,
     badgePreview: "",
     // monthly limits
@@ -149,6 +151,8 @@ const TierManagement = () => {
       yearly_price: "",
       monthlyDurationInDays: 30,
       yearlyDurationInDays: 365,
+      monthlyGracePeriodDays: 0,
+      yearlyGracePeriodDays: 0,
       badgeLogo: null,
       badgePreview: "",
       monthlyMaxVehicleOnMarketPlace: 0,
@@ -204,6 +208,8 @@ const TierManagement = () => {
         yearly_price: Number(form.yearly_price),
         monthlyDurationInDays: Number(form.monthlyDurationInDays) || 30,
         yearlyDurationInDays: Number(form.yearlyDurationInDays) || 365,
+        monthlyGracePeriodDays: Number(form.monthlyGracePeriodDays) || 0,
+        yearlyGracePeriodDays: Number(form.yearlyGracePeriodDays) || 0,
         status: form.status,
         
         // Limits
@@ -262,6 +268,8 @@ const TierManagement = () => {
       yearly_price: String(tier.yearlyPrice ?? tier.yearly_price ?? ""),
       monthlyDurationInDays: tier.monthlyDurationInDays ?? 30,
       yearlyDurationInDays: tier.yearlyDurationInDays ?? 365,
+      monthlyGracePeriodDays: tier.monthlyGracePeriodDays ?? 0,
+      yearlyGracePeriodDays: tier.yearlyGracePeriodDays ?? 0,
       badgeLogo: null,
       badgePreview: tier.tierBadgeUrl || tier.badgeUrl || "",
       
@@ -512,7 +520,7 @@ const TierManagement = () => {
                     </div>
 
                     <div className="space-y-2 mb-3">
-                      <div className="flex items-center justify-between rounded-xl border border-slate-150 bg-slate-50/50 px-3.5 py-2">
+                      <div className="flex items-center justify-between rounded-xl bg-slate-50/50 px-3.5 py-2 shadow-md">
                         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                           Vehicles on Marketplace
                         </span>
@@ -521,7 +529,7 @@ const TierManagement = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between rounded-xl border border-slate-150 bg-slate-50/50 px-3.5 py-2">
+                      <div className="flex items-center justify-between rounded-xl bg-slate-50/50 px-3.5 py-2 shadow-md">
                         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                           Free Inspections
                         </span>
@@ -530,7 +538,7 @@ const TierManagement = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between rounded-xl border border-slate-150 bg-slate-50/50 px-3.5 py-2">
+                      <div className="flex items-center justify-between rounded-xl bg-slate-50/50 px-3.5 py-2 shadow-md">
                         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                           Custom Store Uploads
                         </span>
@@ -544,7 +552,7 @@ const TierManagement = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between rounded-xl border border-slate-150 bg-slate-50/50 px-3.5 py-2">
+                      <div className="flex items-center justify-between rounded-xl bg-slate-50/50 px-3.5 py-2 shadow-md">
                         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                           2W Inspection Discount
                         </span>
@@ -553,12 +561,23 @@ const TierManagement = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between rounded-xl border border-slate-150 bg-slate-50/50 px-3.5 py-2">
+                      <div className="flex items-center justify-between rounded-xl bg-slate-50/50 px-3.5 py-2 shadow-md">
                         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                           4W Inspection Discount
                         </span>
                         <span className="rounded-lg bg-blue-100 text-blue-800 px-2 py-0.5 text-xs font-bold font-sans">
                           {currentLimits.fourWheelInspectionDiscount ?? 0}%
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-xl bg-slate-50/50 px-3.5 py-2 shadow-md">
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+                          Grace Period
+                        </span>
+                        <span className="rounded-lg bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-bold font-sans">
+                          {activeCardTab === "monthly"
+                            ? `${tier?.monthlyGracePeriodDays ?? 0} Days`
+                            : `${tier?.yearlyGracePeriodDays ?? 0} Days`}
                         </span>
                       </div>
                     </div>

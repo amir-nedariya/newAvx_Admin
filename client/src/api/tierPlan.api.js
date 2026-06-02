@@ -27,6 +27,10 @@ export const createTierPlan = async (payload) => {
     String(payload.yearlyDurationInDays || 365)
   );
 
+  // Grace Periods
+  formData.append("monthlyGracePeriodDays", String(payload.monthlyGracePeriodDays ?? 0));
+  formData.append("yearlyGracePeriodDays", String(payload.yearlyGracePeriodDays ?? 0));
+
   // Monthly Limits
   formData.append("monthlyMaxVehicleOnMarketPlace", String(payload.monthlyMaxVehicleOnMarketPlace ?? 0));
   formData.append("monthlyMaxFreeInspection", String(payload.monthlyMaxFreeInspection ?? 0));
@@ -79,6 +83,10 @@ export const updateTierPlan = async (id, payload) => {
     String(payload.yearlyDurationInDays || 365)
   );
   formData.append("status", payload.status || "ACTIVE");
+
+  // Grace Periods
+  formData.append("monthlyGracePeriodDays", String(payload.monthlyGracePeriodDays ?? 0));
+  formData.append("yearlyGracePeriodDays", String(payload.yearlyGracePeriodDays ?? 0));
 
   // Monthly Limits
   formData.append("monthlyMaxVehicleOnMarketPlace", String(payload.monthlyMaxVehicleOnMarketPlace ?? 0));

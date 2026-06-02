@@ -93,7 +93,7 @@ const ModalShell = ({
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 bg-slate-50/30">{children}</div>
+        <div className="overflow-y-auto flex-1 bg-slate-50/30 p-5">{children}</div>
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
@@ -195,7 +195,13 @@ const CreateTierModal = ({
     Number(form.monthly_price) > 0 &&
     Number(form.yearly_price) > 0 &&
     Number(form.monthlyDurationInDays) >= 1 &&
-    Number(form.yearlyDurationInDays) >= 1;
+    Number(form.yearlyDurationInDays) >= 1 &&
+    form.monthlyGracePeriodDays !== "" &&
+    Number(form.monthlyGracePeriodDays) >= 0 &&
+    Number(form.monthlyGracePeriodDays) <= 365 &&
+    form.yearlyGracePeriodDays !== "" &&
+    Number(form.yearlyGracePeriodDays) >= 0 &&
+    Number(form.yearlyGracePeriodDays) <= 365;
 
   const isLimitsValid =
     Number(form.monthlyMaxVehicleOnMarketPlace) >= 0 &&
@@ -410,6 +416,57 @@ const CreateTierModal = ({
                   placeholder="365"
                   disabled={lockClose}
                 />
+              </div>
+            </div>
+
+            {/* Grace Period Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Monthly Grace Period (Days) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="365"
+                  value={form.monthlyGracePeriodDays}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      monthlyGracePeriodDays: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-semibold text-slate-900 transition-all"
+                  placeholder="0"
+                  disabled={lockClose}
+                />
+                {form.monthlyGracePeriodDays !== "" && (Number(form.monthlyGracePeriodDays) < 0 || Number(form.monthlyGracePeriodDays) > 365) && (
+                  <p className="text-xs text-rose-500 mt-1">Monthly grace period days must be between 0 and 365.</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Yearly Grace Period (Days) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="365"
+                  value={form.yearlyGracePeriodDays}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      yearlyGracePeriodDays: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-semibold text-slate-900 transition-all"
+                  placeholder="0"
+                  disabled={lockClose}
+                />
+                {form.yearlyGracePeriodDays !== "" && (Number(form.yearlyGracePeriodDays) < 0 || Number(form.yearlyGracePeriodDays) > 365) && (
+                  <p className="text-xs text-rose-500 mt-1">Yearly grace period days must be between 0 and 365.</p>
+                )}
               </div>
             </div>
 
@@ -751,7 +808,7 @@ const CreateTierModal = ({
         {/* Tab 4: RAZORPAY INTEGRATION */}
         {activeTab === "razorpay" && (
           <div className="space-y-5">
-            <div className="bg-sky-50 rounded-2xl border border-sky-200 p-4 flex gap-3 text-sky-800">
+            {/* <div className="bg-sky-50 rounded-2xl border border-sky-200 p-4 flex gap-3 text-sky-800">
               <Shield className="flex-shrink-0 text-sky-600" size={20} />
               <div>
                 <h4 className="text-sm font-bold">Payment Gateway Integration</h4>
@@ -760,7 +817,7 @@ const CreateTierModal = ({
                   This ensures consultants are correctly redirected to checkout forms with appropriate price structures.
                 </p>
               </div>
-            </div>
+            </div> */}
 
             <div className="grid grid-cols-1 gap-4">
               <div>
