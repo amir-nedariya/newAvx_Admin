@@ -1,9 +1,14 @@
 import api from "./axios"; // make sure api.js exists
 
 /* ================= GET USERS (PAGINATED) ================= */
-export const getUsers = async (pageNo = 1) => {
+export const getUsers = async (pageNo = 1, searchText = "") => {
   try {
-    const res = await api.get("/user", { params: { pageNo } });
+    const res = await api.get("/user", {
+      params: {
+        pageNo,
+        searchText: searchText !== null && searchText !== undefined ? searchText.trim() : "",
+      },
+    });
     return res.data;
   } catch (error) {
     console.error("Error fetching users:", error);

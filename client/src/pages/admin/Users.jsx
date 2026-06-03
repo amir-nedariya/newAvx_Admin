@@ -141,12 +141,15 @@ const Users = () => {
     totalActiveFlaggedUserSellers: 0,
     totalSuspendedUserSellers: 0,
   });
+  const [userSearch, setUserSearch] = useState("");
+  const firstLoadUsersSearchRef = useRef(true);
+  const userSearchDebounceRef = useRef(null);
 
   /* ================= FETCH USERS ================= */
-  const fetchUsers = async (pageNo) => {
+  const fetchUsers = async (pageNo, searchVal = userSearch) => {
     try {
       setLoading(true);
-      const res = await getUsers(pageNo);
+      const res = await getUsers(pageNo, searchVal);
       if (res.status === "OK") {
         setUsers(res.data);
         setPage(res.pageResponse.currentPage);
@@ -158,6 +161,10 @@ const Users = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefreshUsers = () => {
+    fetchUsers(page, userSearch);
   };
 
   /* ================= FETCH PENDING USERS ================= */
@@ -227,7 +234,7 @@ const Users = () => {
 
   useEffect(() => {
     if (activeTab === "all") {
-      fetchUsers(page);
+      fetchUsers(page, userSearch);
     } else if (activeTab === "pending") {
       fetchPendingUsers(page);
     } else if (activeTab === "suspended") {
@@ -237,7 +244,32 @@ const Users = () => {
     } else if (activeTab === "help-center") {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, page]);
+
+  useEffect(() => {
+    if (activeTab !== "all") return;
+
+    if (firstLoadUsersSearchRef.current) {
+      firstLoadUsersSearchRef.current = false;
+      return;
+    }
+
+    if (userSearchDebounceRef.current) {
+      clearTimeout(userSearchDebounceRef.current);
+    }
+
+    userSearchDebounceRef.current = setTimeout(() => {
+      setPage(1);
+      fetchUsers(1, userSearch);
+    }, 500);
+
+    return () => {
+      if (userSearchDebounceRef.current) {
+        clearTimeout(userSearchDebounceRef.current);
+      }
+    };
+  }, [userSearch]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -697,6 +729,29 @@ const Users = () => {
               </button>
             </div>
           </div>
+
+          {/* ================= SEARCH BAR FOR ALL USERS ================= */}
+          {activeTab === "all" && (
+            <div className="mb-4 flex-shrink-0 flex items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-left animate-in fade-in duration-300">
+              <div className="relative flex-1 max-w-md">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search users by name, email, phone..."
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-[13.5px] font-medium text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100 placeholder:text-slate-400"
+                />
+              </div>
+              <button
+                onClick={handleRefreshUsers}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-[13px] font-bold text-slate-700 transition-all hover:bg-slate-50 active:scale-95 shadow-sm"
+                type="button"
+              >
+                <RefreshCw className="h-4 w-4 text-slate-500" />
+                Refresh
+              </button>
+            </div>
+          )}
 
           {/* ================= TABLE CARD ================= */}
           <div className="flex-1 flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden min-h-0">

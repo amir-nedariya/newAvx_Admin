@@ -11,8 +11,10 @@ export const filterConsultations = async (payload = {}) => {
 /* =======================================================
    ✅ CONSULTATION: GET SUSPENDED (GET)
 ======================================================= */
-export const getSuspendedConsultations = async () => {
-  const res = await api.get("/consultation/suspended");
+export const getSuspendedConsultations = async (pageNo = 0, pageSize = 10) => {
+  const res = await api.get("/consultation/suspended", {
+    params: { pageNo, pageSize },
+  });
   return res.data;
 };
 

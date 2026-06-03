@@ -131,7 +131,11 @@ const SuspendedConsultants = () => {
     const [modal, setModal] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
 
-    const fetchSuspendedList = useCallback(async (showToast = false) => {
+    const [page, setPage] = useState(1);
+    const [serverTotalPages, setServerTotalPages] = useState(1);
+    const [serverTotal, setServerTotal] = useState(0);
+
+    const fetchSuspendedList = useCallback(async (targetPage = 1, showToast = false) => {
         try {
             setError("");
             if (showToast) {
@@ -140,15 +144,21 @@ const SuspendedConsultants = () => {
                 setLoading(true);
             }
 
-            const res = await getSuspendedConsultations();
+            // Spring Boot expects 0-indexed page number
+            const res = await getSuspendedConsultations(targetPage - 1, 10);
 
-            // Extract data from the response structure
-            const list = res?.data || [];
+            // Extract data from the response structure (Page object)
+            const list = res?.data?.content || [];
+            const totalPages = res?.data?.totalPages || 1;
+            const totalElements = res?.data?.totalElements || 0;
 
             console.log("🔍 Suspended consultants API response:", res);
             console.log("🔍 Extracted list:", list);
 
             setRows(list);
+            setServerTotalPages(totalPages);
+            setServerTotal(totalElements);
+            setPage(targetPage);
 
             if (showToast) {
                 toast.success("Suspended consultants refreshed");
@@ -156,6 +166,8 @@ const SuspendedConsultants = () => {
         } catch (err) {
             console.error("Suspended consultants fetch failed:", err);
             setRows([]);
+            setServerTotalPages(1);
+            setServerTotal(0);
             setError(
                 err?.response?.data?.message ||
                 err?.message ||
@@ -169,8 +181,8 @@ const SuspendedConsultants = () => {
     }, []);
 
     useEffect(() => {
-        fetchSuspendedList();
-    }, [fetchSuspendedList]);
+        fetchSuspendedList(page);
+    }, [page, fetchSuspendedList]);
 
     const filteredRows = useMemo(() => {
         const q = searchText.trim().toLowerCase();
@@ -211,12 +223,12 @@ const SuspendedConsultants = () => {
 
     const stats = useMemo(() => {
         return {
-            total: rows.length,
+            total: serverTotal || rows.length,
             permanent: rows.filter((item) => item?.suspenseType === "PERMANENT").length,
             temporary: rows.filter((item) => item?.suspenseType === "TEMPORARY").length,
             active: rows.filter((item) => item?.isActive).length,
         };
-    }, [rows]);
+    }, [rows, serverTotal]);
 
     const handleClearFilters = () => {
         setSearchText("");
@@ -237,7 +249,7 @@ const SuspendedConsultants = () => {
 
                 toast.success("Consultant unsuspended successfully");
                 setModal(null);
-                fetchSuspendedList();
+                fetchSuspendedList(page);
             }
         } catch (err) {
             console.error("Action failed:", err);
@@ -360,7 +372,7 @@ const SuspendedConsultants = () => {
                                 </button>
 
                                 <button
-                                    onClick={() => fetchSuspendedList(true)}
+                                    onClick={() => fetchSuspendedList(page, true)}
                                     className="inline-flex h-11 md:h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-[13px] font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
                                     type="button"
                                 >
@@ -441,7 +453,7 @@ const SuspendedConsultants = () => {
                                                 <td className="border-b border-slate-100 px-6 py-4.5 align-middle">
                                                     <div className="flex min-w-[280px] items-center gap-4">
                                                         <ConsultantLogo
-                                                            src={item?.logoUrl}
+                                                            src={item?.thumbnailImage}
                                                             alt={item?.consultationName || "Consultation"}
                                                         />
                                                         <div className="min-w-0">
@@ -575,18 +587,31 @@ const SuspendedConsultants = () => {
                         </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-col gap-2 border-t border-slate-200 bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
                         <div className="text-sm text-slate-500">
-                            Showing{" "}
-                            <span className="font-semibold text-slate-900">
-                                {filteredRows.length}
-                            </span>{" "}
-                            of <span className="font-semibold text-slate-900">{rows.length}</span>{" "}
-                            suspended consultants
+                            Page <span className="font-semibold text-slate-900">{page}</span> /{" "}
+                            <span className="font-semibold text-slate-900">{serverTotalPages}</span>
+                            <span className="ml-2">• {serverTotal} total records</span>
                         </div>
 
-                        <div className="text-sm font-medium text-slate-400">
-                            Live suspended consultants list
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1 || loading}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                type="button"
+                            >
+                                Prev
+                            </button>
+
+                            <button
+                                onClick={() => setPage((p) => Math.min(serverTotalPages, p + 1))}
+                                disabled={page === serverTotalPages || loading}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                type="button"
+                            >
+                                Next
+                            </button>
                         </div>
                     </div>
                 </section>

@@ -1836,14 +1836,16 @@ const InspectionRequests = () => {
                           <th className="px-5 py-4 font-semibold whitespace-nowrap">Payment Proof</th>
                         </>
                       )}
-                      <th className="px-6 py-4 text-right font-semibold whitespace-nowrap">Actions</th>
+                      {activeTab !== "ALL" && (
+                        <th className="px-6 py-4 text-right font-semibold whitespace-nowrap">Actions</th>
+                      )}
                     </tr>
                   </thead>
 
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
                       <tr>
-                        <td colSpan={activeTab === "PAYMENT_DONE" ? 11 : activeTab === "REQUEST_CHANGES" ? 10 : activeTab === "PENDING" ? 8 : 9} className="px-6 py-28 text-center">
+                        <td colSpan={activeTab === "PAYMENT_DONE" ? 11 : activeTab === "REQUEST_CHANGES" ? 10 : (activeTab === "PENDING" || activeTab === "ALL") ? 8 : 9} className="px-6 py-28 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <Loader2 className="h-12 w-12 text-sky-600 animate-spin mb-4" />
                             <div className="text-lg font-bold text-slate-900">Loading inspection requests...</div>
@@ -1934,13 +1936,13 @@ const InspectionRequests = () => {
                           {/* INSPECTOR */}
                           {(activeTab === "ALL" || activeTab !== "PENDING") && (
                             <td className="px-5 py-4">
-                              {row.inspectorUsername || row.inspectorName ? (
+                              {row.inspectorFullName || row.inspectorUsername ? (
                                 <div className="flex items-center gap-2">
                                   <div className="w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-[11px] font-bold">
-                                    {(row.inspectorUsername || row.inspectorName)[0]}
+                                    {(row.inspectorFullName || row.inspectorUsername)[0]}
                                   </div>
                                   <span className="text-[13px] font-semibold text-slate-700">
-                                    {row.inspectorUsername || row.inspectorName}
+                                    {row.inspectorFullName || row.inspectorUsername}
                                   </span>
                                 </div>
                               ) : (
@@ -1981,27 +1983,29 @@ const InspectionRequests = () => {
                           )}
 
                           {/* ACTIONS */}
-                          <td className="px-6 py-4 text-right">
-                            <InspectionRowActions
-                              item={row}
-                              activeTab={activeTab}
-                              onView={handleViewDetails}
-                              onAssign={(item) => setModal({ type: "assign", item })}
-                              onReschedule={handleReschedule}
-                              onCancel={(item) => setModal({ type: "cancel", item })}
-                              onApprove={(item) => setModal({ type: "approve", item })}
-                              onReject={(item) => setModal({ type: "reject", item })}
-                              onRequestChanges={(item) => setModal({ type: "requestChanges", item })}
-                              onRefund={(item) => setModal({ type: "refund", item })}
-                              onReview={() => handleReviewReport(row)}
-                              onPayment={(item) => setModal({ type: "payToInspector", item })}
-                            />
-                          </td>
+                          {activeTab !== "ALL" && (
+                            <td className="px-6 py-4 text-right">
+                              <InspectionRowActions
+                                item={row}
+                                activeTab={activeTab}
+                                onView={handleViewDetails}
+                                onAssign={(item) => setModal({ type: "assign", item })}
+                                onReschedule={handleReschedule}
+                                onCancel={(item) => setModal({ type: "cancel", item })}
+                                onApprove={(item) => setModal({ type: "approve", item })}
+                                onReject={(item) => setModal({ type: "reject", item })}
+                                onRequestChanges={(item) => setModal({ type: "requestChanges", item })}
+                                onRefund={(item) => setModal({ type: "refund", item })}
+                                onReview={() => handleReviewReport(row)}
+                                onPayment={(item) => setModal({ type: "payToInspector", item })}
+                              />
+                            </td>
+                          )}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={activeTab === "PAYMENT_DONE" ? 11 : activeTab === "REQUEST_CHANGES" ? 10 : activeTab === "PENDING" ? 8 : 9} className="px-6 py-28 text-center">
+                        <td colSpan={activeTab === "PAYMENT_DONE" ? 11 : activeTab === "REQUEST_CHANGES" ? 10 : (activeTab === "PENDING" || activeTab === "ALL") ? 8 : 9} className="px-6 py-28 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-4">
                               <Search size={28} />

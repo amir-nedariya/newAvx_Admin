@@ -2227,8 +2227,8 @@ const ConsultantProfile = () => {
             </div>
           </div>
 
-          {/* Admin Remarks Section - Show when verification is REQUEST_CHANGES */}
-          {profile?.verification === "REQUEST_CHANGES" && profile?.adminRemark && (
+          {/* Admin Remarks Section - Show when verification is REQUEST_CHANGES or REQUESTED, but only if adminRemarks is present, not empty, and not the fallback "-" */}
+          {(profile?.verification === "REQUEST_CHANGES" || profile?.verification === "REQUESTED") && profile?.adminRemark && profile?.adminRemark !== "-" && String(profile.adminRemark).trim() !== "" && (
             <div className="border-b border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-4 md:px-6">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
@@ -2237,7 +2237,7 @@ const ConsultantProfile = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-amber-900">
-                      Admin Remarks - Changes Requested
+                      {profile?.verification === "REQUEST_CHANGES" ? "Admin Remarks - Changes Requested" : "Admin Remarks"}
                     </h3>
                   </div>
                   <div className="rounded-xl border border-amber-200 px-4 py-3">

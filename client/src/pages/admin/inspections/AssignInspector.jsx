@@ -1339,13 +1339,13 @@ const AssignInspector = () => {
                       </td>
 
                       <td className="px-5 py-4">
-                        {row.inspectorUsername || row.inspectorName ? (
+                        {row.inspectorFullName || row.inspectorUsername ? (
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-[11px] font-bold">
-                              {(row.inspectorUsername || row.inspectorName)[0]}
+                              {(row.inspectorFullName || row.inspectorUsername)[0]}
                             </div>
                             <span className="text-[13px] font-semibold text-slate-700">
-                              {row.inspectorUsername || row.inspectorName}
+                              {row.inspectorFullName || row.inspectorUsername}
                             </span>
                           </div>
                         ) : (

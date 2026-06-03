@@ -404,7 +404,7 @@ export default function FlaggedConsultations() {
                                         >
                                             <td className="border-b border-r border-slate-100 px-6 py-4.5 align-middle">
                                                 <div className="flex min-w-[280px] items-center gap-4">
-                                                    <ConsultantLogo src={row.logoUrl} />
+                                                    <ConsultantLogo src={row.thumbnailImage} />
                                                     <div className="min-w-0">
                                                         <div className="truncate text-[14px] cursor-pointer font-bold text-slate-900 transition-colors group-hover:text-sky-700"
                                                              title="View Consultant Details"
