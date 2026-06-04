@@ -19,13 +19,52 @@ const ICON_MAP = {
 const WhyBuyBasic1Display = ({ data }) => {
   if (!data) return null;
 
-  if (data?.processes && Array.isArray(data.processes) && data.processes.length > 0) {
-    data.processSteps = data.processes.map(p => ({
-      title: p.title || "",
-      description: p.desc || p.description || "",
-      icon: p.icon || ""
-    }));
-  }
+  console.log("Buy basic data ", data);
+
+  const hero = data.whyBuyHeroSection || {};
+  const story = data.storySection || {};
+  const vehicle = data.vehicleSelectionSection || {};
+  const process = data.processSection || {};
+  const inspection = data.inspectionSection || {};
+  const commitment = data.customerCommitmentSection || {};
+  const testimonial = data.testimonialSection || {};
+
+  // Hero Section
+  const heroTitle = hero.title || data.whyBuyHeroTitle || "";
+  const heroDescription = hero.description || data.whyBuyHeroDescription || "";
+
+  // Story Section
+  const storyTitle = story.title || data.storyTitle || "";
+  const storyDescription = story.description || data.storyDescription || "";
+
+  // Vehicle Selection Section
+  const vehicleTitle = vehicle.title || data.vehicleSelectionTitle || "";
+  const vehicleDescription = vehicle.description || data.vehicleSelectionDescription || "";
+
+  // Process Section
+  const processTitle = process.title || data.processTitle || "";
+  const processDescription = process.description || data.processDescription || "";
+  const rawProcesses = process.processes || data.processes || [];
+  const processSteps = Array.isArray(rawProcesses)
+    ? rawProcesses.map((p) => ({
+        title: p.title || "",
+        description: p.desc || p.description || "",
+        icon: p.icon || "",
+      }))
+    : [];
+
+  // Inspection Section
+  const inspectionTitle = inspection.title || data.inspectionTitle || "";
+  const inspectionDescription = inspection.description || data.inspectionText || "";
+  const inspectionPoints = inspection.inspectionPoints || data.inspectionPoints || [];
+
+  // Commitment Section
+  const commitmentTitle = commitment.title || data.customerCommitmentTitle || "";
+  const commitmentDescription = commitment.description || data.customerCommitmentDescription || "";
+
+  // Testimonial Section
+  const testimonialTitle = testimonial.title || data.testimonialTitle || "";
+  const featuredReviews = testimonial.featuredReviews || data.featuredReviews || null;
 
   return (
     <div className="space-y-20">
@@ -36,30 +75,30 @@ const WhyBuyBasic1Display = ({ data }) => {
           Trusted Auto Consultants
         </p>
 
-        <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary mt-4 font-[Montserrat]">
-          {data.whyBuyHeroTitle}
-        </h2>
+        <h2 className="text-4xl font-semibold font-[Montserrat] text-primary mt-4">
+          {heroTitle}
+        </h2> 
 
         <div
-          className="text-third mt-4 max-w-2xl font-[Poppins]"
-          dangerouslySetInnerHTML={{ __html: data.whyBuyHeroDescription }}
+          className="text-third mt-4 max-w-full font-[Poppins]"
+          dangerouslySetInnerHTML={{ __html: heroDescription }}
         />
       </section>
 
       {/* STORY */}
       <section className="bg-primary border-y border-third/20 py-16">
         <div className="max-w-7xl mx-auto px-6 space-y-6">
-          <p className="uppercase text-secondary/70 text-sm tracking-[0.4em]">
+          <p className="uppercase text-secondary text-sm tracking-[0.4em]">
             Consultant Story
           </p>
 
-          <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary font-[Montserrat]">
-            {data.storyTitle}
+          <h2 className="text-4xl font-semibold font-[Montserrat] text-secondary">
+            {storyTitle}
           </h2>
 
           <div
-            className="text-secondary/80"
-            dangerouslySetInnerHTML={{ __html: data.storyDescription }}
+            className="text-secondary"
+            dangerouslySetInnerHTML={{ __html: storyDescription }}
           />
         </div>
       </section>
@@ -70,60 +109,55 @@ const WhyBuyBasic1Display = ({ data }) => {
           Our Standards
         </p>
 
-        <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary mt-4 font-[Montserrat]">
-          {data.vehicleSelectionTitle}
+        <h2 className="text-4xl font-semibold font-[Montserrat] text-primary mt-4">
+          {vehicleTitle}
         </h2>
 
-        <div className="border-l-2 border-secondary/40 pl-5 mt-6 space-y-4">
-          {data.vehicleSelectionDescription
-            ?.split("\n\n")
-            .map((para, i) => (
-              <p key={i} className="text-third">
-                {para}
-              </p>
-            ))}
-        </div>
+        <div
+          className="border-l-2 border-primary/40 pl-5 mt-6 space-y-4 text-third font-[Poppins]"
+          dangerouslySetInnerHTML={{ __html: vehicleDescription }}
+        />
       </section>
 
       {/* PROCESS */}
       <section className="container py-16">
-        <div className="space-y-6 max-w-2xl">
+        <div className="space-y-6 max-w-full">
           <p className="uppercase text-third text-sm tracking-[0.4em] font-[Poppins]">
             Simple Process
           </p>
 
-          <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary font-[Montserrat]">
-            {data.processTitle}
+          <h2 className="text-4xl font-semibold font-[Montserrat] text-primary">
+            {processTitle}
           </h2>
 
           <div
             className="text-third font-[Poppins]"
-            dangerouslySetInnerHTML={{ __html: data.processDescription }}
+            dangerouslySetInnerHTML={{ __html: processDescription }}
           />
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-10">
-          {data.processSteps?.map((step, i) => {
+          {processSteps?.map((step, i) => {
             const Icon = ICON_MAP[step.icon];
 
             return (
               <div
                 key={i}
-                className="p-6 border border-secondary/20 rounded-xl hover:border-fourth transition"
+                className="p-6 border border-primary/20 rounded-xl hover:border-fourth transition"
               >
                 <div className="mb-4">
                   {typeof step.icon === "string" &&
                     step.icon.startsWith("<svg") ? (
                     <div
-                      className="text-secondary"
+                      className="text-primary"
                       dangerouslySetInnerHTML={{ __html: step.icon }}
                     />
                   ) : Icon ? (
-                    <Icon className="text-secondary" />
+                    <Icon className="text-primary" />
                   ) : null}
                 </div>
 
-                <h3 className="font-semibold  font-[Montserrat] text-secondary">
+                <h3 className="font-semibold font-[Montserrat] text-primary">
                   {step.title}
                 </h3>
 
@@ -143,23 +177,23 @@ const WhyBuyBasic1Display = ({ data }) => {
             Independent Verification
           </p>
 
-          <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary mt-4 font-[Montserrat]">
-            {data.inspectionTitle}
+          <h2 className="text-4xl font-semibold font-[Montserrat] text-primary mt-4">
+            {inspectionTitle}
           </h2>
 
           <div
             className="text-third mt-4 font-[Poppins]"
-            dangerouslySetInnerHTML={{ __html: data.inspectionText }}
+            dangerouslySetInnerHTML={{ __html: inspectionDescription }}
           />
         </div>
 
         <div className="space-y-4">
-          {data.inspectionPoints?.map((pt, i) => (
+          {inspectionPoints?.map((pt, i) => (
             <div
               key={i}
               className="flex items-start gap-3 p-4 border border-third/20 rounded-lg"
             >
-              <CheckCircle2 className="text-secondary mt-1" />
+              <CheckCircle2 className="text-primary mt-1" />
               <p className="text-third font-[Poppins]">{pt}</p>
             </div>
           ))}
@@ -172,57 +206,57 @@ const WhyBuyBasic1Display = ({ data }) => {
           Our Promise
         </p>
 
-        <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary mt-4 font-[Montserrat]">
-          {data.customerCommitmentTitle}
+        <h2 className="text-4xl font-semibold font-[Montserrat] text-primary mt-4">
+          {commitmentTitle}
         </h2>
 
-        <div className="w-12 h-px bg-secondary/40 mx-auto my-4" />
+        <div className="w-12 h-px bg-primary/40 mx-auto my-4" />
 
         <div
-          className="text-third max-w-2xl mx-auto font-[Poppins]"
+          className="text-third max-w-4xl mx-auto font-[Poppins]"
           dangerouslySetInnerHTML={{
-            __html: data.customerCommitmentDescription,
+            __html: commitmentDescription,
           }}
         />
       </section>
 
       {/* TESTIMONIALS */}
-      {data.featuredReviews && (
-        <section className="bg-primary py-16">
+      {featuredReviews && (
+        <section className="bg-primary/5 py-16">
           <div className="max-w-7xl mx-auto px-6 space-y-10">
 
             <div>
-              <p className="uppercase text-secondary/70 text-sm tracking-[0.4em]">
+              <p className="uppercase text-primary/70 text-sm tracking-[0.4em]">
                 Real Buyers
               </p>
 
-              <h2 className="text-4xl font-semibold  font-[Montserrat] text-secondary font-[Montserrat]">
-                {data.testimonialTitle}
+              <h2 className="text-4xl font-semibold font-[Montserrat] text-primary">
+                {testimonialTitle}
               </h2>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              {data.featuredReviews.map((review, i) => (
+              {featuredReviews.map((review, i) => (
                 <div
                   key={i}
-                  className="p-6 border border-secondary/20 rounded-xl"
+                  className="p-6 border border-primary/20 rounded-xl"
                 >
                   <div className="flex gap-1 mb-3">
                     {[...Array(5)].map((_, idx) => (
                       <Star
-                        key={idx}
-                        size={14}
-                        className={
-                          idx < review.rating
-                            ? "text-fourth fill-fourth"
-                            : "text-third"
-                        }
-                      />
+                          key={idx}
+                          size={14}
+                          className={
+                            idx < review.rating
+                              ? "text-fourth fill-fourth"
+                              : "text-third"
+                          }
+                        />
                     ))}
                   </div>
 
                   {review.reviewTitle && (
-                    <h4 className="font-semibold  font-[Montserrat] text-secondary">
+                    <h4 className="font-semibold font-[Montserrat] text-primary">
                       {review.reviewTitle}
                     </h4>
                   )}
@@ -231,7 +265,7 @@ const WhyBuyBasic1Display = ({ data }) => {
                     {review.reviewText}
                   </p>
 
-                  <p className="text-secondary/70 mt-4 text-sm">
+                  <p className="text-primary/70 mt-4 text-sm">
                     — {review.reviewerName}
                   </p>
                 </div>
