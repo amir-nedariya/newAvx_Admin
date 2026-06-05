@@ -80,6 +80,7 @@ import Abuse from "./pages/admin/inquiries/Abuse";
 import PPCHub from "./pages/admin/ppc/PPCHub";
 import Campaigns from "./pages/admin/ppc/Campaigns";
 import Featured from "./pages/admin/ppc/Featured";
+import PPCWalletDetails from "./pages/admin/ppc/PPCWalletDetails";
 
 // Others
 import Badge from "./pages/admin/other/Badge";
@@ -97,6 +98,7 @@ import RankingDistribution from "./pages/admin/analytics/RankingDistribution";
 import TopConsultants from "./pages/admin/analytics/TopConsultants";
 import CMS from "./pages/admin/CMS";
 import Settings from "./pages/admin/Settings";
+import WalletsAndBilling from "./pages/admin/WalletsAndBilling";
 
 // Store theme
 import StoreThemeList from "./pages/admin/store-theme/StoreThemeList";
@@ -235,6 +237,7 @@ const App = () => {
         <Route path="ppc/moderation" element={<PPCHub initialTab="moderation" />} />
         <Route path="ppc/overrides" element={<PPCHub initialTab="overrides" />} />
         <Route path="ppc/wallets" element={<PPCHub initialTab="wallets" />} />
+        <Route path="ppc/wallets/:id" element={<PPCWalletDetails />} />
         <Route path="ppc/featured" element={<Featured />} />
 
         {/* Other */}
@@ -255,6 +258,7 @@ const App = () => {
         </Route>
         <Route path="cms" element={<CMS />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="wallets-billing" element={<WalletsAndBilling />} />
 
         {/* Store theme */}
         <Route path="store-theme" element={<StoreThemeList />} />

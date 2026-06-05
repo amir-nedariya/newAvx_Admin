@@ -18,6 +18,7 @@ import {
   ChevronRight,
   X,
   ShoppingCart,
+  Wallet,
 } from "lucide-react";
 
 const cls = (...classes) => classes.filter(Boolean).join(" ");
@@ -523,6 +524,18 @@ const Sidebar = ({ collapsed = false, onToggle, mobile = false, onClose }) => {
             <SubItem to="/admin/analytics/ranking" label="Ranking Distribution" />
             <SubItem to="/admin/analytics/consultants" label="Top Performing Consultants" />
           </TreeItem>
+
+
+          <TreeItem
+            title="Wallets & Billing"
+            icon={Wallet}
+            to="/admin/wallets-billing"
+            collapsed={collapsed}
+            onToggleCollapsed={onToggle}
+            onNavigate={mobile ? onClose : undefined}
+            openMenu={openMenu}
+            setOpenMenu={setOpenMenu}
+          />
 
           <TreeItem
             title="Admin Settings"

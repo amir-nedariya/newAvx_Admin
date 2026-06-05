@@ -72,7 +72,7 @@ const TABS = [
   },
   {
     id: "wallets",
-    label: "Wallets & billing",
+    label: "PPC billing",
     icon: Wallet,
     badge: null,
     component: PPCWallets,
