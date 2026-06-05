@@ -21,6 +21,7 @@ import {
   Download,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { QRCodeCanvas } from "qrcode.react";
 import {
   getAllVehicleInspections,
   getAllVehicleInspectionsAllTab,
@@ -2070,6 +2071,7 @@ const InspectionRequests = () => {
 
 function PayToInspectorModal({ modal, onClose, onConfirm }) {
   const [paidAmount, setPaidAmount] = useState("");
+  const [upiUrl, setUpiUrl] = useState("");
   const [screenshot, setScreenshot] = useState(null);
   const [screenshotPreview, setScreenshotPreview] = useState("");
   const [loading, setLoading] = useState(false);
@@ -2077,6 +2079,7 @@ function PayToInspectorModal({ modal, onClose, onConfirm }) {
   useEffect(() => {
     if (modal?.type === "payToInspector") {
       setPaidAmount("");
+      setUpiUrl("");
       setScreenshot(null);
       setScreenshotPreview("");
       setLoading(false);
@@ -2087,6 +2090,20 @@ function PayToInspectorModal({ modal, onClose, onConfirm }) {
 
   const item = modal.item;
   const upiId = item?.inspector?.upiId || item?.inspectorUpiId || item?.upiId || "Not Available";
+
+  const handleGenerateQr = () => {
+    if (!paidAmount || Number(paidAmount) <= 0) {
+      toast.error("Please enter a valid amount to generate QR code");
+      return;
+    }
+    if (upiId === "Not Available" || !upiId) {
+      toast.error("UPI ID is not available for this inspector");
+      return;
+    }
+    const name = item?.inspectorFullName || item?.inspectorUsername || (item?.inspector ? `${item.inspector.firstname} ${item.inspector.lastname}` : "") || "Inspector";
+    const generatedUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${paidAmount}&cu=INR&tn=${encodeURIComponent("Inspection Payment " + item.id)}`;
+    setUpiUrl(generatedUrl);
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -2122,7 +2139,7 @@ function PayToInspectorModal({ modal, onClose, onConfirm }) {
   return (
     <>
       <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed left-1/2 top-1/2 z-[61] w-[95%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+      <div className="fixed left-1/2 top-1/2 z-[61] w-[95%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <div className="flex items-start justify-between border-b border-slate-100 pb-4">
           <div>
             <h3 className="text-lg font-bold text-slate-900">Pay to Inspector</h3>
@@ -2145,15 +2162,21 @@ function PayToInspectorModal({ modal, onClose, onConfirm }) {
             <label className="block text-[12px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
               Inspector UPI ID
             </label>
-            <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 font-mono text-[13px] text-slate-800">
-              <span>{upiId}</span>
-              {upiId !== "Not Available" && (
+            <div className="relative">
+              <input
+                type="text"
+                value={upiId}
+                disabled
+                className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 outline-none text-slate-800 text-[13px] font-mono select-all"
+              />
+              {upiId && upiId !== "Not Available" && (
                 <button
+                  type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(upiId);
                     toast.success("UPI ID copied to clipboard!");
                   }}
-                  className="text-[11px] font-bold text-sky-600 hover:text-sky-700 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-sky-600 hover:text-sky-700 transition-colors"
                 >
                   Copy
                 </button>
@@ -2166,15 +2189,41 @@ function PayToInspectorModal({ modal, onClose, onConfirm }) {
             <label className="block text-[12px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
               Paid Amount (₹)
             </label>
-            <input
-              type="number"
-              value={paidAmount}
-              onChange={(e) => setPaidAmount(e.target.value)}
-              disabled={loading}
-              placeholder="Enter amount paid"
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px]"
-            />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={paidAmount}
+                onChange={(e) => {
+                  setPaidAmount(e.target.value);
+                  setUpiUrl("");
+                }}
+                disabled={loading}
+                placeholder="Enter amount paid"
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 outline-none focus:border-sky-400 text-slate-900 text-[13px]"
+              />
+              <button
+                type="button"
+                onClick={handleGenerateQr}
+                disabled={loading || !paidAmount}
+                className="rounded-xl bg-sky-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-sky-700 transition-colors disabled:opacity-50"
+              >
+                Generate QR
+              </button>
+            </div>
           </div>
+
+          {/* UPI QR Display */}
+          {upiUrl && (
+            <div className="flex flex-col items-center justify-center p-4 border border-slate-100 rounded-xl bg-slate-50 space-y-3">
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                <QRCodeCanvas value={upiUrl} size={180} />
+              </div>
+              <div className="text-center">
+                <p className="text-[12px] font-semibold text-slate-600">Scan & Pay ₹{paidAmount}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Supports Google Pay, PhonePe, Paytm & BHIM</p>
+              </div>
+            </div>
+          )}
 
           {/* Screenshot Upload Field */}
           <div>

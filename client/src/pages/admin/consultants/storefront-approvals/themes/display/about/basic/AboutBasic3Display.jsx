@@ -8,7 +8,7 @@ function AboutBasic3Display({ data }) {
         <>
             <section className="relative flex flex-col justify-center min-h-screen items-center py-12">
                 <div className="mx-auto w-full flex flex-col gap-14">
-                    <div className="flex flex-col items-center text-center gap-10 max-w-3xl mx-auto">
+                    <div className="flex flex-col items-center text-center gap-10 max-w-full mx-auto">
                         <p className="text-sm tracking-[0.45em] uppercase text-third font-semibold">
                             Hero
                         </p>
@@ -16,7 +16,7 @@ function AboutBasic3Display({ data }) {
                             {data.heroSection?.title}
                         </h2>
                         <div
-                            className="text-third/55 text-base sm:text-lg font-[Poppins] leading-relaxed max-w-xl"
+                            className="text-third/55 text-base sm:text-lg font-[Poppins] leading-relaxed max-w-5xl"
                             dangerouslySetInnerHTML={{ __html: data.heroSection?.description }}
                         />
                     </div>
@@ -87,7 +87,7 @@ function AboutBasic3Display({ data }) {
                             Numbers that<span className="text-primary"> speak for us</span>
                         </h2>
                         <div
-                            className="text-third/70 text-md font-[Poppins] leading-relaxed max-w-md"
+                            className="text-third/70 text-md font-[Poppins] leading-relaxed max-w-5xl"
                             dangerouslySetInnerHTML={{ __html: data.aboutUsSection?.description }}
                         />
                     </div>
