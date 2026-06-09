@@ -846,3 +846,62 @@ export const requestChangeConsultationUpdate = async ({ consultationUpdateId, re
   const res = await api.patch("/consultation/update-requests/request-change", payload);
   return res.data;
 };
+
+/* =======================================================
+   ✅ WALLET: GET KPI (GET)
+   Returns: { totalBalance, totalTopUpBalance, totalWithdrawBalance, totalActiveConsultCount }
+======================================================= */
+export const getWalletKpi = async () => {
+  const res = await api.get("/consultation/wallet/kpi");
+  return res.data;
+};
+
+/* =======================================================
+   ✅ WALLET: FILTER WALLETS (POST)
+   BODY:
+   {
+     consultName    : partial name search
+     tierId         : filter by tier id
+     stateId        : filter by state id
+     cityId         : filter by city id
+     minBalance     : minimum wallet balance (inclusive)
+     maxBalance     : maximum wallet balance (inclusive)
+     fromDate       : wallet created from date (yyyy-MM-dd)
+     toDate         : wallet created to date   (yyyy-MM-dd)
+     pageNo         : 1-based page number (default 1)
+   }
+   Response: paginated, 10 records per page
+======================================================= */
+export const filterWallets = async (payload = {}) => {
+  const res = await api.post("/consultation/wallet/filter", payload);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ WALLET: GET WALLET BY ID (GET)
+   Returns full wallet details + consultation info + transactions list
+======================================================= */
+export const getWalletById = async (walletId) => {
+  if (!walletId) throw new Error("walletId is required");
+  const res = await api.get(`/consultation/wallet/${walletId}`);
+  return res.data;
+};
+
+/* =======================================================
+   ✅ WALLET: FILTER TRANSACTIONS (POST)
+   BODY:
+   {
+     searchText : partial name search on consultation name
+     fromDate   : transaction date from (yyyy-MM-dd)
+     toDate     : transaction date to   (yyyy-MM-dd)
+     sourceType : WalletTransactionSource enum value
+                  (MANUAL_TOPUP | SUBSCRIPTION_REFUND | ADMIN_CREDIT |
+                   INSPECTION_PAYMENT | PPC_PURCHASE | ADMIN_DEBIT)
+     pageNo     : 1-based page number (default 1)
+   }
+   Response: paginated, 10 records per page
+======================================================= */
+export const filterWalletTransactions = async (payload = {}) => {
+  const res = await api.post("/consultation/wallet/transaction/filter", payload);
+  return res.data;
+};

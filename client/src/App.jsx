@@ -1,4 +1,7 @@
-import { Routes, Route, Navigate, BrowserRouter } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShieldCheck } from "lucide-react";
 import AdminLayout from "./components/layouts/AdminLayout";
 
 // Dashboard
@@ -64,6 +67,7 @@ import AssignInspector from "./pages/admin/inspections/AssignInspector";
 import ReportsReview from "./pages/admin/inspections/ReportsReview";
 import Disputes from "./pages/admin/inspections/Disputes";
 import InspectionRefund from "./pages/admin/inspections/InspectionRefund";
+import SelfInspection from "./pages/admin/inspections/SelfInspection";
 
 
 // Operations
@@ -130,9 +134,107 @@ import Leads from "./pages/admin/Leads";
 import Inspector from "./pages/admin/inspections/Inspector";
 
 const App = () => {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2400); // 2.4s splash screen
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/admin" replace />} />
+    <>
+      <AnimatePresence mode="wait">
+        {showSplash && (
+          <motion.div
+            key="splash"
+            initial={{ opacity: 1 }}
+            exit={{ 
+              opacity: 0, 
+              scale: 1.05, 
+              transition: { duration: 0.4, ease: "easeInOut" } 
+            }}
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#090D1A]"
+          >
+            {/* Background Glows */}
+            <div className="absolute w-[400px] h-[400px] rounded-full bg-sky-500/10 blur-[120px] pointer-events-none" />
+            <div className="absolute w-[300px] h-[300px] rounded-full bg-indigo-500/5 blur-[100px] pointer-events-none" />
+
+            {/* Glowing Logo Icon */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ 
+                scale: 1, 
+                opacity: 1,
+                transition: { duration: 0.6, ease: "easeOut" }
+              }}
+              className="relative z-10 mb-8"
+            >
+              <div className="w-24 h-24 bg-sky-500 rounded-3xl flex items-center justify-center shadow-lg shadow-sky-500/25 border border-sky-400/30 relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-tr from-sky-600 to-indigo-600 opacity-90" />
+                <motion.div 
+                  className="relative z-10 text-white"
+                  animate={{ 
+                    rotate: [0, 4, -4, 0],
+                    scale: [1, 1.03, 1.03, 1] 
+                  }}
+                  transition={{ 
+                    duration: 3, 
+                    repeat: Infinity,
+                    ease: "easeInOut" 
+                  }}
+                >
+                  <ShieldCheck className="w-12 h-12" strokeWidth={2} />
+                </motion.div>
+                {/* Clean white light sweep */}
+                <motion.div 
+                  className="absolute inset-0 w-1/2 h-full bg-white/10 skew-x-12"
+                  animate={{ x: ["-100%", "200%"] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.8 }}
+                />
+              </div>
+            </motion.div>
+
+            {/* Text and loading progress indicator */}
+            <div className="relative z-10 text-center space-y-4 px-4">
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: 0.3, duration: 0.5 } }}
+                className="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-400"
+              >
+                Welcome to
+              </motion.p>
+              
+              <motion.h1
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.5 } }}
+                className="text-3xl md:text-4xl font-black tracking-wider text-white"
+              >
+                <span className="bg-gradient-to-r from-sky-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(56,189,248,0.12)]">
+                  REECOMM
+                </span>
+                <span className="text-slate-100 ml-2.5">ADMIN PANEL</span>
+              </motion.h1>
+
+              {/* Progress Indicator */}
+              <div className="pt-4 flex justify-center">
+                <div className="w-48 h-1 bg-slate-800 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: "0%" }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 2.0, ease: "easeInOut" }}
+                    className="h-full bg-gradient-to-r from-sky-500 via-sky-400 to-indigo-500 rounded-full"
+                  />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <Routes>
+        <Route path="/" element={<Navigate to="/admin" replace />} />
 
       <Route path="/admin" element={<AdminLayout />}>
         {/* Dashboard */}
@@ -209,6 +311,7 @@ const App = () => {
         <Route path="inspections/disputes" element={<Disputes />} />
         <Route path="inspections/inspector" element={<Inspector />} />
         <Route path="inspections/inspection-refund" element={<InspectionRefund />} />
+        <Route path="inspections/self-inspection" element={<SelfInspection />} />
 
 
         {/* Operations */}
@@ -273,6 +376,7 @@ const App = () => {
         <Route path="store-template/edit/:id" element={<StoreTemplateEdit />} />
       </Route>
     </Routes>
+    </>
   );
 };
 

@@ -16,6 +16,8 @@ import {
   Wallet,
   Building,
   Award,
+  Mail,
+  Phone,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { mockWallets, mockTransactions } from "./mockData";
@@ -186,12 +188,19 @@ const PPCWalletDetails = () => {
       // Check if session storage or local state already has updates for this wallet
       const key = `wallet_details_${id}`;
       const saved = localStorage.getItem(key);
+
+      const enrich = (item) => ({
+        ...item,
+        phone: item.phone || "9000000008",
+        email: item.email || `${item.name.toLowerCase().replace(/\s+/g, "")}@gmail.com`
+      });
+
       if (saved) {
         const parsed = JSON.parse(saved);
-        setWallet(parsed.wallet);
+        setWallet(enrich(parsed.wallet));
         setWalletTx(parsed.transactions);
       } else {
-        setWallet(foundWallet);
+        setWallet(enrich(foundWallet));
         const relatedTx = mockTransactions.filter((tx) => tx.consultantId === id);
         setWalletTx(relatedTx);
       }
@@ -366,7 +375,7 @@ const PPCWalletDetails = () => {
       {/* First Row Grid: Balance Card and Consultant Profile side-by-side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Card 1: Balance Card */}
-        <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-[180px]">
+        <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-[190px]">
           <div className="absolute right-0 top-0 translate-x-1/4 -translate-y-1/4 w-32 h-32 rounded-full bg-blue-500/5 pointer-events-none" />
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
@@ -397,40 +406,81 @@ const PPCWalletDetails = () => {
         </div>
 
         {/* Card 2: Consultant Profile Details */}
-        <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm space-y-3.5 text-xs flex flex-col justify-between h-[180px]">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-            <User size={14} className="text-slate-400" />
-            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Consultant Profile</span>
+        <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-[190px]">
+          <div className="absolute right-0 top-0 translate-x-1/4 -translate-y-1/4 w-32 h-32 rounded-full bg-indigo-500/5 pointer-events-none" />
+          
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+            <div className="w-5 h-5 rounded-md bg-slate-50 flex items-center justify-center text-slate-500">
+              <User size={13} className="stroke-[2.5px]" />
+            </div>
+            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+              Consultant Profile
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3 flex-1 pt-1">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-2.5 flex-1 pt-3 text-xs">
+            {/* Row 1 */}
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-400">Tier</span>
-              <span className="inline-flex items-center gap-1 font-bold text-slate-700">
-                <Award size={13} className="text-amber-500" />
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-bold text-[10px] uppercase tracking-wide ${
+                (wallet.tier || "").toLowerCase() === "platinum" || (wallet.tier || "").toLowerCase() === "premium" || (wallet.tier || "").toLowerCase() === "gold"
+                  ? "bg-amber-50 text-amber-700 border-amber-200/60"
+                  : (wallet.tier || "").toLowerCase() === "silver"
+                    ? "bg-slate-50 text-slate-600 border-slate-200"
+                    : "bg-orange-50 text-orange-700 border-orange-200/60"
+              }`}>
+                <Award size={11} className="stroke-[2.5px]" />
                 {wallet.tier || "Bronze"}
               </span>
             </div>
+            
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-400">State</span>
-              <span className="inline-flex items-center gap-1 font-bold text-slate-700">
-                <Building size={13} className="text-slate-400" />
-                {wallet.state}
+              <span className="inline-flex items-center gap-1.5 font-bold text-slate-700">
+                <Building size={13} className="text-indigo-400/80 stroke-[2px]" />
+                {wallet.state || "-"}
               </span>
             </div>
+
+            {/* Row 2 */}
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-400">City</span>
-              <span className="inline-flex items-center gap-1 font-bold text-slate-700">
-                <MapPin size={13} className="text-slate-400" />
-                {wallet.city}
+              <span className="inline-flex items-center gap-1.5 font-bold text-slate-700">
+                <MapPin size={13} className="text-rose-400 stroke-[2px]" />
+                {wallet.city || "-"}
               </span>
             </div>
+
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-400">Registered</span>
-              <span className="inline-flex items-center gap-1 font-bold text-slate-700">
-                <Calendar size={13} className="text-slate-400" />
+              <span className="inline-flex items-center gap-1.5 font-bold text-slate-700">
+                <Calendar size={13} className="text-emerald-400 stroke-[2px]" />
                 {wallet.date ? new Date(wallet.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
               </span>
+            </div>
+
+            {/* Row 3 */}
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-400">Phone</span>
+              <a
+                href={`tel:${wallet.phone || "9000000008"}`}
+                className="inline-flex items-center gap-1.5 font-bold text-slate-700 hover:text-blue-600 transition"
+              >
+                <Phone size={13} className="text-sky-400 stroke-[2px]" />
+                {wallet.phone || "9000000008"}
+              </a>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-400">Email</span>
+              <a
+                href={`mailto:${wallet.email || "motocare@gmail.com"}`}
+                className="inline-flex items-center gap-1.5 font-bold text-slate-700 hover:text-blue-600 transition truncate max-w-[140px] sm:max-w-[180px]"
+                title={wallet.email || "motocare@gmail.com"}
+              >
+                <Mail size={13} className="text-purple-400 stroke-[2px]" />
+                {wallet.email || "motocare@gmail.com"}
+              </a>
             </div>
           </div>
         </div>
